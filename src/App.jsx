@@ -931,7 +931,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const selectedCat = getCat(cats, form.cat);
   const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
-  const steps = ["Documento", "Dettagli", "Opzioni"];
+  const steps = ["Documento", "Dettagli", "Ricorrenza", "Opzioni"];
+  const lastStep = steps.length - 1;
   const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
   const count = Math.max(1, parseInt(form.recurringCount) || 1);
   const baseAmount = Number(form.budget) || 0;
@@ -978,29 +979,28 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
   const preview = (() => {
     if (!form.recurringEnabled || occurrences.length === 0) return null;
-    const next12End = new Date(today);
-    next12End.setFullYear(next12End.getFullYear() + 1);
-    const next12 = occurrences.filter(d => d >= today && d < next12End);
-    const next12Total = next12.length * baseAmount;
-    const avg = next12Total / 12;
+    const currentYear = today.getFullYear();
+    const thisYearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+    const thisYearOccurrences = occurrences.filter(d => d >= today && d <= thisYearEnd);
+    const thisYearTotal = thisYearOccurrences.length * baseAmount;
     const next = occurrences.find(d => d >= today) || occurrences[0] || null;
 
-    const nextYear = today.getFullYear() + 1;
+    const nextYear = currentYear + 1;
     const nextYearStart = new Date(nextYear, 0, 1);
     const nextYearEnd = new Date(nextYear, 11, 31, 23, 59, 59, 999);
     const nextYearOccurrences = occurrences.filter(d => d >= nextYearStart && d <= nextYearEnd);
     const nextYearTotal = nextYearOccurrences.length * baseAmount;
 
     return {
-      next12Count: next12.length,
-      next12Total,
-      avg,
+      thisYearCount: thisYearOccurrences.length,
+      thisYearTotal,
       next,
       nextYear,
       nextYearCount: nextYearOccurrences.length,
       nextYearTotal
     };
   })();
+  const canProceedDetails = form.title.trim() && form.date;
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
@@ -1267,9 +1267,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 </div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:6, gap:12 }}>
                   <div>
-                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.next12Total)}</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>prossimi 12 mesi · {preview.next12Count} scadenze</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>media {formatCurrency(preview.avg)}/mese</div>
+                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.thisYearTotal)}</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>quest'anno · {preview.thisYearCount} scadenze</div>
                   </div>
                   <div style={{ textAlign:"right" }}>
                     <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.nextYearTotal)}</div>
@@ -1283,8 +1282,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 </div>
               </div>
             )}
+          </>
+        )}
 
-            <div style={{ marginTop:14, background:"#fff8f5", border:"1px solid #FBE9E7", borderRadius:10, padding:"10px 12px" }}>
+        {step === 3 && (
+          <>
+            <div style={{ marginTop:2, background:"#fff8f5", border:"1px solid #FBE9E7", borderRadius:10, padding:"10px 12px" }}>
               <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
                 <input
                   type="checkbox"
@@ -1346,15 +1349,31 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               Indietro
             </button>
           )}
-          {step < 2 ? (
+          {step < lastStep ? (
             <>
-              <button onClick={() => setStep(s => Math.min(2, s + 1))} style={{
-                flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", color:"#6b6961", cursor:"pointer", fontSize:14, fontWeight:600, minHeight:48
-              }}>Salta</button>
-              <button onClick={() => setStep(s => Math.min(2, s + 1))} style={{
-                flex:2, padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48,
-                boxShadow:"0 4px 14px rgba(0,0,0,.2)",
-              }}>Avanti</button>
+              {step === 0 && (
+                <button onClick={() => setStep(s => Math.min(lastStep, s + 1))} style={{
+                  flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", color:"#6b6961", cursor:"pointer", fontSize:14, fontWeight:600, minHeight:48
+                }}>Salta</button>
+              )}
+              <button
+                onClick={() => {
+                  if (step === 1 && !canProceedDetails) return;
+                  setStep(s => Math.min(lastStep, s + 1));
+                }}
+                disabled={step === 1 && !canProceedDetails}
+                style={{
+                  flex:2, padding:"14px", borderRadius:14, border:"none",
+                  background: (step === 1 && !canProceedDetails) ? "#e0ddd6" : "#2d2b26",
+                  color:"#fff",
+                  cursor: (step === 1 && !canProceedDetails) ? "not-allowed" : "pointer",
+                  fontSize:14, fontWeight:700, minHeight:48,
+                  boxShadow:"0 4px 14px rgba(0,0,0,.2)",
+                  opacity: (step === 1 && !canProceedDetails) ? 0.6 : 1,
+                }}
+              >
+                Avanti
+              </button>
             </>
           ) : (
             <button onClick={() => {
@@ -1417,9 +1436,16 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 }
                 onClose();
               }
-            }} style={{
-              flex:2, padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48,
+            }}
+            disabled={!canProceedDetails}
+            style={{
+              flex:2, padding:"14px", borderRadius:14, border:"none",
+              background: !canProceedDetails ? "#e0ddd6" : "#2d2b26",
+              color:"#fff",
+              cursor: !canProceedDetails ? "not-allowed" : "pointer",
+              fontSize:14, fontWeight:700, minHeight:48,
               boxShadow:"0 4px 14px rgba(0,0,0,.2)",
+              opacity: !canProceedDetails ? 0.6 : 1,
             }}>Aggiungi</button>
           )}
         </div>
