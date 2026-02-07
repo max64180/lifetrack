@@ -124,6 +124,17 @@ function groupItems(items, range) {
 function diffDays(d) { return Math.round((d - TODAY) / 86400000); }
 function fmtDate(d) { return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; }
 
+function toDate(value) {
+  if (value instanceof Date) return value;
+  if (value && typeof value.toDate === 'function') return value.toDate();
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return new Date(NaN);
+}
+
+function isValidDate(d) {
+  return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
 function getUrgency(date, done) {
   if (done) return { color:"#aaa", bg:"#f0efe8", label:"Fatto" };
   const days = diffDays(date);
@@ -2208,13 +2219,20 @@ export default function App() {
     const saved = localStorage.getItem('lifetrack_worklogs');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Convert date strings back to Date objects
+      // Convert date values back to Date objects (supports Firestore Timestamps)
       Object.keys(parsed).forEach(key => {
-        parsed[key] = parsed[key].map(log => ({
-          ...log,
-          date: new Date(log.date),
-          nextDate: log.nextDate ? new Date(log.nextDate) : null
-        }));
+        parsed[key] = parsed[key]
+          .map(log => {
+            const date = toDate(log.date);
+            const nextDate = log.nextDate ? toDate(log.nextDate) : null;
+            if (!isValidDate(date)) return null;
+            return {
+              ...log,
+              date,
+              nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
+            };
+          })
+          .filter(Boolean);
       });
       return parsed;
     }
@@ -2249,17 +2267,27 @@ export default function App() {
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const parsedDeadlines = (data.deadlines || []).map(d => ({
-          ...d,
-          date: new Date(d.date)
-        }));
+        const parsedDeadlines = (data.deadlines || [])
+          .map(d => {
+            const date = toDate(d.date);
+            if (!isValidDate(date)) return null;
+            return { ...d, date };
+          })
+          .filter(Boolean);
         const parsedWorkLogs = {};
         Object.keys(data.workLogs || {}).forEach(key => {
-          parsedWorkLogs[key] = (data.workLogs[key] || []).map(log => ({
-            ...log,
-            date: new Date(log.date),
-            nextDate: log.nextDate ? new Date(log.nextDate) : null
-          }));
+          parsedWorkLogs[key] = (data.workLogs[key] || [])
+            .map(log => {
+              const date = toDate(log.date);
+              const nextDate = log.nextDate ? toDate(log.nextDate) : null;
+              if (!isValidDate(date)) return null;
+              return {
+                ...log,
+                date,
+                nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
+              };
+            })
+            .filter(Boolean);
         });
         setDeadlines(parsedDeadlines);
         setCats(data.categories || DEFAULT_CATS);
