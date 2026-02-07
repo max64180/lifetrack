@@ -6,6 +6,9 @@ export default defineConfig({
   optimizeDeps: {
     include: ['firebase/app', 'firebase/auth', 'firebase/firestore']
   },
+  build: {
+    sourcemap: true
+  },
   // Leave CommonJS handling to Vite defaults.
   // Restricting include to /firebase/ can break React named exports in prod build.
 })
