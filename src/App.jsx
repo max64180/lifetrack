@@ -2201,6 +2201,26 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
+  // App state (must be declared before any hooks that reference them)
+  const [cats, setCats] = useState(DEFAULT_CATS);
+  const [deadlines, setDeadlines] = useState([]);
+  const [workLogs, setWorkLogs] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_worklogs');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Convert date strings back to Date objects
+      Object.keys(parsed).forEach(key => {
+        parsed[key] = parsed[key].map(log => ({
+          ...log,
+          date: new Date(log.date),
+          nextDate: log.nextDate ? new Date(log.nextDate) : null
+        }));
+      });
+      return parsed;
+    }
+    return {}; // { "casa_colico": [...], "auto_micro": [...] }
+  });
+
   // 🔥 Firebase Authentication
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -2288,12 +2308,6 @@ export default function App() {
     );
   }
 
-
-  // Load from localStorage or use defaults
-  const [cats, setCats] = useState(DEFAULT_CATS);
-  
-  const [deadlines, setDeadlines] = useState([]);
-
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
     localStorage.setItem('lifetrack_categories', JSON.stringify(cats));
@@ -2302,24 +2316,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lifetrack_deadlines', JSON.stringify(deadlines));
   }, [deadlines]);
-
-  // Work logs for assets
-  const [workLogs, setWorkLogs] = useState(() => {
-    const saved = localStorage.getItem('lifetrack_worklogs');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Convert date strings back to Date objects
-      Object.keys(parsed).forEach(key => {
-        parsed[key] = parsed[key].map(log => ({
-          ...log,
-          date: new Date(log.date),
-          nextDate: log.nextDate ? new Date(log.nextDate) : null
-        }));
-      });
-      return parsed;
-    }
-    return {}; // { "casa_colico": [...], "auto_micro": [...] }
-  });
 
   useEffect(() => {
     localStorage.setItem('lifetrack_worklogs', JSON.stringify(workLogs));
