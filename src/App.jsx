@@ -3485,14 +3485,14 @@ export default function App() {
           { id:"timeline", labelKey:"tabs.timeline" }, 
           { id:"overdue", labelKey:"tabs.overdue" },
           { id:"done", labelKey:"tabs.done" }
-        ].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             flex:1, padding:"12px 0", border:"none", background:"transparent", cursor:"pointer",
-            fontSize:14, fontWeight: activeTab === t.id ? 700 : 500,
-            color: activeTab === t.id ? (t.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
-            borderBottom: activeTab === t.id ? `2.5px solid ${t.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
+            fontSize:14, fontWeight: activeTab === tab.id ? 700 : 500,
+            color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
+            borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
             transition:"all .2s", minHeight:44,
-          }}>{t(t.labelKey)}</button>
+          }}>{t(tab.labelKey)}</button>
         ))}
       </div>
 
