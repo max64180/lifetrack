@@ -18,6 +18,7 @@ const auth = getAuth(app);
 // Use long-polling to avoid Safari/ITP/CORS issues with Firestore WebChannel
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: true,
   useFetchStreams: false,
 });
 
@@ -2215,6 +2216,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const suppressSaveRef = useRef(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -2293,6 +2295,7 @@ export default function App() {
             })
             .filter(Boolean);
         });
+        suppressSaveRef.current = true;
         setDeadlines(parsedDeadlines);
         setCats(data.categories || DEFAULT_CATS);
         setWorkLogs(parsedWorkLogs);
@@ -2307,6 +2310,10 @@ export default function App() {
   // 🔥 Firebase Auto-Save
   useEffect(() => {
     if (!user || loading) return;
+    if (suppressSaveRef.current) {
+      suppressSaveRef.current = false;
+      return;
+    }
     
     const saveTimer = setTimeout(async () => {
       try {
