@@ -200,20 +200,6 @@ function RangeSelector({ active, onChange }) {
 /* Budget summary bar */
 function BudgetBar({ deadlines, range, cats }) {
   const maxDays = RANGES.find(r => r.id === range)?.days || 30;
-  const editScheduleChanged = editConfirm ? (() => {
-    const { item, form } = editConfirm;
-    const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
-    const count = Math.max(1, parseInt(form.recurringCount) || 1);
-    const itemDateStr = item.date instanceof Date
-      ? item.date.toISOString().split('T')[0]
-      : new Date(item.date).toISOString().split('T')[0];
-    return (
-      form.date !== itemDateStr ||
-      interval !== item.recurring.interval ||
-      form.recurringUnit !== item.recurring.unit ||
-      count !== item.recurring.total
-    );
-  })() : false;
   const inRange = deadlines.filter(d => !d.done && diffDays(d.date) >= 0 && diffDays(d.date) <= maxDays);
   const total   = inRange.reduce((s, d) => s + d.budget, 0);
   const count   = inRange.length;
@@ -2555,6 +2541,21 @@ export default function App() {
   const [downpaymentDate, setDownpaymentDate] = useState("");
   const [viewingDoc, setViewingDoc] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { itemId, futureCount }
+
+  const editScheduleChanged = editConfirm ? (() => {
+    const { item, form } = editConfirm;
+    const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+    const count = Math.max(1, parseInt(form.recurringCount) || 1);
+    const itemDateStr = item.date instanceof Date
+      ? item.date.toISOString().split('T')[0]
+      : new Date(item.date).toISOString().split('T')[0];
+    return (
+      form.date !== itemDateStr ||
+      interval !== item.recurring.interval ||
+      form.recurringUnit !== item.recurring.unit ||
+      count !== item.recurring.total
+    );
+  })() : false;
 
   // Show toast helper
   const showToast = (message) => {
