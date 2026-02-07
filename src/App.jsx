@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { initializeFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { initializeFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 
 // 🔥 Firebase Configuration
 const firebaseConfig = {
@@ -20,6 +20,8 @@ const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
 });
+
+const isSafari = typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 
 
@@ -2264,45 +2266,67 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 Firebase Real-time Sync
+  // 🔥 Firebase Sync (polling on Safari to avoid WebChannel issues)
   useEffect(() => {
     if (!user) return;
-    
     const docRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const parsedDeadlines = (data.deadlines || [])
-          .map(d => {
-            const date = toDate(d.date);
+
+    const applySnapshot = (docSnap) => {
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      const parsedDeadlines = (data.deadlines || [])
+        .map(d => {
+          const date = toDate(d.date);
+          if (!isValidDate(date)) return null;
+          return { ...d, date };
+        })
+        .filter(Boolean);
+      const parsedWorkLogs = {};
+      Object.keys(data.workLogs || {}).forEach(key => {
+        parsedWorkLogs[key] = (data.workLogs[key] || [])
+          .map(log => {
+            const date = toDate(log.date);
+            const nextDate = log.nextDate ? toDate(log.nextDate) : null;
             if (!isValidDate(date)) return null;
-            return { ...d, date };
+            return {
+              ...log,
+              date,
+              nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
+            };
           })
           .filter(Boolean);
-        const parsedWorkLogs = {};
-        Object.keys(data.workLogs || {}).forEach(key => {
-          parsedWorkLogs[key] = (data.workLogs[key] || [])
-            .map(log => {
-              const date = toDate(log.date);
-              const nextDate = log.nextDate ? toDate(log.nextDate) : null;
-              if (!isValidDate(date)) return null;
-              return {
-                ...log,
-                date,
-                nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
-              };
-            })
-            .filter(Boolean);
-        });
-        suppressSaveRef.current = true;
-        setDeadlines(parsedDeadlines);
-        setCats(data.categories || DEFAULT_CATS);
-        setWorkLogs(parsedWorkLogs);
+      });
+      suppressSaveRef.current = true;
+      setDeadlines(parsedDeadlines);
+      setCats(data.categories || DEFAULT_CATS);
+      setWorkLogs(parsedWorkLogs);
+    };
+
+    if (isSafari) {
+      let cancelled = false;
+      const fetchOnce = async () => {
+        try {
+          const snap = await getDoc(docRef);
+          if (!cancelled) applySnapshot(snap);
+        } catch (error) {
+          console.error("Firebase poll error:", error);
+        }
+      };
+      fetchOnce();
+      const interval = setInterval(fetchOnce, 5000);
+      return () => {
+        cancelled = true;
+        clearInterval(interval);
+      };
+    }
+
+    const unsubscribe = onSnapshot(
+      docRef,
+      applySnapshot,
+      (error) => {
+        console.error("Firebase sync error:", error);
       }
-    }, (error) => {
-      console.error("Firebase sync error:", error);
-    });
-    
+    );
     return () => unsubscribe();
   }, [user]);
 
