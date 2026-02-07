@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore/lite';
 
 // 🔥 Firebase Configuration
@@ -2214,6 +2214,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const suppressSaveRef = useRef(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMode, setAuthMode] = useState("login"); // login | signup
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -2244,20 +2249,9 @@ export default function App() {
 
   // 🔥 Firebase Authentication
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setLoading(false);
-      } else {
-        try {
-          const result = await signInAnonymously(auth);
-          setUser(result.user);
-          setLoading(false);
-        } catch (error) {
-          console.error("Firebase auth error:", error);
-          setLoading(false);
-        }
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser || null);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -2633,6 +2627,41 @@ export default function App() {
     showToast("✓ Documento eliminato");
   };
 
+  const handleAuth = async () => {
+    if (!authEmail || !authPassword) {
+      setAuthError("Inserisci email e password");
+      return;
+    }
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      if (authMode === "signup") {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+    } catch (error) {
+      const code = error?.code || "";
+      let msg = "Errore autenticazione";
+      if (code.includes("auth/invalid-email")) msg = "Email non valida";
+      else if (code.includes("auth/invalid-credential") || code.includes("auth/wrong-password")) msg = "Credenziali errate";
+      else if (code.includes("auth/user-not-found")) msg = "Utente non trovato";
+      else if (code.includes("auth/email-already-in-use")) msg = "Email già registrata";
+      else if (code.includes("auth/weak-password")) msg = "Password troppo corta (min 6)";
+      setAuthError(msg);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   // 🔥 Loading Screen (after all hooks)
   if (loading) {
     return (
@@ -2641,6 +2670,66 @@ export default function App() {
           <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
           <div style={{ fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
           <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>Caricamento...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#1e1c18", color:"#fff", padding:20 }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+          *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+        `}</style>
+        <div style={{ width:"100%", maxWidth:360, background:"#2d2b26", borderRadius:18, padding:"22px 20px", boxShadow:"0 10px 30px rgba(0,0,0,.35)" }}>
+          <div style={{ textAlign:"center", marginBottom:16 }}>
+            <div style={{ fontSize:40, marginBottom:6 }}>📅</div>
+            <div style={{ fontSize:18, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
+            <div style={{ fontSize:12, opacity:.6, marginTop:4 }}>Accedi per sincronizzare su tutti i dispositivi</div>
+          </div>
+
+          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>Email</label>
+          <input
+            type="email"
+            value={authEmail}
+            onChange={e => setAuthEmail(e.target.value)}
+            placeholder="nome@email.com"
+            style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #3a3731", background:"#1f1d19", color:"#fff", marginBottom:12, fontSize:14, outline:"none" }}
+          />
+
+          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>Password</label>
+          <input
+            type="password"
+            value={authPassword}
+            onChange={e => setAuthPassword(e.target.value)}
+            placeholder="••••••"
+            style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #3a3731", background:"#1f1d19", color:"#fff", marginBottom:12, fontSize:14, outline:"none" }}
+          />
+
+          {authError && (
+            <div style={{ background:"rgba(229,57,53,.15)", color:"#ffb3ad", padding:"8px 10px", borderRadius:10, fontSize:12, marginBottom:10 }}>
+              {authError}
+            </div>
+          )}
+
+          <button
+            onClick={handleAuth}
+            disabled={authBusy}
+            style={{ width:"100%", padding:"12px", borderRadius:12, border:"none", background:"#E8855D", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", opacity: authBusy ? 0.7 : 1 }}
+          >
+            {authMode === "signup" ? "Crea account" : "Accedi"}
+          </button>
+
+          <div style={{ marginTop:12, textAlign:"center", fontSize:12, color:"rgba(255,255,255,.6)" }}>
+            {authMode === "signup" ? "Hai già un account?" : "Non hai un account?"}{" "}
+            <button
+              onClick={() => { setAuthMode(authMode === "signup" ? "login" : "signup"); setAuthError(""); }}
+              style={{ background:"transparent", border:"none", color:"#E8855D", fontWeight:700, cursor:"pointer" }}
+            >
+              {authMode === "signup" ? "Accedi" : "Crea account"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -2689,6 +2778,9 @@ export default function App() {
                 </button>
                 <button onClick={() => setShowCats(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
                   <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>⚙</span>
+                </button>
+                <button onClick={handleSignOut} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                  <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>⎋</span>
                 </button>
               </div>
             </div>
