@@ -1,0 +1,376 @@
+{
+  "app": {
+    "name": "LifeTrack",
+    "tagline": "deadline tracking",
+    "loading": "Loading..."
+  },
+  "auth": {
+    "subtitle": "Sign in to sync across devices",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "name@email.com",
+    "passwordPlaceholder": "••••••",
+    "login": "Sign in",
+    "signup": "Create account",
+    "hasAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "errors": {
+      "missing": "Enter email and password",
+      "invalidEmail": "Invalid email",
+      "invalidCreds": "Wrong credentials",
+      "userNotFound": "User not found",
+      "emailInUse": "Email already registered",
+      "weakPassword": "Password too short (min 6)",
+      "generic": "Authentication error"
+    }
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "add": "Add",
+    "close": "Close",
+    "open": "Open",
+    "download": "Download",
+    "share": "Share",
+    "view": "View",
+    "edit": "Edit",
+    "postpone": "Postpone",
+    "complete": "Complete",
+    "reactivate": "Reactivate",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "save": "Save"
+  },
+  "wizard": {
+    "newTitle": "New deadline",
+    "editTitle": "Edit deadline",
+    "step": {
+      "document": "Document",
+      "details": "Details",
+      "recurring": "Recurring",
+      "options": "Options"
+    },
+    "docLabel": "Document (optional)",
+    "docUpload": "📸 Upload document (you can skip)",
+    "docAttached": "Document attached",
+    "docRemove": "Remove",
+    "title": "Title",
+    "titlePlaceholder": "e.g. Insurance renewal",
+    "untitled": "Untitled",
+    "category": "Category",
+    "asset": "For which?",
+    "dueDate": "Due date",
+    "budget": "Budget (€)",
+    "budgetHint": "If you don't know the amount, leave it empty: it won't count in totals.",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes…"
+  },
+  "recurring": {
+    "title": "🔁 Recurring deadline",
+    "subtitle": "Automatically generates multiple occurrences",
+    "frequency": "Frequency",
+    "preset": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly",
+      "custom": "Custom"
+    },
+    "summary": {
+      "repeat": "Repeats {{label}}",
+      "end": "{{label}}",
+      "auto": "continues (shown up to {{date}})",
+      "date": "until {{date}}",
+      "count": "for {{count}} times",
+      "datePlaceholder": "until selected date"
+    },
+    "everySingle": "every {{unit}}",
+    "everyMultiple": "every {{count}} {{unit}}",
+    "advanced": "Advanced",
+    "advancedHide": "Hide advanced",
+    "every": "Every",
+    "endTitle": "Series end",
+    "endAuto": "No end",
+    "endCount": "After N",
+    "endDate": "Until",
+    "occurrences": "💡 {{count}} deadlines will be created at €{{amount}} each",
+    "occurrencesNoAmount": "💡 {{count}} deadlines will be created (amount to estimate)"
+  },
+  "impact": {
+    "title": "Economic impact",
+    "thisYear": "this year",
+    "nextYear": "year {{year}}",
+    "next": "next {{date}}",
+    "missing": "Add an estimate to calculate impact"
+  },
+  "options": {
+    "mandatoryTitle": "⚠ Mandatory deadline",
+    "mandatoryHint": "e.g. taxes, fines, legal documents",
+    "essentialTitle": "💡 Essential expense",
+    "essentialHint": "Needed for daily life (bills, groceries, rent)",
+    "autoPayTitle": "🔄 Automatic payment",
+    "autoPayHint": "Bank direct debit or automatic charge"
+  },
+  "range": {
+    "week": "Week",
+    "month": "Month",
+    "quarter": "Quarter",
+    "semester": "Semester",
+    "year": "Year"
+  },
+  "tabs": {
+    "timeline": "Timeline",
+    "overdue": "Overdue",
+    "done": "Completed"
+  },
+  "empty": {
+    "timelineTitle": "No deadlines in this period",
+    "doneTitle": "No completed deadlines",
+    "hint": "Try changing the time range"
+  },
+  "filters": {
+    "all": "All",
+    "mandatory": "⚠ Mandatory",
+    "recurring": "🔁 Recurring",
+    "autoPay": "🔄 Automatic",
+    "essential": "💡 Essential",
+    "estimate": "❔ To estimate"
+  },
+  "stats": {
+    "title": "📈 Stats",
+    "tabs": {
+      "year": "📈 Year {{year}}",
+      "future": "🔮 Next 12 months"
+    },
+    "year": {
+      "cardTitle": "SPENDING {{year}}",
+      "change": "{{direction}} {{percent}}% vs {{prevYear}} (€{{prevTotal}})",
+      "completed": "{{count}} completed deadlines"
+    },
+    "future": {
+      "cardTitle": "NEXT 12 MONTHS",
+      "summary": "{{count}} active deadlines • {{recurring}} recurring • {{autoPay}} auto-pay"
+    },
+    "insights": {
+      "title": "💡 INSIGHTS",
+      "avgMonthly": "• Average monthly spend: €{{amount}}",
+      "topCategory": "• Top category: {{icon}} {{label}} ({{percentage}}%)",
+      "peakMonth": "• Peak month: {{month}} (€{{amount}})",
+      "futurePeak": "• Heaviest month: {{month}} (€{{amount}})",
+      "next30": "• {{count}} deadlines in next 30 days",
+      "futureAvg": "• Expected monthly average: €{{amount}}"
+    },
+    "breakdownTitle": "📊 Breakdown by category",
+    "trendTitle": "📅 Monthly trend",
+    "futureTimelineTitle": "📅 Upcoming months",
+    "futureTimelineCount": "{{count}}×"
+  },
+  "assetList": {
+    "title": "🏷️ My Assets",
+    "emptyTitle": "No assets configured",
+    "emptyHint": "Add assets to categories in settings (⚙️) to track specific expenses for cars, homes, etc.",
+    "itemStats": "{{deadlines}} deadlines • {{completed}} completed",
+    "total": "total"
+  },
+  "asset": {
+    "tabs": {
+      "overview": "📋 Overview",
+      "deadlines": "📅 Deadlines",
+      "log": "🔧 Log"
+    },
+    "totalSpent": "TOTAL SPENT",
+    "summary": "{{deadlines}} deadlines • {{worklogs}} logged works",
+    "nextDeadlines": "📅 Upcoming deadlines",
+    "lastWork": "🔧 Latest work",
+    "documents": "📎 Documents ({{count}})",
+    "moreDocs": "+{{count}} more",
+    "addDeadline": "Add deadline for {{asset}}",
+    "deadlinesSummary": "{{total}} total deadlines • {{completed}} completed • {{upcoming}} upcoming",
+    "emptyDeadlinesTitle": "No deadlines",
+    "emptyDeadlinesHint": "Click \"+ Add\" to create a deadline",
+    "completed": "✓ Completed",
+    "searchPlaceholder": "🔍 Search work logs...",
+    "addWork": "Add work",
+    "emptyWorkTitle": "No work logged",
+    "emptyWorkHint": "Add work logs to track maintenance and interventions",
+    "noResults": "No results for \"{{query}}\"",
+    "kmLabel": "🚗 {{km}} km",
+    "kmNext": "→ next: {{km}} km"
+  },
+  "workLog": {
+    "title": "🔧 {{mode}} work - {{asset}}",
+    "edit": "Edit",
+    "new": "New",
+    "fields": {
+      "title": "Title *",
+      "date": "Date *",
+      "mileage": "🚗 Mileage",
+      "description": "Work description",
+      "cost": "Cost (€)"
+    },
+    "placeholders": {
+      "title": "Describe the work",
+      "kmCurrent": "Current",
+      "kmNext": "Next",
+      "description": "Details of the work performed..."
+    },
+    "openDeadline": "📅 Open next maintenance deadline",
+    "save": "Save"
+  },
+  "card": {
+    "dueDate": "Due date",
+    "budget": "Budget",
+    "repeats": "Repeats",
+    "never": "Never",
+    "repeatPattern": "{{index}}/{{total}} (every {{interval}} {{unit}})",
+    "mandatory": "⚠ Mandatory deadline",
+    "autoPayActive": "🔄 Automatic payment active",
+    "autoCompleted": "✓ Auto-completed at due date",
+    "skipped": "⏭ Skipped",
+    "estimateMissing": "To estimate",
+    "estimateMissingTitle": "💡 Missing estimate",
+    "addEstimate": "Add estimate"
+  },
+  "units": {
+    "day": { "one": "day", "other": "days" },
+    "week": { "one": "week", "other": "weeks" },
+    "month": { "one": "month", "other": "months" },
+    "year": { "one": "year", "other": "years" }
+  },
+  "docs": {
+    "title": "📎 Documents",
+    "none": "No documents attached",
+    "document": "Document",
+    "receipt": "Receipt",
+    "defaultFilename": "document.jpg",
+    "defaultTitle": "Document",
+    "attachDocument": "📸 Attach document",
+    "attachReceipt": "🧾 Attach receipt",
+    "deleteConfirm": "Delete document?"
+  },
+  "category": {
+    "title": "Category management",
+    "generic": "Generic category",
+    "assetsCount_one": "{{count}} linked asset",
+    "assetsCount_other": "{{count}} linked assets",
+    "assetsTitle": "Linked assets",
+    "assetsEmpty": "No assets. Add the first one to specify which car, home, etc.",
+    "newAssetPlaceholder": "New asset (e.g. Fiat Panda)",
+    "addAsset": "+ Add",
+    "newTitle": "New category",
+    "name": "Name",
+    "namePlaceholder": "e.g. Travel",
+    "emoji": "Emoji",
+    "color": "Color",
+    "create": "Create category",
+    "add": "+ Add category",
+    "deleteConfirm": "Delete this category? Associated deadlines will not be removed."
+  },
+  "backup": {
+    "title": "📤 Backup & Sharing",
+    "export": "📥 Export Data (JSON)",
+    "import": "📤 Import Data (JSON)",
+    "exported": "✅ Data exported! Find the file in Downloads",
+    "invalidFile": "❌ Invalid file",
+    "importConfirm": "Import {{deadlines}} deadlines and {{categories}} categories?\n\n⚠️ This will replace current data!",
+    "imported": "✅ Data imported! The page will reload.",
+    "readError": "❌ File read error: {{message}}",
+    "shareTipTitle": "To share:",
+    "shareTip": "Export → send via WhatsApp → recipient imports",
+    "resetConfirm": "Reset all data? This action cannot be undone.",
+    "reset": "🗑 Reset data (for test)"
+  },
+  "payment": {
+    "expected": "Expected budget:",
+    "paidFull": "Paid €{{amount}}",
+    "downpayment": "I paid a down payment",
+    "differentAmount": "Different amount",
+    "notPaid": "Not paid",
+    "paidAmountTitle": "Paid amount",
+    "paidAmountLabel": "How much did you pay?",
+    "confirm": "Confirm",
+    "downpaymentTitle": "Down payment",
+    "downpaymentLabel": "How much did you pay now?",
+    "remaining": "Remaining balance: €{{amount}}",
+    "balanceDue": "When is the balance due?",
+    "createBalance": "Create balance"
+  },
+  "postpone": {
+    "title": "Postpone deadline",
+    "subtitle": "Choose the new date for this deadline"
+  },
+  "editRecurring": {
+    "title": "Edit recurring",
+    "subtitle": "Apply changes only to this deadline or to others as well?",
+    "warning": "Warning: changing frequency or date will regenerate the whole series.",
+    "onlyThis": "Only this",
+    "fromThis": "From this onward",
+    "all": "Whole series"
+  },
+  "deleteSeries": {
+    "title": "Delete recurring series",
+    "subtitle": "This deadline is part of a series ({{current}}/{{total}}).",
+    "warning": "This and the next {{count}} future deadlines will be deleted.",
+    "note": "(Past completed deadlines will not be touched)",
+    "confirm": "Delete series"
+  },
+  "toast": {
+    "autoPayCompleted": "✓ {{count}} automatic payments completed",
+    "deadlineSkipped": "✓ Deadline skipped",
+    "paidFull": "✓ Paid €{{amount}}",
+    "notPaid": "✓ Marked as not paid",
+    "paidAmount": "✓ Paid €{{amount}}",
+    "downpaymentCreated": "✓ Down payment €{{down}} - Balance €{{remaining}} created",
+    "deadlineDeleted": "✓ Deadline deleted",
+    "futureDeleted": "✓ Deleted {{count}} future deadlines",
+    "seriesCreatedRange": "✓ Series created! {{outside}}/{{total}} beyond {{range}}",
+    "deadlineAddedOutside": "✓ Deadline added! It's beyond {{range}} - change range to see it",
+    "seriesCreated": "✓ {{count}} deadlines created",
+    "deadlinePostponed": "✓ Deadline postponed",
+    "documentAttached": "✓ Document attached",
+    "documentUploadError": "✗ Document upload error",
+    "documentDeleted": "✓ Document deleted",
+    "shareUnsupported": "Sharing is not supported on this device",
+    "shareError": "Share error",
+    "worklogUpdated": "✓ Work log updated",
+    "worklogAdded": "✓ Work log added"
+  },
+  "budgetBar": {
+    "title": "Budget in range",
+    "deadlines": "Deadlines",
+    "missing": "⚠ {{count}} to estimate"
+  },
+  "common": {
+    "deadlines": "deadlines"
+  },
+  "sync": {
+    "saving": "Saving..."
+  },
+  "cat": {
+    "casa": "Home",
+    "auto": "Auto",
+    "famiglia": "Family",
+    "finanze": "Finance",
+    "salute": "Health",
+    "scuola": "School"
+  },
+  "group": {
+    "all": "All",
+    "weekThis": "This week",
+    "weekNext": "Next week",
+    "weekPlus": "Week +{{count}}",
+    "quarter": "Q{{num}} {{year}}",
+    "semesterFirst": "1st semester {{year}}",
+    "semesterSecond": "2nd semester {{year}}"
+  },
+  "urgency": {
+    "done": "Done",
+    "overdue": "Overdue",
+    "today": "Today",
+    "days": "{{count}}d"
+  },
+  "errors": {
+    "fileUpload": "File upload error"
+  }
+}

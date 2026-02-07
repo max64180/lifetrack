@@ -1,0 +1,376 @@
+{
+  "app": {
+    "name": "LifeTrack",
+    "tagline": "gestione scadenze",
+    "loading": "Caricamento..."
+  },
+  "auth": {
+    "subtitle": "Accedi per sincronizzare su tutti i dispositivi",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "nome@email.com",
+    "passwordPlaceholder": "••••••",
+    "login": "Accedi",
+    "signup": "Crea account",
+    "hasAccount": "Hai già un account?",
+    "noAccount": "Non hai un account?",
+    "errors": {
+      "missing": "Inserisci email e password",
+      "invalidEmail": "Email non valida",
+      "invalidCreds": "Credenziali errate",
+      "userNotFound": "Utente non trovato",
+      "emailInUse": "Email già registrata",
+      "weakPassword": "Password troppo corta (min 6)",
+      "generic": "Errore autenticazione"
+    }
+  },
+  "actions": {
+    "cancel": "Annulla",
+    "back": "Indietro",
+    "next": "Avanti",
+    "skip": "Salta",
+    "add": "Aggiungi",
+    "close": "Chiudi",
+    "open": "Apri",
+    "download": "Scarica",
+    "share": "Condividi",
+    "view": "Vedi",
+    "edit": "Modifica",
+    "postpone": "Posticipa",
+    "complete": "Completata",
+    "reactivate": "Riattiva",
+    "delete": "Elimina",
+    "confirm": "Conferma",
+    "save": "Salva"
+  },
+  "wizard": {
+    "newTitle": "Nuova scadenza",
+    "editTitle": "Modifica scadenza",
+    "step": {
+      "document": "Documento",
+      "details": "Dettagli",
+      "recurring": "Ricorrenza",
+      "options": "Opzioni"
+    },
+    "docLabel": "Documento (opzionale)",
+    "docUpload": "📸 Carica il documento (puoi saltare)",
+    "docAttached": "Documento allegato",
+    "docRemove": "Rimuovi",
+    "title": "Titolo",
+    "titlePlaceholder": "Es. Rinnovo assicurazione",
+    "untitled": "Senza titolo",
+    "category": "Categoria",
+    "asset": "Per quale?",
+    "dueDate": "Data scadenza",
+    "budget": "Budget (€)",
+    "budgetHint": "Se non sai l'importo puoi lasciarlo vuoto: non entrerà nei totali.",
+    "notes": "Note",
+    "notesPlaceholder": "Appunti…"
+  },
+  "recurring": {
+    "title": "🔁 Scadenza ricorrente",
+    "subtitle": "Genera automaticamente più occorrenze",
+    "frequency": "Frequenza",
+    "preset": {
+      "monthly": "Mensile",
+      "quarterly": "Trimestrale",
+      "yearly": "Annuale",
+      "custom": "Personalizzata"
+    },
+    "summary": {
+      "repeat": "Ripete {{label}}",
+      "end": "{{label}}",
+      "auto": "continua (mostriamo fino al {{date}})",
+      "date": "fino al {{date}}",
+      "count": "per {{count}} volte",
+      "datePlaceholder": "fino alla data scelta"
+    },
+    "everySingle": "ogni {{unit}}",
+    "everyMultiple": "ogni {{count}} {{unit}}",
+    "advanced": "Avanzate",
+    "advancedHide": "Nascondi avanzate",
+    "every": "Ogni",
+    "endTitle": "Fine serie",
+    "endAuto": "Senza fine",
+    "endCount": "Dopo N",
+    "endDate": "Fino al",
+    "occurrences": "💡 Verranno create {{count}} scadenze con €{{amount}} ciascuna",
+    "occurrencesNoAmount": "💡 Verranno create {{count}} scadenze (importo da stimare)"
+  },
+  "impact": {
+    "title": "Impatto economico",
+    "thisYear": "quest'anno",
+    "nextYear": "anno {{year}}",
+    "next": "prossima {{date}}",
+    "missing": "Aggiungi una stima per calcolare l'impatto"
+  },
+  "options": {
+    "mandatoryTitle": "⚠ Scadenza inderogabile",
+    "mandatoryHint": "Es. tasse, multe, documenti legali",
+    "essentialTitle": "💡 Spesa essenziale",
+    "essentialHint": "Necessaria per vita quotidiana (bollette, spesa, affitto)",
+    "autoPayTitle": "🔄 Pagamento automatico",
+    "autoPayHint": "Domiciliazione bancaria o addebito automatico"
+  },
+  "range": {
+    "week": "Settimana",
+    "month": "Mese",
+    "quarter": "Trimestre",
+    "semester": "Semestre",
+    "year": "Anno"
+  },
+  "tabs": {
+    "timeline": "Timeline",
+    "overdue": "Scadute",
+    "done": "Completate"
+  },
+  "empty": {
+    "timelineTitle": "Nessuna scadenza in questo periodo",
+    "doneTitle": "Nessuna scadenza completata",
+    "hint": "Prova a cambiare l'intervallo temporale"
+  },
+  "filters": {
+    "all": "Tutte",
+    "mandatory": "⚠ Inderogabili",
+    "recurring": "🔁 Ricorrenti",
+    "autoPay": "🔄 Automatici",
+    "essential": "💡 Essenziali",
+    "estimate": "❔ Da stimare"
+  },
+  "stats": {
+    "title": "📈 Statistiche",
+    "tabs": {
+      "year": "📈 Anno {{year}}",
+      "future": "🔮 Prossimi 12 mesi"
+    },
+    "year": {
+      "cardTitle": "SPESE {{year}}",
+      "change": "{{direction}} {{percent}}% vs {{prevYear}} (€{{prevTotal}})",
+      "completed": "{{count}} scadenze completate"
+    },
+    "future": {
+      "cardTitle": "PROSSIMI 12 MESI",
+      "summary": "{{count}} scadenze attive • {{recurring}} ricorrenti • {{autoPay}} domiciliate"
+    },
+    "insights": {
+      "title": "💡 INSIGHTS",
+      "avgMonthly": "• Spesa media mensile: €{{amount}}",
+      "topCategory": "• Categoria più costosa: {{icon}} {{label}} ({{percentage}}%)",
+      "peakMonth": "• Picco di spesa: {{month}} (€{{amount}})",
+      "futurePeak": "• Mese più impegnativo: {{month}} (€{{amount}})",
+      "next30": "• {{count}} scadenze nei prossimi 30 giorni",
+      "futureAvg": "• Spesa media mensile prevista: €{{amount}}"
+    },
+    "breakdownTitle": "📊 Breakdown per categoria",
+    "trendTitle": "📅 Trend mensile",
+    "futureTimelineTitle": "📅 Prossimi mesi",
+    "futureTimelineCount": "{{count}}×"
+  },
+  "assetList": {
+    "title": "🏷️ I miei Asset",
+    "emptyTitle": "Nessun asset configurato",
+    "emptyHint": "Aggiungi asset alle categorie nelle impostazioni (⚙️) per tracciare spese specifiche per auto, case, etc.",
+    "itemStats": "{{deadlines}} scadenze • {{completed}} completate",
+    "total": "totale"
+  },
+  "asset": {
+    "tabs": {
+      "overview": "📋 Panoramica",
+      "deadlines": "📅 Scadenze",
+      "log": "🔧 Registro"
+    },
+    "totalSpent": "TOTALE SPESO",
+    "summary": "{{deadlines}} scadenze • {{worklogs}} lavori registrati",
+    "nextDeadlines": "📅 Prossime Scadenze",
+    "lastWork": "🔧 Ultimi Lavori",
+    "documents": "📎 Documenti ({{count}})",
+    "moreDocs": "+{{count}} altri",
+    "addDeadline": "Aggiungi scadenza per {{asset}}",
+    "deadlinesSummary": "{{total}} scadenze totali • {{completed}} completate • {{upcoming}} future",
+    "emptyDeadlinesTitle": "Nessuna scadenza",
+    "emptyDeadlinesHint": "Clicca \"+ Aggiungi\" per creare una scadenza",
+    "completed": "✓ Completata",
+    "searchPlaceholder": "🔍 Cerca nei lavori...",
+    "addWork": "Aggiungi lavoro",
+    "emptyWorkTitle": "Nessun lavoro registrato",
+    "emptyWorkHint": "Aggiungi lavori per tenere traccia di manutenzioni e interventi",
+    "noResults": "Nessun risultato per \"{{query}}\"",
+    "kmLabel": "🚗 {{km}} km",
+    "kmNext": "→ prossimo: {{km}} km"
+  },
+  "workLog": {
+    "title": "🔧 {{mode}} lavoro - {{asset}}",
+    "edit": "Modifica",
+    "new": "Nuovo",
+    "fields": {
+      "title": "Titolo *",
+      "date": "Data *",
+      "mileage": "🚗 Chilometraggio",
+      "description": "Descrizione lavori",
+      "cost": "Costo (€)"
+    },
+    "placeholders": {
+      "title": "Descrivi il lavoro",
+      "kmCurrent": "Attuale",
+      "kmNext": "Prossimo",
+      "description": "Dettagli del lavoro eseguito..."
+    },
+    "openDeadline": "📅 Apri prossima scadenza lavori",
+    "save": "Salva"
+  },
+  "card": {
+    "dueDate": "Scadenza",
+    "budget": "Budget",
+    "repeats": "Ripete",
+    "never": "Mai più",
+    "repeatPattern": "{{index}}/{{total}} (ogni {{interval}} {{unit}})",
+    "mandatory": "⚠ Scadenza inderogabile",
+    "autoPayActive": "🔄 Pagamento automatico attivo",
+    "autoCompleted": "✓ Completata automaticamente alla scadenza",
+    "skipped": "⏭ Scadenza saltata",
+    "estimateMissing": "Da stimare",
+    "estimateMissingTitle": "💡 Stima mancante",
+    "addEstimate": "Aggiungi stima"
+  },
+  "units": {
+    "day": { "one": "giorno", "other": "giorni" },
+    "week": { "one": "settimana", "other": "settimane" },
+    "month": { "one": "mese", "other": "mesi" },
+    "year": { "one": "anno", "other": "anni" }
+  },
+  "docs": {
+    "title": "📎 Documenti",
+    "none": "Nessun documento allegato",
+    "document": "Documento",
+    "receipt": "Ricevuta",
+    "defaultFilename": "documento.jpg",
+    "defaultTitle": "Documento",
+    "attachDocument": "📸 Allega documento",
+    "attachReceipt": "🧾 Allega ricevuta",
+    "deleteConfirm": "Eliminare documento?"
+  },
+  "category": {
+    "title": "Gestione categorie",
+    "generic": "Categoria generica",
+    "assetsCount_one": "{{count}} asset collegato",
+    "assetsCount_other": "{{count}} asset collegati",
+    "assetsTitle": "Assets collegati",
+    "assetsEmpty": "Nessun asset. Aggiungi il primo per specificare quale auto, casa, etc.",
+    "newAssetPlaceholder": "Nuovo asset (es. Fiat Panda)",
+    "addAsset": "+ Aggiungi",
+    "newTitle": "Nuova categoria",
+    "name": "Nome",
+    "namePlaceholder": "Es. Viaggi",
+    "emoji": "Emoji",
+    "color": "Colore",
+    "create": "Crea categoria",
+    "add": "+ Aggiungi categoria",
+    "deleteConfirm": "Eliminare questa categoria? Le scadenze associate non verranno eliminate."
+  },
+  "backup": {
+    "title": "📤 Backup & Condivisione",
+    "export": "📥 Esporta Dati (JSON)",
+    "import": "📤 Importa Dati (JSON)",
+    "exported": "✅ Dati esportati! Trovi il file in Downloads",
+    "invalidFile": "❌ File non valido",
+    "importConfirm": "Importare {{deadlines}} scadenze e {{categories}} categorie?\n\n⚠️ Questo sostituirà i dati attuali!",
+    "imported": "✅ Dati importati! La pagina si ricaricherà.",
+    "readError": "❌ Errore lettura file: {{message}}",
+    "shareTipTitle": "Per condividere:",
+    "shareTip": "Esporta → invia file via WhatsApp → destinatario fa Importa",
+    "resetConfirm": "Resettare tutti i dati? Questa azione non può essere annullata.",
+    "reset": "🗑 Reset dati (per test)"
+  },
+  "payment": {
+    "expected": "Budget previsto:",
+    "paidFull": "Pagata €{{amount}}",
+    "downpayment": "Ho pagato un acconto",
+    "differentAmount": "Importo diverso",
+    "notPaid": "Non pagata",
+    "paidAmountTitle": "Importo pagato",
+    "paidAmountLabel": "Quanto hai pagato?",
+    "confirm": "Conferma",
+    "downpaymentTitle": "Pagamento acconto",
+    "downpaymentLabel": "Quanto hai pagato ora?",
+    "remaining": "Saldo rimanente: €{{amount}}",
+    "balanceDue": "Quando scade il saldo?",
+    "createBalance": "Crea saldo"
+  },
+  "postpone": {
+    "title": "Posticipa scadenza",
+    "subtitle": "Scegli la nuova data per questa scadenza"
+  },
+  "editRecurring": {
+    "title": "Modifica ricorrenza",
+    "subtitle": "Vuoi applicare le modifiche solo a questa scadenza o anche alle altre?",
+    "warning": "Attenzione: cambiando frequenza o data, “Tutta la serie” rigenera tutte le occorrenze.",
+    "onlyThis": "Solo questa",
+    "fromThis": "Da questa in poi",
+    "all": "Tutta la serie"
+  },
+  "deleteSeries": {
+    "title": "Elimina serie ricorrente",
+    "subtitle": "Questa scadenza fa parte di una serie ({{current}}/{{total}}).",
+    "warning": "Verranno eliminate questa e le {{count}} scadenze future della serie.",
+    "note": "(Le scadenze passate già completate non verranno toccate)",
+    "confirm": "Elimina serie"
+  },
+  "toast": {
+    "autoPayCompleted": "✓ {{count}} pagamenti automatici completati",
+    "deadlineSkipped": "✓ Scadenza saltata",
+    "paidFull": "✓ Pagata €{{amount}}",
+    "notPaid": "✓ Segnata come non pagata",
+    "paidAmount": "✓ Pagata €{{amount}}",
+    "downpaymentCreated": "✓ Acconto €{{down}} - Saldo €{{remaining}} creato",
+    "deadlineDeleted": "✓ Scadenza eliminata",
+    "futureDeleted": "✓ Eliminate {{count}} scadenze future",
+    "seriesCreatedRange": "✓ Serie creata! {{outside}}/{{total}} oltre {{range}}",
+    "deadlineAddedOutside": "✓ Scadenza aggiunta! È oltre {{range}} - cambia range per vederla",
+    "seriesCreated": "✓ {{count}} scadenze create",
+    "deadlinePostponed": "✓ Scadenza posticipata",
+    "documentAttached": "✓ Documento allegato",
+    "documentUploadError": "✗ Errore upload documento",
+    "documentDeleted": "✓ Documento eliminato",
+    "shareUnsupported": "Condivisione non supportata su questo dispositivo",
+    "shareError": "Errore condivisione",
+    "worklogUpdated": "✓ Lavoro aggiornato",
+    "worklogAdded": "✓ Lavoro aggiunto al registro"
+  },
+  "budgetBar": {
+    "title": "Budget nel periodo",
+    "deadlines": "Scadenze",
+    "missing": "⚠ {{count}} da stimare"
+  },
+  "common": {
+    "deadlines": "scadenze"
+  },
+  "sync": {
+    "saving": "Salvataggio..."
+  },
+  "cat": {
+    "casa": "Casa",
+    "auto": "Auto",
+    "famiglia": "Famiglia",
+    "finanze": "Finanze",
+    "salute": "Salute",
+    "scuola": "Scuola"
+  },
+  "group": {
+    "all": "Tutte",
+    "weekThis": "Questa settimana",
+    "weekNext": "Prossima settimana",
+    "weekPlus": "Settimana +{{count}}",
+    "quarter": "Q{{num}} {{year}}",
+    "semesterFirst": "1° semestre {{year}}",
+    "semesterSecond": "2° semestre {{year}}"
+  },
+  "urgency": {
+    "done": "Fatto",
+    "overdue": "Scaduta",
+    "today": "Oggi",
+    "days": "{{count}}g"
+  },
+  "errors": {
+    "fileUpload": "Errore caricamento file"
+  }
+}

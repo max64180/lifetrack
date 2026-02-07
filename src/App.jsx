@@ -1,7 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore/lite';
+import { DEFAULT_CATS, RANGES } from "./data/constants";
+import { getCat } from "./utils/cats";
+import { compressImage } from "./utils/files";
+import i18n from "./i18n";
 
 // 🔥 Firebase Configuration
 const firebaseConfig = {
@@ -22,69 +27,17 @@ const db = getFirestore(app);
 
 
 /* ── CONFIG & DATI ─────────────────────────────────────── */
-const DEFAULT_CATS = [
-  { id:"casa",     label:"Casa",      icon:"🏠", color:"#E8855D", light:"#FFF0EC", assets:["Colico", "Monza"] },
-  { id:"auto",     label:"Auto",      icon:"🚗", color:"#5B8DD9", light:"#EBF2FC", assets:["Micro", "Sym 125"] },
-  { id:"famiglia", label:"Famiglia",  icon:"👨‍👩‍👧", color:"#C77DBA", light:"#F8EEF7", assets:[] },
-  { id:"finanze",  label:"Finanze",   icon:"💰", color:"#4CAF6E", light:"#EDFBF2", assets:[] },
-  { id:"salute",   label:"Salute",    icon:"🏥", color:"#F0B84D", light:"#FFF8ED", assets:[] },
-  { id:"scuola",   label:"Scuola",    icon:"📚", color:"#7B8BE8", light:"#F0F2FD", assets:[] },
-];
-
-const getCat = (cats, id) => cats.find(c => c.id === id) || cats[0];
-
 // Format currency without decimals (fix #1)
 const formatCurrency = (amount) => `€${Math.round(amount)}`;
+const formatNumber = (amount) => Math.round(amount).toLocaleString(getLocale());
 
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
-
-const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-const MONTHS_SHORT = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
-
-/* ── DOCUMENT HELPERS ──────────────────────────────────── */
-// Compress and convert image to base64
-async function compressImage(file, maxWidth = 800) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 /* ── DATI FAKE RIMOSSI - App vuota per uso reale ──────────────────────────────────── */
 
 
 /* ── TIME RANGES ───────────────────────────────────────── */
-const RANGES = [
-  { id:"settimana",  label:"Settimana",  days:7   },
-  { id:"mese",       label:"Mese",       days:30  },
-  { id:"trimestre",  label:"Trimestre",  days:90  },
-  { id:"semestre",   label:"Semestre",   days:180 },
-  { id:"anno",       label:"Anno",       days:365 },
-];
 
 /* ── GROUPING LOGIC ────────────────────────────────────── */
 function getGroupKey(date, range) {
@@ -93,22 +46,30 @@ function getGroupKey(date, range) {
     case "settimana": {
       const diff = Math.floor((date - TODAY) / 86400000);
       const w = Math.floor(diff / 7);
-      return { key: `w${w}`, label: w === 0 ? "Questa settimana" : w === 1 ? "Prossima settimana" : `Settimana +${w}`, order: w };
+      const label = w === 0
+        ? i18n.t("group.weekThis", "Questa settimana")
+        : w === 1
+          ? i18n.t("group.weekNext", "Prossima settimana")
+          : i18n.t("group.weekPlus", { count: w, defaultValue: `Settimana +${w}` });
+      return { key: `w${w}`, label, order: w };
     }
     case "mese":
-      return { key: `${y}-${m}`, label: `${MONTHS_IT[m]} ${y}`, order: y * 12 + m };
+      return { key: `${y}-${m}`, label: `${capitalize(date.toLocaleDateString(getLocale(), { month:"long" }))} ${y}`, order: y * 12 + m };
     case "trimestre": {
       const q = Math.floor(m / 3);
-      return { key: `${y}-Q${q}`, label: `Q${q+1} ${y}`, order: y * 4 + q };
+      return { key: `${y}-Q${q}`, label: i18n.t("group.quarter", { num: q + 1, year: y, defaultValue: `Q${q+1} ${y}` }), order: y * 4 + q };
     }
     case "semestre": {
       const s = m < 6 ? 0 : 1;
-      return { key: `${y}-S${s}`, label: s === 0 ? `1° semestre ${y}` : `2° semestre ${y}`, order: y * 2 + s };
+      const label = s === 0
+        ? i18n.t("group.semesterFirst", { year: y, defaultValue: `1° semestre ${y}` })
+        : i18n.t("group.semesterSecond", { year: y, defaultValue: `2° semestre ${y}` });
+      return { key: `${y}-S${s}`, label, order: y * 2 + s };
     }
     case "anno":
       return { key: `${y}`, label: `${y}`, order: y };
     default:
-      return { key: "all", label: "Tutte", order: 0 };
+      return { key: "all", label: i18n.t("group.all", "Tutte"), order: 0 };
   }
 }
 
@@ -123,8 +84,11 @@ function groupItems(items, range) {
 }
 
 /* ── HELPERS ───────────────────────────────────────────── */
+const getLocale = () => (i18n.language || "it").toLowerCase().startsWith("it") ? "it-IT" : "en-US";
+const capitalize = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
 function diffDays(d) { return Math.round((d - TODAY) / 86400000); }
-function fmtDate(d) { return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; }
+function fmtDate(d) { return d.toLocaleDateString(getLocale(), { day:"2-digit", month:"short" }); }
 
 function getOccurrenceDate(startDate, i, intervalVal, unit) {
   const d = new Date(startDate);
@@ -225,19 +189,20 @@ function isValidDate(d) {
 }
 
 function getUrgency(date, done) {
-  if (done) return { color:"#aaa", bg:"#f0efe8", label:"Fatto" };
+  if (done) return { color:"#aaa", bg:"#f0efe8", label:i18n.t("urgency.done", "Fatto") };
   const days = diffDays(date);
-  if (days < 0)  return { color:"#E53935", bg:"#FFEBEE", label:"Scaduta" };
-  if (days === 0) return { color:"#E53935", bg:"#FFEBEE", label:"Oggi" };
-  if (days <= 3)  return { color:"#F4511E", bg:"#FBE9E7", label:`${days}g` };
-  if (days <= 7)  return { color:"#FB8C00", bg:"#FFF3E0", label:`${days}g` };
-  return               { color:"#4CAF6E", bg:"#E8F5E9", label:`${days}g` };
+  if (days < 0)  return { color:"#E53935", bg:"#FFEBEE", label:i18n.t("urgency.overdue", "Scaduta") };
+  if (days === 0) return { color:"#E53935", bg:"#FFEBEE", label:i18n.t("urgency.today", "Oggi") };
+  if (days <= 3)  return { color:"#F4511E", bg:"#FBE9E7", label:i18n.t("urgency.days", { count: days, defaultValue: `${days}g` }) };
+  if (days <= 7)  return { color:"#FB8C00", bg:"#FFF3E0", label:i18n.t("urgency.days", { count: days, defaultValue: `${days}g` }) };
+  return               { color:"#4CAF6E", bg:"#E8F5E9", label:i18n.t("urgency.days", { count: days, defaultValue: `${days}g` }) };
 }
 
 /* ── COMPONENTI ────────────────────────────────────────── */
 
 /* Range Selector */
 function RangeSelector({ active, onChange }) {
+  const { t } = useTranslation();
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current?.querySelector(`[data-active="true"]`);
@@ -263,7 +228,7 @@ function RangeSelector({ active, onChange }) {
             transition:"background .2s, color .2s, transform .15s",
             transform: isActive ? "scale(1.04)" : "scale(1)",
             boxShadow: isActive ? "0 3px 12px rgba(0,0,0,.25)" : "none",
-          }}>{r.label}</button>
+          }}>{t(r.labelKey, { defaultValue: r.label })}</button>
         );
       })}
     </div>
@@ -272,6 +237,7 @@ function RangeSelector({ active, onChange }) {
 
 /* Budget summary bar */
 function BudgetBar({ deadlines, range, cats }) {
+  const { t } = useTranslation();
   const maxDays = RANGES.find(r => r.id === range)?.days || 30;
   const inRange = deadlines.filter(d => !d.done && diffDays(d.date) >= 0 && diffDays(d.date) <= maxDays);
   const inRangeBudgeted = inRange.filter(d => !d.estimateMissing);
@@ -290,15 +256,15 @@ function BudgetBar({ deadlines, range, cats }) {
       <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"14px 16px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:10 }}>
           <div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>Budget nel periodo</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>{t("budgetBar.title")}</div>
             <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
             {missingCount > 0 && (
-              <div style={{ marginTop:4, fontSize:10, color:"rgba(255,255,255,.45)" }}>⚠ {missingCount} da stimare</div>
+              <div style={{ marginTop:4, fontSize:10, color:"rgba(255,255,255,.45)" }}>{t("budgetBar.missing", { count: missingCount })}</div>
             )}
           </div>
           <div style={{ display:"flex", gap:10 }}>
             <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>Scadenze</div>
+              <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
               <div style={{ fontSize:16, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
             </div>
             {urgent > 0 && (
@@ -334,9 +300,31 @@ function BudgetBar({ deadlines, range, cats }) {
 
 /* Carta scadenza – ICONE PIÙ GRANDI E VISIVE */
 function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
+  const { t } = useTranslation();
   const cat = getCat(cats, item.cat);
   const urg = getUrgency(item.date, item.done);
   const days = diffDays(item.date);
+  const catLabel = t(cat.labelKey || "", { defaultValue: cat.label });
+  const unitMap = {
+    giorni: "day",
+    settimane: "week",
+    mesi: "month",
+    anni: "year",
+  };
+  const recurringUnitKey = item.recurring?.unit ? unitMap[item.recurring.unit] : null;
+  const intervalLabel = recurringUnitKey
+    ? (item.recurring.interval === 1
+        ? t(`units.${recurringUnitKey}.one`)
+        : t(`units.${recurringUnitKey}.other`))
+    : (item.recurring?.unit || "");
+  const recurringSummary = item.recurring && item.recurring.enabled
+    ? t("card.repeatPattern", {
+        index: item.recurring.index,
+        total: item.recurring.total,
+        interval: item.recurring.interval,
+        unit: intervalLabel
+      })
+    : t("card.never");
 
   return (
     <div style={{ marginBottom:8 }}>
@@ -368,7 +356,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           </div>
           <div style={{ display:"flex", gap:5, marginTop:4, alignItems:"center", flexWrap:"wrap" }}>
             <span style={{ fontSize:11, background:cat.light, color:cat.color, borderRadius:8, padding:"2px 8px", fontWeight:700, border:`1px solid ${cat.color}33` }}>
-              {cat.label}
+              {catLabel}
             </span>
             {item.asset && (
               <span 
@@ -428,23 +416,19 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 
           <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
             <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>Scadenza</div>
+              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.dueDate")}</div>
               <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginTop:2 }}>{fmtDate(item.date)}</div>
             </div>
             <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>Budget</div>
+              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.budget")}</div>
               <div style={{ fontSize:14, fontWeight:700, color: item.estimateMissing ? "#8a6d1f" : (item.budget > 0 ? "#4CAF6E" : "#aaa"), marginTop:2 }}>
-                {item.estimateMissing ? "Da stimare" : (item.budget > 0 ? `€${item.budget}` : "—")}
+                {item.estimateMissing ? t("card.estimateMissing") : (item.budget > 0 ? `€${item.budget}` : "—")}
               </div>
             </div>
             <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>Ripete</div>
+              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.repeats")}</div>
               <div style={{ fontSize:13, fontWeight:600, color:"#2d2b26", marginTop:2 }}>
-                {item.recurring && item.recurring.enabled ? (
-                  `${item.recurring.index}/${item.recurring.total} (ogni ${item.recurring.interval} ${item.recurring.unit})`
-                ) : (
-                  "Mai più"
-                )}
+                {recurringSummary}
               </div>
             </div>
           </div>
@@ -457,33 +441,33 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           
           {item.mandatory && (
             <div style={{ fontSize:11, color:"#E53935", background:"#FFF0EC", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-              ⚠ Scadenza inderogabile
+              {t("card.mandatory")}
             </div>
           )}
 
           {item.autoPay && !item.done && (
             <div style={{ fontSize:11, color:"#5B8DD9", background:"#EBF2FC", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-              🔄 Pagamento automatico attivo
+              {t("card.autoPayActive")}
             </div>
           )}
 
           {item.autoCompleted && item.done && (
             <div style={{ fontSize:11, color:"#4CAF6E", background:"#E8F5E9", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-              ✓ Completata automaticamente alla scadenza
+              {t("card.autoCompleted")}
             </div>
           )}
 
           {item.skipped && item.done && (
             <div style={{ fontSize:11, color:"#6b6961", background:"#f0efe8", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-              ⏭ Scadenza saltata
+              {t("card.skipped")}
             </div>
           )}
 
           {item.estimateMissing && !item.done && (
             <div style={{ fontSize:11, color:"#8a6d1f", background:"#FFF8ED", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-              <span>💡 Stima mancante</span>
+              <span>{t("card.estimateMissingTitle")}</span>
               <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{ padding:"6px 10px", borderRadius:8, border:"none", background:"#2d2b26", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                Aggiungi stima
+                {t("card.addEstimate")}
               </button>
             </div>
           )}
@@ -491,7 +475,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           {/* Documents section */}
           {((item.documents && item.documents.length > 0) || !item.done) && (
             <div style={{ background:"#faf9f7", borderRadius:10, padding:"8px 10px", marginBottom:12 }}>
-              <div style={{ fontSize:10, color:"#8a877f", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>📎 Documenti</div>
+              <div style={{ fontSize:10, color:"#8a877f", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{t("docs.title")}</div>
               
               {item.documents && item.documents.length > 0 ? (
                 <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:6 }}>
@@ -500,28 +484,28 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
                       <span style={{ fontSize:16 }}>{doc.type === 'receipt' ? '🧾' : '📄'}</span>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:11, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{doc.filename}</div>
-                        <div style={{ fontSize:9, color:"#8a877f" }}>{doc.type === 'receipt' ? 'Ricevuta' : 'Documento'}</div>
+                        <div style={{ fontSize:9, color:"#8a877f" }}>{doc.type === 'receipt' ? t("docs.receipt") : t("docs.document")}</div>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); onViewDoc(doc); }} style={{ padding:"3px 7px", borderRadius:6, border:"none", background:"#EBF2FC", color:"#5B8DD9", fontSize:10, fontWeight:600, cursor:"pointer" }}>Vedi</button>
-                      <button onClick={(e) => { e.stopPropagation(); if(window.confirm("Eliminare documento?")) onDeleteDoc(item.id, doc.id); }} style={{ padding:"3px 6px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer", lineHeight:1 }}>✕</button>
+                      <button onClick={(e) => { e.stopPropagation(); onViewDoc(doc); }} style={{ padding:"3px 7px", borderRadius:6, border:"none", background:"#EBF2FC", color:"#5B8DD9", fontSize:10, fontWeight:600, cursor:"pointer" }}>{t("actions.view")}</button>
+                      <button onClick={(e) => { e.stopPropagation(); if(window.confirm(t("docs.deleteConfirm"))) onDeleteDoc(item.id, doc.id); }} style={{ padding:"3px 6px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer", lineHeight:1 }}>✕</button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize:10, color:"#b5b2a8", fontStyle:"italic", marginBottom:6 }}>Nessun documento allegato</div>
+                <div style={{ fontSize:10, color:"#b5b2a8", fontStyle:"italic", marginBottom:6 }}>{t("docs.none")}</div>
               )}
               
               {/* Upload buttons - più compatti */}
               {!item.done && (
                 <label style={{ display:"block", padding:"7px", borderRadius:8, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:32 }}>
                   <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'incoming', e.target.files[0]); e.target.value=''; }} />
-                  📸 Allega documento
+                  {t("docs.attachDocument")}
                 </label>
               )}
               {item.done && (
                 <label style={{ display:"block", padding:"7px", borderRadius:8, border:"1px dashed #4CAF6E44", background:"#E8F5E9", color:"#4CAF6E", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:32 }}>
                   <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'receipt', e.target.files[0]); e.target.value=''; }} />
-                  🧾 Allega ricevuta
+                  {t("docs.attachReceipt")}
                 </label>
               )}
             </div>
@@ -531,7 +515,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
               flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
               background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-            }}>✏️ Modifica</button>
+            }}>✏️ {t("actions.edit")}</button>
           </div>
 
           <div style={{ display:"flex", gap:8 }}>
@@ -540,14 +524,14 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               <button onClick={(e) => { e.stopPropagation(); onPostpone(item.id); }} style={{
                 flex:1, padding:"11px", borderRadius:10, border:"none",
                 background:"#FB8C00", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-              }}>↻ Posticipa</button>
+              }}>↻ {t("actions.postpone")}</button>
             )}
 
             {item.recurring && item.recurring.enabled && !item.done && (
               <button onClick={(e) => { e.stopPropagation(); onSkip(item.id); }} style={{
                 flex:1, padding:"11px", borderRadius:10, border:"none",
                 background:"#edecea", color:"#6b6961", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-              }}>⏭ Salta</button>
+              }}>⏭ {t("actions.skip")}</button>
             )}
             
             <button onClick={(e) => { e.stopPropagation(); onComplete(item.id); }} style={{
@@ -555,12 +539,12 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               background: item.done ? "#edecea" : cat.color,
               color: item.done ? "#6b6961" : "#fff",
               fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-            }}>{item.done ? "↩ Riattiva" : "✓ Completata"}</button>
+            }}>{item.done ? `↩ ${t("actions.reactivate")}` : `✓ ${t("actions.complete")}`}</button>
             
             <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} style={{
               flex:1, padding:"11px", borderRadius:10, border:"none",
               background:"#FFF0EC", color:"#E53935", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-            }}>Elimina</button>
+            }}>{t("actions.delete")}</button>
           </div>
         </div>
       )}
@@ -569,7 +553,8 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 }
 
 /* Smart Category Filter with asset sub-filters */
-function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, maxDays, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterEssential, setFilterEssential }) {
+function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, maxDays, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
+  const { t } = useTranslation();
   // Count deadlines per category (only active timeline deadlines)
   const catCounts = useMemo(() => {
     const counts = {};
@@ -617,7 +602,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           flexShrink:0, borderRadius:18, padding:"6px 14px", border:"none", cursor:"pointer", fontSize:12, fontWeight:700,
           background: filterCat === null ? "#2d2b26" : "#edecea",
           color: filterCat === null ? "#fff" : "#6b6961", minHeight:36,
-        }}>Tutte</button>
+        }}>{t("filters.all")}</button>
         
         {sortedCats.map(c => {
           const count = catCounts[c.id] || 0;
@@ -631,7 +616,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
               border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
               position:"relative",
             }}>
-              {c.icon} {c.label}
+              {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
               <span style={{ 
                 marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
                 background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
@@ -659,7 +644,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
                 background: filterAsset === null ? cat.color : "rgba(255,255,255,.7)",
                 color: filterAsset === null ? "#fff" : "#6b6961",
                 minHeight:32,
-              }}>Tutti</button>
+              }}>{t("filters.all")}</button>
               
               {cat.assets.map(asset => {
                 // Count deadlines per asset
@@ -695,7 +680,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           color: filterMandatory ? "#E53935" : "#8a877f",
           border: `1.5px solid ${filterMandatory ? "#E5393555" : "transparent"}`,
           minHeight:32,
-        }}>⚠ Inderogabili</button>
+        }}>{t("filters.mandatory")}</button>
 
         <button onClick={() => setFilterRecurring(!filterRecurring)} style={{
           flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
@@ -703,7 +688,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           color: filterRecurring ? "#5B8DD9" : "#8a877f",
           border: `1.5px solid ${filterRecurring ? "#5B8DD955" : "transparent"}`,
           minHeight:32,
-        }}>🔁 Ricorrenti</button>
+        }}>{t("filters.recurring")}</button>
 
         <button onClick={() => setFilterAutoPay(!filterAutoPay)} style={{
           flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
@@ -711,7 +696,7 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           color: filterAutoPay ? "#5B8DD9" : "#8a877f",
           border: `1.5px solid ${filterAutoPay ? "#5B8DD955" : "transparent"}`,
           minHeight:32,
-        }}>🔄 Automatici</button>
+        }}>{t("filters.autoPay")}</button>
 
         <button onClick={() => setFilterEssential(!filterEssential)} style={{
           flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
@@ -719,7 +704,15 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           color: filterEssential ? "#4CAF6E" : "#8a877f",
           border: `1.5px solid ${filterEssential ? "#4CAF6E55" : "transparent"}`,
           minHeight:32,
-        }}>💡 Essenziali</button>
+        }}>{t("filters.essential")}</button>
+
+        <button onClick={() => setFilterEstimateMissing(!filterEstimateMissing)} style={{
+          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
+          background: filterEstimateMissing ? "#FFF8ED" : "#edecea",
+          color: filterEstimateMissing ? "#8a6d1f" : "#8a877f",
+          border: `1.5px solid ${filterEstimateMissing ? "#E6C97A55" : "transparent"}`,
+          minHeight:32,
+        }}>{t("filters.estimate")}</button>
       </div>
     </div>
   );
@@ -762,6 +755,7 @@ function GroupHeader({ group, cats }) {
 /* ── ADD SHEET CON ASSET PICKER ────────────────────────── */
 /* ── PAYMENT FLOW MODAL ────────────────────────────────── */
 function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmount, downpaymentDate, setDownpaymentDate, onChangeStep }) {
+  const { t } = useTranslation();
   if (!open || !item) return null;
 
   return (
@@ -779,40 +773,40 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
         {step === 'choose' && (
           <>
             <h3 style={{ margin:"0 0 8px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{item.title}</h3>
-            <div style={{ fontSize:13, color:"#8a877f", marginBottom:20 }}>Budget previsto: <strong>€{item.budget}</strong></div>
+            <div style={{ fontSize:13, color:"#8a877f", marginBottom:20 }}>{t("payment.expected")} <strong>€{item.budget}</strong></div>
 
             {/* Big button: Pagata per intero */}
             <button onClick={() => onConfirm('full')} style={{
               width:"100%", padding:"16px", borderRadius:14, border:"none",
               background:"#4CAF6E", color:"#fff", cursor:"pointer", fontSize:16, fontWeight:700,
               marginBottom:12, boxShadow:"0 4px 14px rgba(76,175,110,.25)", minHeight:56,
-            }}>✓ Pagata €{item.budget}</button>
+            }}>✓ {t("payment.paidFull", { amount: item.budget })}</button>
 
             {/* Secondary options */}
             <button onClick={() => onChangeStep('downpayment')} style={{
               width:"100%", padding:"14px", borderRadius:12, border:"2px solid #e8e6e0",
               background:"#fff", color:"#2d2b26", cursor:"pointer", fontSize:14, fontWeight:600,
               marginBottom:8, minHeight:48,
-            }}>💰 Ho pagato un acconto</button>
+            }}>💰 {t("payment.downpayment")}</button>
 
             <button onClick={() => onChangeStep('partial')} style={{
               width:"100%", padding:"14px", borderRadius:12, border:"2px solid #e8e6e0",
               background:"#fff", color:"#2d2b26", cursor:"pointer", fontSize:14, fontWeight:600,
               marginBottom:8, minHeight:48,
-            }}>✏ Importo diverso</button>
+            }}>✏ {t("payment.differentAmount")}</button>
 
             <button onClick={() => onConfirm('not_paid')} style={{
               width:"100%", padding:"14px", borderRadius:12, border:"2px solid #FBE9E7",
               background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:14, fontWeight:600,
               minHeight:48,
-            }}>✗ Non pagata</button>
+            }}>✗ {t("payment.notPaid")}</button>
           </>
         )}
 
         {step === 'partial' && (
           <>
-            <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>Importo pagato</h3>
-            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>Quanto hai pagato?</label>
+            <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t("payment.paidAmountTitle")}</h3>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>{t("payment.paidAmountLabel")}</label>
             <input
               type="number"
               value={amount}
@@ -822,17 +816,17 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
               style={{ width:"100%", padding:"14px 16px", borderRadius:12, border:"2px solid #edecea", fontSize:18, fontWeight:700, outline:"none", marginBottom:20, textAlign:"center" }}
             />
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>Annulla</button>
-              <button onClick={() => onConfirm('partial')} style={{ flex:2, padding:"14px", borderRadius:12, border:"none", background:"#4CAF6E", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>Conferma</button>
+              <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
+              <button onClick={() => onConfirm('partial')} style={{ flex:2, padding:"14px", borderRadius:12, border:"none", background:"#4CAF6E", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>{t("payment.confirm")}</button>
             </div>
           </>
         )}
 
         {step === 'downpayment' && (
           <>
-            <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>Pagamento acconto</h3>
+            <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t("payment.downpaymentTitle")}</h3>
             
-            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>Quanto hai pagato ora?</label>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>{t("payment.downpaymentLabel")}</label>
             <input
               type="number"
               value={amount}
@@ -844,11 +838,11 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
 
             {amount && Number(amount) < item.budget && (
               <div style={{ background:"#EBF2FC", border:"1px solid #5B8DD966", borderRadius:10, padding:"10px 12px", marginBottom:16 }}>
-                <div style={{ fontSize:12, color:"#5B8DD9", fontWeight:600 }}>Saldo rimanente: €{item.budget - Number(amount)}</div>
+                <div style={{ fontSize:12, color:"#5B8DD9", fontWeight:600 }}>{t("payment.remaining", { amount: item.budget - Number(amount) })}</div>
               </div>
             )}
 
-            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>Quando scade il saldo?</label>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6, textTransform:"uppercase" }}>{t("payment.balanceDue")}</label>
             <input
               type="date"
               value={downpaymentDate}
@@ -857,7 +851,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
             />
 
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>Annulla</button>
+              <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
               <button 
                 onClick={() => onConfirm('downpayment')} 
                 disabled={!amount || !downpaymentDate || Number(amount) >= item.budget}
@@ -868,7 +862,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
                   fontSize:14, fontWeight:700,
                   opacity: (!amount || !downpaymentDate || Number(amount) >= item.budget) ? 0.5 : 1
                 }}
-              >Crea saldo</button>
+              >{t("payment.createBalance")}</button>
             </div>
           </>
         )}
@@ -878,6 +872,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
 }
 
 function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem }) {
+  const { t, i18n } = useTranslation();
   const [step, setStep] = useState(0); // 0 doc, 1 base, 2 options
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({ 
@@ -952,7 +947,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const selectedCat = getCat(cats, form.cat);
   const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
-  const steps = ["Documento", "Dettagli", "Ricorrenza", "Opzioni"];
+  const steps = [
+    t("wizard.step.document"),
+    t("wizard.step.details"),
+    t("wizard.step.recurring"),
+    t("wizard.step.options")
+  ];
   const lastStep = steps.length - 1;
   const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
   const count = Math.max(1, parseInt(form.recurringCount) || 1);
@@ -970,33 +970,38 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     : null;
   const occurrences = schedule ? schedule.dates : [];
   const totalOccurrences = schedule ? schedule.total : 0;
-  const autoEndLabel = getAutoEndDate().toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
-  const unitSingular = ({
-    giorni: "giorno",
-    settimane: "settimana",
-    mesi: "mese",
-    anni: "anno",
-  })[form.recurringUnit] || form.recurringUnit;
+  const autoEndLabel = getAutoEndDate().toLocaleDateString(getLocale(), { day:'2-digit', month:'short', year:'numeric' });
+  const lang = (i18n.language || "it").toLowerCase().startsWith("it") ? "it" : "en";
+  const unitMap = {
+    giorni: { it:["giorno","giorni"], en:["day","days"] },
+    settimane: { it:["settimana","settimane"], en:["week","weeks"] },
+    mesi: { it:["mese","mesi"], en:["month","months"] },
+    anni: { it:["anno","anni"], en:["year","years"] },
+  };
+  const unitLabels = unitMap[form.recurringUnit] || { it:[form.recurringUnit, form.recurringUnit], en:[form.recurringUnit, form.recurringUnit] };
+  const unitLabel = interval === 1 ? unitLabels[lang][0] : unitLabels[lang][1];
   const frequencyLabel = form.recurringPreset === "mensile"
-    ? "ogni mese"
+    ? t("recurring.everySingle", { unit: lang === "it" ? "mese" : "month" })
     : form.recurringPreset === "trimestrale"
-      ? "ogni 3 mesi"
+      ? t("recurring.everyMultiple", { count: 3, unit: lang === "it" ? "mesi" : "months" })
       : form.recurringPreset === "annuale"
-        ? "ogni anno"
-        : (interval === 1 ? `ogni ${unitSingular}` : `ogni ${interval} ${form.recurringUnit}`);
+        ? t("recurring.everySingle", { unit: lang === "it" ? "anno" : "year" })
+        : (interval === 1
+          ? t("recurring.everySingle", { unit: unitLabel })
+          : t("recurring.everyMultiple", { count: interval, unit: unitLabel }));
   const endDateLabel = form.recurringEndDate
-    ? new Date(form.recurringEndDate + "T00:00:00").toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' })
+    ? new Date(form.recurringEndDate + "T00:00:00").toLocaleDateString(getLocale(), { day:'2-digit', month:'short', year:'numeric' })
     : "";
   const endSummary = form.recurringEndMode === "auto"
-    ? `continua (mostriamo fino al ${autoEndLabel})`
+    ? t("recurring.summary.auto", { date: autoEndLabel })
     : form.recurringEndMode === "date"
-      ? (endDateLabel ? `fino al ${endDateLabel}` : "fino alla data scelta")
-      : `per ${count} volte`;
+      ? (endDateLabel ? t("recurring.summary.date", { date: endDateLabel }) : t("recurring.summary.datePlaceholder"))
+      : t("recurring.summary.count", { count });
   const presetOptions = [
-    { id:"mensile", label:"Mensile", interval:1, unit:"mesi" },
-    { id:"trimestrale", label:"Trimestrale", interval:3, unit:"mesi" },
-    { id:"annuale", label:"Annuale", interval:1, unit:"anni" },
-    { id:"custom", label:"Personalizzata" },
+    { id:"mensile", label: t("recurring.preset.monthly"), interval:1, unit:"mesi" },
+    { id:"trimestrale", label: t("recurring.preset.quarterly"), interval:3, unit:"mesi" },
+    { id:"annuale", label: t("recurring.preset.yearly"), interval:1, unit:"anni" },
+    { id:"custom", label: t("recurring.preset.custom") },
   ];
 
   const preview = (() => {
@@ -1036,7 +1041,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
         <h3 style={{ margin:"0 0 6px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
-          {editingItem ? "Modifica scadenza" : "Nuova scadenza"}
+          {editingItem ? t("wizard.editTitle") : t("wizard.newTitle")}
         </h3>
         <div style={{ display:"flex", gap:6, marginBottom:12 }}>
           {steps.map((s, i) => (
@@ -1051,7 +1056,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             Step {step + 1} · {steps[step]}
           </div>
           <div style={{ fontSize:11, color:"#b5b2a8" }}>
-            {form.title ? form.title : "Senza titolo"}
+            {form.title ? form.title : t("wizard.untitled")}
             {form.date ? ` · ${form.date}` : ""}
             {form.budget ? ` · €${form.budget}` : ""}
           </div>
@@ -1059,7 +1064,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         {step === 0 && (
           <>
-            <label style={lbl}>Documento (opzionale)</label>
+            <label style={lbl}>{t("wizard.docLabel")}</label>
             <div style={{ background:"#faf9f7", borderRadius:12, padding:"10px 12px", border:"1px solid #edecea" }}>
               {form.documents.length === 0 ? (
                 <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
@@ -1069,20 +1074,20 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                         const base64 = await compressImage(e.target.files[0]);
                         const doc = { id: Date.now(), type: 'incoming', base64, filename: e.target.files[0].name, uploadDate: new Date().toISOString() };
                         set("documents", [doc]);
-                      } catch(err) { alert("Errore caricamento file"); }
+                      } catch(err) { alert(t("errors.fileUpload")); }
                       e.target.value = '';
                     }
                   }} />
-                  📸 Carica il documento (puoi saltare)
+                  {t("wizard.docUpload")}
                 </label>
               ) : (
                 <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
                   <span style={{ fontSize:16 }}>📄</span>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
-                    <div style={{ fontSize:10, color:"#8a877f" }}>Documento allegato</div>
+                    <div style={{ fontSize:10, color:"#8a877f" }}>{t("wizard.docAttached")}</div>
                   </div>
-                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>Rimuovi</button>
+                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>{t("wizard.docRemove")}</button>
                 </div>
               )}
             </div>
@@ -1091,10 +1096,10 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         {step === 1 && (
           <>
-            <label style={lbl}>Titolo</label>
-            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Es. Rinnovo assicurazione" style={inp} autoFocus/>
+            <label style={lbl}>{t("wizard.title")}</label>
+            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp} autoFocus/>
 
-            <label style={lbl}>Categoria</label>
+            <label style={lbl}>{t("wizard.category")}</label>
             <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
@@ -1104,13 +1109,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   fontWeight: form.cat === c.id ? 700 : 500,
                   color: form.cat === c.id ? c.color : "#6b6961",
                   minHeight:44,
-                }}>{c.icon} {c.label}</button>
+                }}>{c.icon} {t(c.labelKey || "", { defaultValue: c.label })}</button>
               ))}
             </div>
 
             {hasAssets && (
               <>
-                <label style={lbl}>Per quale?</label>
+                <label style={lbl}>{t("wizard.asset")}</label>
                 <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
                   {selectedCat.assets.map(a => (
                     <button key={a} onClick={() => set("asset", a)} style={{
@@ -1126,15 +1131,15 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               </>
             )}
 
-            <label style={lbl}>Data scadenza</label>
+            <label style={lbl}>{t("wizard.dueDate")}</label>
             <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
 
             <div style={{ display:"flex", gap:10 }}>
               <div style={{ flex:1 }}>
-                <label style={lbl}>Budget (€)</label>
+                <label style={lbl}>{t("wizard.budget")}</label>
                 <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="0" style={inp}/>
                 <div style={{ fontSize:11, color:"#8a877f", marginTop:6 }}>
-                  Se non sai l'importo puoi lasciarlo vuoto: non entrerà nei totali.
+                  {t("wizard.budgetHint")}
                 </div>
               </div>
             </div>
@@ -1152,14 +1157,14 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
                 />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>🔁 Scadenza ricorrente</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Genera automaticamente più occorrenze</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{t("recurring.title")}</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("recurring.subtitle")}</div>
                 </div>
               </label>
 
               {form.recurringEnabled && (
                 <div style={{ paddingLeft:4 }}>
-                  <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:6 }}>Frequenza</div>
+                  <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:6 }}>{t("recurring.frequency")}</div>
                   <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
                     {presetOptions.map(p => {
                       const active = form.recurringPreset === p.id;
@@ -1188,7 +1193,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   </div>
 
                   <div style={{ background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"8px 10px", fontSize:11, color:"#6b6961" }}>
-                    <div style={{ fontWeight:700, color:"#2d2b26" }}>Ripete {frequencyLabel}</div>
+                    <div style={{ fontWeight:700, color:"#2d2b26" }}>{t("recurring.summary.repeat", { label: frequencyLabel })}</div>
                     <div style={{ marginTop:4, color:"#8a877f" }}>{endSummary}</div>
                   </div>
 
@@ -1196,14 +1201,14 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                     onClick={() => setShowAdvanced(v => !v)}
                     style={{ marginTop:10, background:"transparent", border:"none", color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer" }}
                   >
-                    {showAdvanced ? "Nascondi avanzate" : "Avanzate"}
+                    {showAdvanced ? t("recurring.advancedHide") : t("recurring.advanced")}
                   </button>
 
                   {showAdvanced && (
                     <div style={{ marginTop:8, background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"10px" }}>
                       {form.recurringPreset === "custom" && (
                         <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Ogni</label>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.every")}</label>
                           <input 
                             type="number" 
                             value={form.recurringInterval} 
@@ -1225,12 +1230,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                         </div>
                       )}
 
-                      <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, display:"block", marginBottom:6 }}>Fine serie</label>
+                      <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, display:"block", marginBottom:6 }}>{t("recurring.endTitle")}</label>
                       <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
                         {[
-                          { id:"auto", label:"Senza fine" },
-                          { id:"count", label:"Dopo N" },
-                          { id:"date", label:"Fino al" },
+                          { id:"auto", label:t("recurring.endAuto") },
+                          { id:"count", label:t("recurring.endCount") },
+                          { id:"date", label:t("recurring.endDate") },
                         ].map(opt => {
                           const active = form.recurringEndMode === opt.id;
                           return (
@@ -1251,7 +1256,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
                       {form.recurringEndMode === "count" && (
                         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Ripetizioni</label>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.endCount")}</label>
                           <input 
                             type="number" 
                             value={form.recurringCount} 
@@ -1266,7 +1271,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
                       {form.recurringEndMode === "date" && (
                         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Fino al</label>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.endDate")}</label>
                           <input 
                             type="date" 
                             value={form.recurringEndDate}
@@ -1280,8 +1285,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
                   <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
                     {budgetMissing
-                      ? `💡 Verranno create ${totalOccurrences || count} scadenze (importo da stimare)`
-                      : `💡 Verranno create ${totalOccurrences || count} scadenze con €${form.budget} ciascuna`
+                      ? t("recurring.occurrencesNoAmount", { count: totalOccurrences || count })
+                      : t("recurring.occurrences", { count: totalOccurrences || count, amount: form.budget })
                     }
                   </div>
                 </div>
@@ -1291,26 +1296,26 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             {preview && (
               <div style={{ marginTop:12, background:"#2d2b26", color:"#fff", borderRadius:10, padding:"10px 12px" }}>
                 <div style={{ fontSize:10, opacity:.6, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
-                  Impatto economico
+                  {t("impact.title")}
                 </div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:6, gap:12 }}>
                   <div>
                     <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.thisYearTotal)}</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>quest'anno · {preview.thisYearCount} scadenze</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>{t("impact.thisYear")} · {preview.thisYearCount} {t("common.deadlines")}</div>
                   </div>
                   <div style={{ textAlign:"right" }}>
                     <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.nextYearTotal)}</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>anno {preview.nextYear} · {preview.nextYearCount} scadenze</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>{t("impact.nextYear", { year: preview.nextYear })} · {preview.nextYearCount} {t("common.deadlines")}</div>
                     {preview.next && (
                       <div style={{ fontSize:10, opacity:.6 }}>
-                        prossima {preview.next.toLocaleDateString('it-IT', { day:'2-digit', month:'short' })}
+                        {t("impact.next", { date: preview.next.toLocaleDateString(lang === "it" ? "it-IT" : "en-US", { day:'2-digit', month:'short' }) })}
                       </div>
                     )}
                   </div>
                 </div>
                 {budgetMissing && (
                   <div style={{ marginTop:6, fontSize:10, opacity:.6 }}>
-                    Aggiungi una stima per calcolare l'impatto
+                    {t("impact.missing")}
                   </div>
                 )}
               </div>
@@ -1333,8 +1338,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   style={{ width:20, height:20, cursor:"pointer", accentColor:"#E53935" }}
                 />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#E53935" }}>⚠ Scadenza inderogabile</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Es. tasse, multe, documenti legali</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#E53935" }}>{t("options.mandatoryTitle")}</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.mandatoryHint")}</div>
                 </div>
               </label>
             </div>
@@ -1349,8 +1354,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   style={{ width:20, height:20, cursor: form.mandatory ? "not-allowed" : "pointer", accentColor:"#4CAF6E", opacity: form.mandatory ? 0.5 : 1 }}
                 />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#4CAF6E" }}>💡 Spesa essenziale</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Necessaria per vita quotidiana (bollette, spesa, affitto)</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#4CAF6E" }}>{t("options.essentialTitle")}</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.essentialHint")}</div>
                 </div>
               </label>
             </div>
@@ -1364,22 +1369,22 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
                 />
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#5B8DD9" }}>🔄 Pagamento automatico</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Domiciliazione bancaria o addebito automatico</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#5B8DD9" }}>{t("options.autoPayTitle")}</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.autoPayHint")}</div>
                 </div>
               </label>
             </div>
 
-            <label style={lbl}>Note</label>
-            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Appunti…" rows={2} style={{ ...inp, resize:"vertical" }}/>
+            <label style={lbl}>{t("wizard.notes")}</label>
+            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} placeholder={t("wizard.notesPlaceholder")} rows={2} style={{ ...inp, resize:"vertical" }}/>
           </>
         )}
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
-          <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:48 }}>Annulla</button>
+          <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:48 }}>{t("actions.cancel")}</button>
           {step > 0 && (
             <button onClick={() => setStep(s => Math.max(0, s - 1))} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#2d2b26", minHeight:48 }}>
-              Indietro
+              {t("actions.back")}
             </button>
           )}
           {step < lastStep ? (
@@ -1387,7 +1392,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               {step === 0 && (
                 <button onClick={() => setStep(s => Math.min(lastStep, s + 1))} style={{
                   flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", color:"#6b6961", cursor:"pointer", fontSize:14, fontWeight:600, minHeight:48
-                }}>Salta</button>
+                }}>{t("actions.skip")}</button>
               )}
               <button
                 onClick={() => {
@@ -1405,7 +1410,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   opacity: (step === 1 && !canProceedDetails) ? 0.6 : 1,
                 }}
               >
-                Avanti
+                {t("actions.next")}
               </button>
             </>
           ) : (
@@ -1481,7 +1486,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               fontSize:14, fontWeight:700, minHeight:48,
               boxShadow:"0 4px 14px rgba(0,0,0,.2)",
               opacity: !canProceedDetails ? 0.6 : 1,
-            }}>Aggiungi</button>
+            }}>{t("actions.add")}</button>
           )}
         </div>
       </div>
@@ -1496,6 +1501,7 @@ const inp = { width:"100%", padding:"12px 14px", borderRadius:12, border:"2px so
 /* ── STATISTICHE SHEET ──────────────────────────────────── */
 /* ── STATISTICHE SHEET (NUOVA VERSIONE AGGREGATA) ──────────────────────────────────── */
 function StatsSheet({ open, onClose, deadlines, cats }) {
+  const { t } = useTranslation();
   const [view, setView] = useState("anno"); // anno, futuro
   
   if (!open) return null;
@@ -1548,7 +1554,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
     const monthDeadlines = currentYearDeadlines.filter(d => d.date >= monthStart && d.date <= monthEnd);
     const monthTotal = monthDeadlines.reduce((sum, d) => sum + d.budget, 0);
     monthlyTrend.push({
-      month: monthStart.toLocaleDateString('it-IT', { month: 'short' }),
+      month: monthStart.toLocaleDateString(getLocale(), { month: 'short' }),
       total: monthTotal
     });
   }
@@ -1593,7 +1599,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
     const monthTotal = monthDeadlines.reduce((sum, d) => sum + d.budget, 0);
     
     futureMonthlyTrend.push({
-      month: monthStart.toLocaleDateString('it-IT', { month: 'short', year: 'numeric' }),
+      month: monthStart.toLocaleDateString(getLocale(), { month: 'short', year: 'numeric' }),
       total: monthTotal,
       count: monthDeadlines.length
     });
@@ -1623,21 +1629,21 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
         
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>📈 Statistiche</h2>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{t("stats.title")}</h2>
           <button onClick={onClose} style={{ fontSize:24, background:"none", border:"none", cursor:"pointer", color:"#8a877f", padding:0 }}>×</button>
         </div>
 
         {/* Tabs Anno/Futuro */}
         <div style={{ display:"flex", gap:8, marginBottom:20 }}>
           {[
-            { id:"anno", label:"📈 Anno " + currentYear },
-            { id:"futuro", label:"🔮 Prossimi 12 mesi" }
-          ].map(t => (
-            <button key={t.id} onClick={() => setView(t.id)} style={{
+            { id:"anno", label: t("stats.tabs.year", { year: currentYear }) },
+            { id:"futuro", label: t("stats.tabs.future") }
+          ].map(option => (
+            <button key={option.id} onClick={() => setView(option.id)} style={{
               flex:1, padding:"10px", borderRadius:10, border:"none", cursor:"pointer", fontSize:12, fontWeight:700,
-              background: view === t.id ? "#2d2b26" : "#f5f4f0",
-              color: view === t.id ? "#fff" : "#6b6961",
-            }}>{t.label}</button>
+              background: view === option.id ? "#2d2b26" : "#f5f4f0",
+              color: view === option.id ? "#fff" : "#6b6961",
+            }}>{option.label}</button>
           ))}
         </div>
 
@@ -1646,39 +1652,51 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
           <div>
             {/* Card principale */}
             <div style={{ background:"linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius:16, padding:"20px", marginBottom:20, color:"#fff" }}>
-              <div style={{ fontSize:11, fontWeight:700, opacity:0.8, marginBottom:4 }}>SPESE {currentYear}</div>
-              <div style={{ fontSize:36, fontWeight:800, fontFamily:"'Sora',sans-serif", marginBottom:8 }}>€{currentYearTotal.toLocaleString()}</div>
+              <div style={{ fontSize:11, fontWeight:700, opacity:0.8, marginBottom:4 }}>
+                {t("stats.year.cardTitle", { year: currentYear })}
+              </div>
+              <div style={{ fontSize:36, fontWeight:800, fontFamily:"'Sora',sans-serif", marginBottom:8 }}>€{formatNumber(currentYearTotal)}</div>
               {yearChange !== null && (
                 <div style={{ fontSize:13, opacity:0.9 }}>
-                  {yearChange >= 0 ? "↑" : "↓"} {Math.abs(yearChange)}% vs {previousYear} (€{prevYearTotal.toLocaleString()})
+                  {t("stats.year.change", { direction: yearChange >= 0 ? "↑" : "↓", percent: Math.abs(yearChange), prevYear: previousYear, prevTotal: formatNumber(prevYearTotal) })}
                 </div>
               )}
-              <div style={{ fontSize:12, marginTop:8, opacity:0.8 }}>{currentYearCount} scadenze completate</div>
+              <div style={{ fontSize:12, marginTop:8, opacity:0.8 }}>{t("stats.year.completed", { count: currentYearCount })}</div>
             </div>
 
             {/* Insights */}
             <div style={{ background:"#FFF8ED", borderRadius:12, padding:"14px 16px", marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#F0B84D", marginBottom:8 }}>💡 INSIGHTS</div>
-              <div style={{ fontSize:12, color:"#2d2b26", lineHeight:1.6 }}>
-                • Spesa media mensile: <strong>€{avgMonthly.toFixed(0)}</strong><br/>
-                {topCat && `• Categoria più costosa: ${topCat.cat.icon} ${topCat.cat.label} (${topCat.percentage}%)`}<br/>
-                {peakMonth && `• Picco di spesa: ${peakMonth.month} (€${Math.round(peakMonth.total)})`}
+              <div style={{ fontSize:11, fontWeight:700, color:"#F0B84D", marginBottom:8 }}>{t("stats.insights.title")}</div>
+              <div style={{ fontSize:12, color:"#2d2b26", lineHeight:1.6, display:"flex", flexDirection:"column", gap:4 }}>
+                <div>{t("stats.insights.avgMonthly", { amount: formatNumber(avgMonthly) })}</div>
+                {topCat && (
+                  <div>
+                    {t("stats.insights.topCategory", {
+                      icon: topCat.cat.icon,
+                      label: t(topCat.cat.labelKey || "", { defaultValue: topCat.cat.label }),
+                      percentage: topCat.percentage
+                    })}
+                  </div>
+                )}
+                {peakMonth && (
+                  <div>{t("stats.insights.peakMonth", { month: peakMonth.month, amount: formatNumber(peakMonth.total) })}</div>
+                )}
               </div>
             </div>
 
             {/* Breakdown categorie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>📊 Breakdown per categoria</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("stats.breakdownTitle")}</div>
               {categoryBreakdown.map(({ cat, total, count, percentage }) => (
                 <div key={cat.id} style={{ marginBottom:10 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:18 }}>{cat.icon}</span>
-                      <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{cat.label}</span>
+                      <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</span>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:11, color:"#8a877f" }}>{count}</span>
-                      <span style={{ fontSize:15, fontWeight:800, color:cat.color }}>€{total}</span>
+                      <span style={{ fontSize:15, fontWeight:800, color:cat.color }}>€{formatNumber(total)}</span>
                     </div>
                   </div>
                   <div style={{ background:"#f5f4f0", borderRadius:8, height:8, overflow:"hidden" }}>
@@ -1691,7 +1709,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
 
             {/* Trend mensile */}
             <div>
-              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>📅 Trend mensile</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("stats.trendTitle")}</div>
               {monthlyTrend.filter(m => m.total > 0).map(({ month, total }) => (
                 <div key={month} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
                   <div style={{ width:35, fontSize:11, color:"#6b6961", fontWeight:600 }}>{month}</div>
@@ -1705,7 +1723,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
                       alignItems:"center",
                       paddingLeft:8
                     }}>
-                      <span style={{ fontSize:11, fontWeight:700, color:"#fff" }}>€{total}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:"#fff" }}>€{formatNumber(total)}</span>
                     </div>
                   </div>
                 </div>
@@ -1719,36 +1737,38 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
           <div>
             {/* Card principale */}
             <div style={{ background:"linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius:16, padding:"20px", marginBottom:20, color:"#fff" }}>
-              <div style={{ fontSize:11, fontWeight:700, opacity:0.8, marginBottom:4 }}>PROSSIMI 12 MESI</div>
-              <div style={{ fontSize:36, fontWeight:800, fontFamily:"'Sora',sans-serif", marginBottom:8 }}>€{futureTotal.toLocaleString()}</div>
+              <div style={{ fontSize:11, fontWeight:700, opacity:0.8, marginBottom:4 }}>{t("stats.future.cardTitle")}</div>
+              <div style={{ fontSize:36, fontWeight:800, fontFamily:"'Sora',sans-serif", marginBottom:8 }}>€{formatNumber(futureTotal)}</div>
               <div style={{ fontSize:12, marginTop:8, opacity:0.9 }}>
-                {futureCount} scadenze attive • {futureRecurring} ricorrenti • {futureAutoPay} domiciliate
+                {t("stats.future.summary", { count: futureCount, recurring: futureRecurring, autoPay: futureAutoPay })}
               </div>
             </div>
 
             {/* Insights */}
             <div style={{ background:"#EBF2FC", borderRadius:12, padding:"14px 16px", marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#5B8DD9", marginBottom:8 }}>💡 INSIGHTS</div>
-              <div style={{ fontSize:12, color:"#2d2b26", lineHeight:1.6 }}>
-                {futurePeakMonth && `• Mese più impegnativo: ${futurePeakMonth.month} (€${Math.round(futurePeakMonth.total)})`}<br/>
-                • {next30DaysCount} scadenze nei prossimi 30 giorni<br/>
-                • Spesa media mensile prevista: <strong>€{(futureTotal / 12).toFixed(0)}</strong>
+              <div style={{ fontSize:11, fontWeight:700, color:"#5B8DD9", marginBottom:8 }}>{t("stats.insights.title")}</div>
+              <div style={{ fontSize:12, color:"#2d2b26", lineHeight:1.6, display:"flex", flexDirection:"column", gap:4 }}>
+                {futurePeakMonth && (
+                  <div>{t("stats.insights.futurePeak", { month: futurePeakMonth.month, amount: formatNumber(futurePeakMonth.total) })}</div>
+                )}
+                <div>{t("stats.insights.next30", { count: next30DaysCount })}</div>
+                <div>{t("stats.insights.futureAvg", { amount: formatNumber(futureTotal / 12) })}</div>
               </div>
             </div>
 
             {/* Breakdown categorie */}
             <div style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>📊 Breakdown per categoria</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("stats.breakdownTitle")}</div>
               {futureCategoryBreakdown.map(({ cat, total, count, percentage }) => (
                 <div key={cat.id} style={{ marginBottom:10 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:18 }}>{cat.icon}</span>
-                      <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{cat.label}</span>
+                      <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</span>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:11, color:"#8a877f" }}>{count}</span>
-                      <span style={{ fontSize:15, fontWeight:800, color:cat.color }}>€{total}</span>
+                      <span style={{ fontSize:15, fontWeight:800, color:cat.color }}>€{formatNumber(total)}</span>
                     </div>
                   </div>
                   <div style={{ background:"#f5f4f0", borderRadius:8, height:8, overflow:"hidden" }}>
@@ -1761,7 +1781,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
 
             {/* Timeline prossimi mesi */}
             <div>
-              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>📅 Prossimi mesi</div>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("stats.futureTimelineTitle")}</div>
               {futureMonthlyTrend.filter(m => m.total > 0).map(({ month, total, count }) => (
                 <div key={month} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
                   <div style={{ width:70, fontSize:10, color:"#6b6961", fontWeight:600 }}>{month}</div>
@@ -1775,10 +1795,10 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
                       alignItems:"center",
                       paddingLeft:8
                     }}>
-                      <span style={{ fontSize:11, fontWeight:700, color:"#fff" }}>€{total}</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:"#fff" }}>€{formatNumber(total)}</span>
                     </div>
                   </div>
-                  <div style={{ fontSize:10, color:"#8a877f", width:25 }}>{count}×</div>
+                  <div style={{ fontSize:10, color:"#8a877f", width:25 }}>{t("stats.futureTimelineCount", { count })}</div>
                 </div>
               ))}
             </div>
@@ -1789,6 +1809,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   );
 }
 function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
+  const { t } = useTranslation();
   if (!open) return null;
 
   // Raggruppa asset per categoria
@@ -1828,16 +1849,16 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
         
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>🏷️ I miei Asset</h2>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{t("assetList.title")}</h2>
           <button onClick={onClose} style={{ fontSize:24, background:"none", border:"none", cursor:"pointer", color:"#8a877f", padding:0 }}>×</button>
         </div>
 
         {!hasAssets ? (
           <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
             <div style={{ fontSize:48, marginBottom:16 }}>🏷️</div>
-            <div style={{ fontSize:16, fontWeight:600, color:"#8a877f", marginBottom:8 }}>Nessun asset configurato</div>
+            <div style={{ fontSize:16, fontWeight:600, color:"#8a877f", marginBottom:8 }}>{t("assetList.emptyTitle")}</div>
             <div style={{ fontSize:13, color:"#b5b2a8", lineHeight:1.6 }}>
-              Aggiungi asset alle categorie nelle impostazioni (⚙️) per tracciare spese specifiche per auto, case, etc.
+              {t("assetList.emptyHint")}
             </div>
           </div>
         ) : (
@@ -1845,7 +1866,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
             <div key={cat.id} style={{ marginBottom:24 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ fontSize:16 }}>{cat.icon}</span>
-                {cat.label}
+                {t(cat.labelKey || "", { defaultValue: cat.label })}
               </div>
               
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1871,12 +1892,12 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:2 }}>{asset.name}</div>
                       <div style={{ fontSize:11, color:"#8a877f" }}>
-                        {asset.deadlines} scadenze • {asset.completed} completate
+                        {t("assetList.itemStats", { deadlines: asset.deadlines, completed: asset.completed })}
                       </div>
                     </div>
                     <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:16, fontWeight:800, color:cat.color }}>€{asset.totalSpent}</div>
-                      <div style={{ fontSize:10, color:"#8a877f" }}>totale</div>
+                      <div style={{ fontSize:16, fontWeight:800, color:cat.color }}>€{formatNumber(asset.totalSpent)}</div>
+                      <div style={{ fontSize:10, color:"#8a877f" }}>{t("assetList.total")}</div>
                     </div>
                   </button>
                 ))}
@@ -1891,6 +1912,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
 
 /* ── ASSET SHEET ──────────────────────────────────── */
 function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, onAddWorkLog, onViewDoc }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("panoramica");
   const [showAddWork, setShowAddWork] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState(null);
@@ -1900,6 +1922,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 
   const cat = cats.find(c => c.id === catId);
   if (!cat) return null;
+  const catLabel = t(cat.labelKey || "", { defaultValue: cat.label });
 
   const assetKey = `${catId}_${assetName.toLowerCase().replace(/\s+/g, '_')}`;
   const assetWorkLogs = (workLogs[assetKey] || []).sort((a, b) => b.date - a.date);
@@ -1934,7 +1957,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
           <div>
             <div style={{ fontSize:28, marginBottom:4 }}>{cat.icon}</div>
             <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{assetName}</h2>
-            <div style={{ fontSize:12, color:"#8a877f", marginTop:2 }}>{cat.label}</div>
+            <div style={{ fontSize:12, color:"#8a877f", marginTop:2 }}>{catLabel}</div>
           </div>
           <button onClick={onClose} style={{ fontSize:24, background:"none", border:"none", cursor:"pointer", color:"#8a877f", padding:0 }}>×</button>
         </div>
@@ -1942,16 +1965,16 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
         {/* Tabs */}
         <div style={{ display:"flex", gap:6, marginBottom:20, borderBottom:"2px solid #f5f4f0" }}>
           {[
-            { id:"panoramica", label:"📋 Overview" },
-            { id:"scadenze", label:"📅 Scadenze" },
-            { id:"registro", label:"🔧 Registro" }
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
+            { id:"panoramica", label: t("asset.tabs.overview") },
+            { id:"scadenze", label: t("asset.tabs.deadlines") },
+            { id:"registro", label: t("asset.tabs.log") }
+          ].map(tabOption => (
+            <button key={tabOption.id} onClick={() => setTab(tabOption.id)} style={{
               flex:1, padding:"10px 8px", background:"none", border:"none", cursor:"pointer",
-              fontSize:12, fontWeight:700, color: tab === t.id ? "#2d2b26" : "#8a877f",
-              borderBottom: tab === t.id ? "2px solid #2d2b26" : "2px solid transparent",
+              fontSize:12, fontWeight:700, color: tab === tabOption.id ? "#2d2b26" : "#8a877f",
+              borderBottom: tab === tabOption.id ? "2px solid #2d2b26" : "2px solid transparent",
               marginBottom:"-2px", transition:"all .2s"
-            }}>{t.label}</button>
+            }}>{tabOption.label}</button>
           ))}
         </div>
 
@@ -1960,25 +1983,25 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
           <div>
             {/* Stats card */}
             <div style={{ background:"#f5f4f0", borderRadius:14, padding:"14px 16px", marginBottom:16 }}>
-              <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:4 }}>TOTALE SPESO</div>
-              <div style={{ fontSize:28, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>€{totalSpent}</div>
+              <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:4 }}>{t("asset.totalSpent")}</div>
+              <div style={{ fontSize:28, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>€{formatNumber(totalSpent)}</div>
               <div style={{ fontSize:12, color:"#6b6961", marginTop:4 }}>
-                {completed.length} scadenze • {assetWorkLogs.length} lavori registrati
+                {t("asset.summary", { deadlines: completed.length, worklogs: assetWorkLogs.length })}
               </div>
             </div>
 
             {/* Prossime scadenze */}
             {upcoming.length > 0 && (
               <div style={{ marginBottom:16 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>📅 Prossime Scadenze</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>{t("asset.nextDeadlines")}</div>
                 {upcoming.sort((a, b) => a.date - b.date).slice(0, 3).map(d => (
                   <div key={d.id} style={{ background:"#EBF2FC", borderRadius:8, padding:"8px 10px", marginBottom:6, border:"1px solid #5B8DD966" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div>
                         <div style={{ fontSize:12, fontWeight:700, color:"#2d2b26" }}>{d.title}</div>
-                        <div style={{ fontSize:10, color:"#8a877f", marginTop:2 }}>{d.date.toLocaleDateString('it-IT')}</div>
+                        <div style={{ fontSize:10, color:"#8a877f", marginTop:2 }}>{d.date.toLocaleDateString(getLocale())}</div>
                       </div>
-                      <div style={{ fontSize:14, fontWeight:800, color:"#5B8DD9" }}>€{d.budget}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"#5B8DD9" }}>€{formatNumber(d.budget)}</div>
                     </div>
                   </div>
                 ))}
@@ -1988,14 +2011,14 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             {/* Ultimi lavori */}
             {assetWorkLogs.length > 0 && (
               <div style={{ marginBottom:16 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>🔧 Ultimi Lavori</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>{t("asset.lastWork")}</div>
                 {assetWorkLogs.slice(0, 2).map(log => (
                   <div key={log.id} style={{ background:"#faf9f7", borderRadius:8, padding:"8px 10px", marginBottom:6, border:"1px solid #e8e6e0" }}>
                     <div style={{ fontSize:12, fontWeight:700, color:"#2d2b26" }}>{log.title}</div>
                     <div style={{ fontSize:10, color:"#8a877f", marginTop:2 }}>
-                      {log.date.toLocaleDateString('it-IT')}
-                      {log.km && ` • ${log.km.toLocaleString()} km`}
-                      {log.cost > 0 && ` • €${log.cost}`}
+                      {log.date.toLocaleDateString(getLocale())}
+                      {log.km && ` • ${log.km.toLocaleString(getLocale())} km`}
+                      {log.cost > 0 && ` • €${formatNumber(log.cost)}`}
                     </div>
                   </div>
                 ))}
@@ -2005,7 +2028,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             {/* Documenti */}
             {allDocuments.length > 0 && (
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>📎 Documenti ({allDocuments.length})</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>{t("asset.documents", { count: allDocuments.length })}</div>
                 {allDocuments.slice(0, 3).map(doc => (
                   <div key={doc.id} onClick={() => onViewDoc(doc)} style={{ background:"#faf9f7", borderRadius:8, padding:"6px 8px", marginBottom:4, fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
                     <span>{doc.type === 'receipt' ? '🧾' : '📄'}</span>
@@ -2014,7 +2037,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 ))}
                 {allDocuments.length > 3 && (
                   <div style={{ fontSize:10, color:"#8a877f", textAlign:"center", marginTop:4 }}>
-                    +{allDocuments.length - 3} altri
+                    {t("asset.moreDocs", { count: allDocuments.length - 3 })}
                   </div>
                 )}
               </div>
@@ -2037,19 +2060,19 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 width:"100%", padding:"10px", borderRadius:10, border:"2px dashed #5B8DD9", background:"#EBF2FC",
                 color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6
               }}>
-                <span style={{ fontSize:16 }}>+</span> Aggiungi scadenza per {assetName}
+                <span style={{ fontSize:16 }}>+</span> {t("asset.addDeadline", { asset: assetName })}
               </button>
             </div>
 
             <div style={{ background:"#f5f4f0", borderRadius:10, padding:"10px 12px", marginBottom:12, fontSize:11, color:"#6b6961" }}>
-              {assetDeadlines.length} scadenze totali • {completed.length} completate • {upcoming.length} future
+              {t("asset.deadlinesSummary", { total: assetDeadlines.length, completed: completed.length, upcoming: upcoming.length })}
             </div>
 
             {assetDeadlines.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
                 <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-                <div style={{ fontSize:14, fontWeight:600, color:"#8a877f", marginBottom:8 }}>Nessuna scadenza</div>
-                <div style={{ fontSize:12, color:"#b5b2a8" }}>Clicca "+ Aggiungi" per creare una scadenza</div>
+                <div style={{ fontSize:14, fontWeight:600, color:"#8a877f", marginBottom:8 }}>{t("asset.emptyDeadlinesTitle")}</div>
+                <div style={{ fontSize:12, color:"#b5b2a8" }}>{t("asset.emptyDeadlinesHint")}</div>
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -2063,7 +2086,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{d.title}</div>
                         <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
-                          {d.date.toLocaleDateString('it-IT')}
+                          {d.date.toLocaleDateString(getLocale())}
                           {d.recurring && d.recurring.enabled && ` • ${d.recurring.index}/${d.recurring.total}`}
                         </div>
                         {d.notes && (
@@ -2071,9 +2094,9 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                         )}
                       </div>
                       <div style={{ textAlign:"right" }}>
-                        <div style={{ fontSize:14, fontWeight:800, color: d.done ? "#4CAF6E" : "#5B8DD9" }}>€{d.budget}</div>
+                        <div style={{ fontSize:14, fontWeight:800, color: d.done ? "#4CAF6E" : "#5B8DD9" }}>€{formatNumber(d.budget)}</div>
                         {d.done && (
-                          <div style={{ fontSize:9, color:"#4CAF6E", fontWeight:600, marginTop:2 }}>✓ Completata</div>
+                          <div style={{ fontSize:9, color:"#4CAF6E", fontWeight:600, marginTop:2 }}>{t("asset.completed")}</div>
                         )}
                       </div>
                     </div>
@@ -2094,7 +2117,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="🔍 Cerca nei lavori..."
+                  placeholder={t("asset.searchPlaceholder")}
                   style={{
                     width:"100%", padding:"10px 36px 10px 12px", borderRadius:10, border:"1px solid #e8e6e0",
                     fontSize:13, fontFamily:"inherit", background:"#faf9f7"
@@ -2119,15 +2142,15 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 width:"100%", padding:"12px", borderRadius:10, border:"2px dashed #5B8DD9", background:"#EBF2FC",
                 color:"#5B8DD9", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6
               }}>
-                <span style={{ fontSize:16 }}>+</span> Aggiungi lavoro
+                <span style={{ fontSize:16 }}>+</span> {t("asset.addWork")}
               </button>
             </div>
 
             {assetWorkLogs.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
                 <div style={{ fontSize:36, marginBottom:10 }}>🔧</div>
-                <div style={{ fontSize:14, fontWeight:600, color:"#8a877f", marginBottom:6 }}>Nessun lavoro registrato</div>
-                <div style={{ fontSize:12, color:"#b5b2a8" }}>Aggiungi lavori per tenere traccia di manutenzioni e interventi</div>
+                <div style={{ fontSize:14, fontWeight:600, color:"#8a877f", marginBottom:6 }}>{t("asset.emptyWorkTitle")}</div>
+                <div style={{ fontSize:12, color:"#b5b2a8" }}>{t("asset.emptyWorkHint")}</div>
               </div>
             ) : (
               (() => {
@@ -2144,7 +2167,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 return filtered.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"30px 20px", color:"#b5b2a8" }}>
                     <div style={{ fontSize:28, marginBottom:8 }}>🔍</div>
-                    <div style={{ fontSize:13, color:"#8a877f" }}>Nessun risultato per "{searchQuery}"</div>
+                    <div style={{ fontSize:13, color:"#8a877f" }}>{t("asset.noResults", { query: searchQuery })}</div>
                   </div>
                 ) : (
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -2163,18 +2186,18 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{log.title}</div>
                         <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
-                          {log.date.toLocaleDateString('it-IT')}
+                          {log.date.toLocaleDateString(getLocale())}
                         </div>
                       </div>
                       {log.cost > 0 && (
-                        <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>€{log.cost}</div>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>€{formatNumber(log.cost)}</div>
                       )}
                     </div>
                     
                     {isAuto && log.km && (
                       <div style={{ background:"#fff", borderRadius:6, padding:"6px 8px", marginBottom:6, fontSize:11, color:"#6b6961" }}>
-                        🚗 {log.km.toLocaleString()} km
-                        {log.nextKm && ` → prossimo: ${log.nextKm.toLocaleString()} km`}
+                        {t("asset.kmLabel", { km: log.km.toLocaleString(getLocale()) })}
+                        {log.nextKm && ` ${t("asset.kmNext", { km: log.nextKm.toLocaleString(getLocale()) })}`}
                       </div>
                     )}
                     
@@ -2235,6 +2258,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 
 /* ── ADD WORK MODAL ──────────────────────────────────── */
 function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, prefill, workLog }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     title: workLog?.title || prefill?.title || "",
     date: workLog?.date ? workLog.date.toISOString().split('T')[0] : (prefill?.date || new Date().toISOString().split('T')[0]),
@@ -2271,6 +2295,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
   if (!open) return null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const modeLabel = workLog ? t("workLog.edit") : t("workLog.new");
 
   const handleSave = () => {
     if (!form.title || !form.date) return;
@@ -2301,33 +2326,33 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
         <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
         
         <h3 style={{ margin:"0 0 16px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
-          🔧 {workLog ? "Modifica" : "Nuovo"} lavoro - {assetName}
+          {t("workLog.title", { mode: modeLabel, asset: assetName })}
         </h3>
 
-        <label style={lbl}>Titolo *</label>
-        <input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Descrivi il lavoro" style={inp}/>
+        <label style={lbl}>{t("workLog.fields.title")}</label>
+        <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("workLog.placeholders.title")} style={inp}/>
 
-        <label style={{ ...lbl, marginTop:12 }}>Data *</label>
+        <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.date")}</label>
         <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
 
         {isAuto && (
           <>
-            <label style={{ ...lbl, marginTop:12 }}>🚗 Chilometraggio</label>
+            <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.mileage")}</label>
             <div style={{ display:"flex", gap:10 }}>
               <div style={{ flex:1 }}>
-                <input type="number" value={form.km} onChange={e => set("km", e.target.value)} placeholder="Attuale" style={inp}/>
+                <input type="number" value={form.km} onChange={e => set("km", e.target.value)} placeholder={t("workLog.placeholders.kmCurrent")} style={inp}/>
               </div>
               <div style={{ flex:1 }}>
-                <input type="number" value={form.nextKm} onChange={e => set("nextKm", e.target.value)} placeholder="Prossimo" style={inp}/>
+                <input type="number" value={form.nextKm} onChange={e => set("nextKm", e.target.value)} placeholder={t("workLog.placeholders.kmNext")} style={inp}/>
               </div>
             </div>
           </>
         )}
 
-        <label style={{ ...lbl, marginTop:12 }}>Descrizione lavori</label>
-        <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Dettagli del lavoro eseguito..." rows={3} style={{ ...inp, resize:"vertical" }}/>
+        <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.description")}</label>
+        <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder={t("workLog.placeholders.description")} rows={3} style={{ ...inp, resize:"vertical" }}/>
 
-        <label style={{ ...lbl, marginTop:12 }}>Costo (€)</label>
+        <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.cost")}</label>
         <input type="number" value={form.cost} onChange={e => set("cost", e.target.value)} placeholder="0" style={inp}/>
 
         {/* Create Deadline button */}
@@ -2335,18 +2360,19 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           width:"100%", marginTop:16, padding:"10px", borderRadius:10, border:"2px dashed #5B8DD9", background:"#EBF2FC",
           color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6
         }}>
-          📅 Apri prossima scadenza lavori
+          {t("workLog.openDeadline")}
         </button>
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
-          <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>Annulla</button>
-          <button onClick={handleSave} disabled={!form.title || !form.date} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background: form.title && form.date ? "#2d2b26" : "#e8e6e0", color:"#fff", cursor: form.title && form.date ? "pointer" : "not-allowed", fontSize:14, fontWeight:700 }}>Salva</button>
+          <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
+          <button onClick={handleSave} disabled={!form.title || !form.date} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background: form.title && form.date ? "#2d2b26" : "#e8e6e0", color:"#fff", cursor: form.title && form.date ? "pointer" : "not-allowed", fontSize:14, fontWeight:700 }}>{t("actions.save")}</button>
         </div>
       </div>
     </div>
   );
 }
 function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs }) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [newAsset, setNewAsset] = useState("");
   const [showAddCat, setShowAddCat] = useState(false);
@@ -2380,7 +2406,7 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
   };
 
   const deleteCategory = (catId) => {
-    if (window.confirm("Eliminare questa categoria? Le scadenze associate non verranno eliminate.")) {
+    if (window.confirm(t("category.deleteConfirm"))) {
       onUpdateCats(cats.filter(c => c.id !== catId));
     }
   };
@@ -2395,7 +2421,7 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
         animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto",
       }}>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
-        <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>Gestione categorie</h3>
+        <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t("category.title")}</h3>
 
         {cats.map(cat => (
           <div key={cat.id} style={{ marginBottom:20, background:"#faf9f7", borderRadius:14, padding:"14px 16px", border:"1px solid #edecea" }}>
@@ -2404,14 +2430,16 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
                 {cat.icon}
               </div>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:15, fontWeight:700, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{cat.label}</div>
-                <div style={{ fontSize:11, color:"#8a877f" }}>{cat.assets.length > 0 ? `${cat.assets.length} asset collegat${cat.assets.length > 1 ? "i" : "o"}` : "Categoria generica"}</div>
+                <div style={{ fontSize:15, fontWeight:700, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</div>
+                <div style={{ fontSize:11, color:"#8a877f" }}>
+                  {cat.assets.length > 0 ? t("category.assetsCount", { count: cat.assets.length }) : t("category.generic")}
+                </div>
               </div>
               <button onClick={() => setEditingId(editingId === cat.id ? null : cat.id)} style={{
                 background: editingId === cat.id ? cat.color : cat.light,
                 color: editingId === cat.id ? "#fff" : cat.color,
                 border:"none", borderRadius:8, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer",
-              }}>{editingId === cat.id ? "Chiudi" : "Modifica"}</button>
+              }}>{editingId === cat.id ? t("actions.close") : t("actions.edit")}</button>
               {/* Elimina solo se custom (non nelle prime 6 default) */}
               {cats.indexOf(cat) >= 6 && (
                 <button onClick={() => deleteCategory(cat.id)} style={{
@@ -2422,9 +2450,9 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
 
             {editingId === cat.id && (
               <div style={{ borderTop:"1px solid #edecea", paddingTop:10 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:6 }}>Assets collegati</div>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:6 }}>{t("category.assetsTitle")}</div>
                 {cat.assets.length === 0 ? (
-                  <div style={{ fontSize:12, color:"#b5b2a8", fontStyle:"italic", marginBottom:8 }}>Nessun asset. Aggiungi il primo per specificare quale auto, casa, etc.</div>
+                  <div style={{ fontSize:12, color:"#b5b2a8", fontStyle:"italic", marginBottom:8 }}>{t("category.assetsEmpty")}</div>
                 ) : (
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
                     {cat.assets.map(a => (
@@ -2439,13 +2467,13 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
                   <input
                     value={editingId === cat.id ? newAsset : ""}
                     onChange={e => setNewAsset(e.target.value)}
-                    placeholder="Nuovo asset (es. Fiat Panda)"
+                    placeholder={t("category.newAssetPlaceholder")}
                     onKeyDown={e => e.key === "Enter" && addAsset(cat.id)}
                     style={{ flex:1, padding:"8px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, outline:"none", background:"#fff" }}
                   />
                   <button onClick={() => addAsset(cat.id)} style={{
                     background:cat.color, color:"#fff", border:"none", borderRadius:8, padding:"8px 14px", fontSize:13, fontWeight:700, cursor:"pointer",
-                  }}>+ Aggiungi</button>
+                  }}>{t("category.addAsset")}</button>
                 </div>
               </div>
             )}
@@ -2455,17 +2483,17 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
         {/* Nuova categoria */}
         {showAddCat ? (
           <div style={{ marginBottom:20, background:"#fff", borderRadius:14, padding:"14px 16px", border:"2px solid #5B8DD9" }}>
-            <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:12 }}>Nuova categoria</div>
+            <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:12 }}>{t("category.newTitle")}</div>
             
-            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>Nome</label>
+            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>{t("category.name")}</label>
             <input
               value={newCat.label}
               onChange={e => setNewCat({...newCat, label: e.target.value})}
-              placeholder="Es. Viaggi"
+              placeholder={t("category.namePlaceholder")}
               style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:14, outline:"none", marginBottom:10 }}
             />
 
-            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>Emoji</label>
+            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>{t("category.emoji")}</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(44px, 1fr))", gap:8, marginBottom:12, maxHeight:200, overflowY:"auto" }}>
               {["🏠","🚗","👨‍👩‍👧","💰","🏥","📚","✈️","🍽️","🛒","💼","🎯","🎓","🏋️","🎨","🎵","🐕","🌱","🔧","📱","💻","⚡","🔑","📦","🎁"].map(emoji => (
                 <button
@@ -2481,7 +2509,7 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
               ))}
             </div>
 
-            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>Colore</label>
+            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>{t("category.color")}</label>
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
               {["#E8855D","#5B8DD9","#C77DBA","#4CAF6E","#F0B84D","#7B8BE8","#E53935","#9C27B0"].map(c => (
                 <button key={c} onClick={() => setNewCat({...newCat, color: c})} style={{
@@ -2491,21 +2519,21 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
             </div>
 
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setShowAddCat(false)} style={{ flex:1, padding:"10px", borderRadius:8, border:"1px solid #e8e6e0", background:"#fff", color:"#6b6961", fontSize:13, fontWeight:600, cursor:"pointer" }}>Annulla</button>
-              <button onClick={addCategory} style={{ flex:1, padding:"10px", borderRadius:8, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>Crea categoria</button>
+              <button onClick={() => setShowAddCat(false)} style={{ flex:1, padding:"10px", borderRadius:8, border:"1px solid #e8e6e0", background:"#fff", color:"#6b6961", fontSize:13, fontWeight:600, cursor:"pointer" }}>{t("actions.cancel")}</button>
+              <button onClick={addCategory} style={{ flex:1, padding:"10px", borderRadius:8, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>{t("category.create")}</button>
             </div>
           </div>
         ) : (
           <button onClick={() => setShowAddCat(true)} style={{
             width:"100%", padding:"14px", borderRadius:14, border:"2px dashed #e8e6e0", background:"transparent", color:"#8a877f", cursor:"pointer", fontSize:14, fontWeight:700, marginBottom:12,
-          }}>+ Aggiungi categoria</button>
+          }}>{t("category.add")}</button>
         )}
 
-        <button onClick={onClose} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48 }}>Chiudi</button>
+        <button onClick={onClose} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48 }}>{t("actions.close")}</button>
         
         {/* Export/Import Data */}
         <div style={{ marginTop:20, paddingTop:20, borderTop:"2px solid #f5f4f0" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>📤 Backup & Condivisione</div>
+          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("backup.title")}</div>
           
           <button onClick={() => {
             const data = {
@@ -2524,11 +2552,11 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            alert('✅ Dati esportati! Trovi il file in Downloads');
+            alert(t("backup.exported"));
           }} style={{ 
             width:"100%", padding:"12px", borderRadius:14, border:"2px solid #5B8DD9", background:"#EBF2FC", color:"#5B8DD9", cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:6
           }}>
-            📥 Esporta Dati (JSON)
+            {t("backup.export")}
           </button>
           
           <label style={{ 
@@ -2545,12 +2573,12 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
                   
                   // Validate data structure
                   if (!data.categories || !data.deadlines) {
-                    alert('❌ File non valido');
+                    alert(t("backup.invalidFile"));
                     return;
                   }
                   
                   // Confirm import
-                  if (!window.confirm(`Importare ${data.deadlines.length} scadenze e ${data.categories.length} categorie?\n\n⚠️ Questo sostituirà i dati attuali!`)) {
+                  if (!window.confirm(t("backup.importConfirm", { deadlines: data.deadlines.length, categories: data.categories.length }))) {
                     return;
                   }
                   
@@ -2559,33 +2587,33 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
                   localStorage.setItem('lifetrack_deadlines', JSON.stringify(data.deadlines));
                   localStorage.setItem('lifetrack_worklogs', JSON.stringify(data.workLogs || {}));
                   
-                  alert('✅ Dati importati! La pagina si ricaricherà.');
+                  alert(t("backup.imported"));
                   window.location.reload();
                 } catch (err) {
-                  alert('❌ Errore lettura file: ' + err.message);
+                  alert(t("backup.readError", { message: err.message }));
                 }
               };
               reader.readAsText(file);
               e.target.value = ''; // Reset input
             }} />
-            📤 Importa Dati (JSON)
+            {t("backup.import")}
           </label>
           
           <div style={{ fontSize:10, color:"#8a877f", marginTop:8, lineHeight:1.4 }}>
-            💡 <strong>Per condividere:</strong> Esporta → invia file via WhatsApp → destinatario fa Importa
+            💡 <strong>{t("backup.shareTipTitle")}</strong> {t("backup.shareTip")}
           </div>
         </div>
         
         {/* Reset button for testing */}
         <button onClick={() => {
-          if (window.confirm("Resettare tutti i dati? Questa azione non può essere annullata.")) {
+          if (window.confirm(t("backup.resetConfirm"))) {
             localStorage.removeItem('lifetrack_categories');
             localStorage.removeItem('lifetrack_deadlines');
             window.location.reload();
           }
         }} style={{ 
           width:"100%", padding:"12px", borderRadius:14, border:"1px solid #FBE9E7", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:12, fontWeight:600, marginTop:10 
-        }}>🗑 Reset dati (per test)</button>
+        }}>{t("backup.reset")}</button>
       </div>
     </div>
   );
@@ -2593,6 +2621,7 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
 
 /* ── APP ROOT ──────────────────────────────────────────── */
 export default function App() {
+  const { t, i18n } = useTranslation();
   // 🔥 Firebase State
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2762,7 +2791,7 @@ export default function App() {
         setDeadlines(newDeadlines);
         const count = newDeadlines.filter(d => d.autoCompleted && d.done).length - deadlines.filter(d => d.autoCompleted && d.done).length;
         if (count > 0) {
-          showToast(`✓ ${count} pagament${count > 1 ? 'i automatici completati' : 'o automatico completato'}`);
+          showToast(t("toast.autoPayCompleted", { count }));
         }
       }
     };
@@ -2779,6 +2808,7 @@ export default function App() {
   const [filterRecurring, setFilterRecurring] = useState(false);
   const [filterAutoPay, setFilterAutoPay] = useState(false);
   const [filterEssential, setFilterEssential] = useState(false);
+  const [filterEstimateMissing, setFilterEstimateMissing] = useState(false);
   const [expandedFilterCat, setExpandedFilterCat] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -2845,9 +2875,10 @@ export default function App() {
     if (filterRecurring) list = list.filter(d => d.recurring && d.recurring.enabled);
     if (filterAutoPay) list = list.filter(d => d.autoPay);
     if (filterEssential) list = list.filter(d => d.essential);
+    if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
     list.sort((a, b) => a.date - b.date);
     return list;
-  }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, activeTab, maxDays]);
+  }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, activeTab, maxDays]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
 
@@ -2877,7 +2908,7 @@ export default function App() {
     if (!item || item.done) return;
     setDeadlines(p => p.map(d => d.id === id ? { ...d, done: true, skipped: true } : d));
     setExpandedId(null);
-    showToast("✓ Scadenza saltata");
+    showToast(t("toast.deadlineSkipped"));
   };
   
   const confirmPayment = (type) => {
@@ -2887,18 +2918,18 @@ export default function App() {
     switch(type) {
       case 'full': // Pagata per intero al budget previsto
         setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, estimateMissing: false } : d));
-        showToast(`✓ Pagata €${item.budget}`);
+        showToast(t("toast.paidFull", { amount: item.budget }));
         break;
         
       case 'not_paid': // Non pagata - azzera budget
         setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: 0, estimateMissing: false } : d));
-        showToast("✓ Segnata come non pagata");
+        showToast(t("toast.notPaid"));
         break;
         
       case 'partial': // Importo diverso - aggiorna budget con importo reale
         const amount = Number(paymentAmount) || 0;
         setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: amount, estimateMissing: false } : d));
-        showToast(`✓ Pagata €${amount}`);
+        showToast(t("toast.paidAmount", { amount }));
         break;
         
       case 'downpayment': // Acconto
@@ -2925,7 +2956,7 @@ export default function App() {
             done: false
           }
         ]);
-        showToast(`✓ Acconto €${downAmount} - Saldo €${remaining} creato`);
+        showToast(t("toast.downpaymentCreated", { down: downAmount, remaining }));
         break;
     }
     
@@ -3171,13 +3202,13 @@ export default function App() {
         // È l'ultima della serie, elimina direttamente
         setDeadlines(p => p.filter(d => d.id !== id));
         setExpandedId(null);
-        showToast("✓ Scadenza eliminata");
+        showToast(t("toast.deadlineDeleted"));
       }
     } else {
       // Non fa parte di una serie, elimina direttamente
       setDeadlines(p => p.filter(d => d.id !== id));
       setExpandedId(null);
-      showToast("✓ Scadenza eliminata");
+      showToast(t("toast.deadlineDeleted"));
     }
   };
   
@@ -3191,7 +3222,7 @@ export default function App() {
       d.recurring.index < deleteConfirm.currentIndex
     ));
     setExpandedId(null);
-    showToast(`✓ Eliminate ${deleteConfirm.futureCount} scadenze future`);
+    showToast(t("toast.futureDeleted", { count: deleteConfirm.futureCount }));
     setDeleteConfirm(null);
   };
   const add = items => { 
@@ -3201,14 +3232,15 @@ export default function App() {
     // Check if any deadline is outside current range
     const outsideRange = itemsArray.filter(item => diffDays(item.date) > maxDays);
     if (outsideRange.length > 0) {
-      const rangeLabel = RANGES.find(r => r.id === range)?.label || range;
+      const rangeInfo = RANGES.find(r => r.id === range);
+      const rangeLabel = rangeInfo ? t(rangeInfo.labelKey, { defaultValue: rangeInfo.label }) : range;
       if (itemsArray.length > 1) {
-        showToast(`✓ Serie creata! ${outsideRange.length}/${itemsArray.length} oltre ${rangeLabel}`);
+        showToast(t("toast.seriesCreatedRange", { outside: outsideRange.length, total: itemsArray.length, range: rangeLabel }));
       } else {
-        showToast(`✓ Scadenza aggiunta! È oltre ${rangeLabel} - cambia range per vederla`);
+        showToast(t("toast.deadlineAddedOutside", { range: rangeLabel }));
       }
     } else if (itemsArray.length > 1) {
-      showToast(`✓ ${itemsArray.length} scadenze create`);
+      showToast(t("toast.seriesCreated", { count: itemsArray.length }));
     }
   };
   
@@ -3223,7 +3255,7 @@ export default function App() {
   const confirmPostpone = () => {
     if (postponeDate) {
       setDeadlines(p => p.map(d => d.id === postponeId ? { ...d, date: new Date(postponeDate + "T00:00:00") } : d));
-      showToast("✓ Scadenza posticipata");
+      showToast(t("toast.deadlinePostponed"));
     }
     setPostponeId(null);
     setPostponeDate("");
@@ -3242,20 +3274,20 @@ export default function App() {
         uploadDate: new Date().toISOString()
       };
       setDeadlines(p => p.map(d => d.id === deadlineId ? { ...d, documents: [...(d.documents || []), doc] } : d));
-      showToast(`✓ Documento allegato`);
+      showToast(t("toast.documentAttached"));
     } catch(err) {
-      showToast("✗ Errore upload documento");
+      showToast(t("toast.documentUploadError"));
     }
   };
   
   const deleteDocument = (deadlineId, docId) => {
     setDeadlines(p => p.map(d => d.id === deadlineId ? { ...d, documents: d.documents.filter(doc => doc.id !== docId) } : d));
-    showToast("✓ Documento eliminato");
+    showToast(t("toast.documentDeleted"));
   };
 
   const handleAuth = async () => {
     if (!authEmail || !authPassword) {
-      setAuthError("Inserisci email e password");
+      setAuthError(t("auth.errors.missing"));
       return;
     }
     setAuthBusy(true);
@@ -3268,12 +3300,12 @@ export default function App() {
       }
     } catch (error) {
       const code = error?.code || "";
-      let msg = "Errore autenticazione";
-      if (code.includes("auth/invalid-email")) msg = "Email non valida";
-      else if (code.includes("auth/invalid-credential") || code.includes("auth/wrong-password")) msg = "Credenziali errate";
-      else if (code.includes("auth/user-not-found")) msg = "Utente non trovato";
-      else if (code.includes("auth/email-already-in-use")) msg = "Email già registrata";
-      else if (code.includes("auth/weak-password")) msg = "Password troppo corta (min 6)";
+      let msg = t("auth.errors.generic");
+      if (code.includes("auth/invalid-email")) msg = t("auth.errors.invalidEmail");
+      else if (code.includes("auth/invalid-credential") || code.includes("auth/wrong-password")) msg = t("auth.errors.invalidCreds");
+      else if (code.includes("auth/user-not-found")) msg = t("auth.errors.userNotFound");
+      else if (code.includes("auth/email-already-in-use")) msg = t("auth.errors.emailInUse");
+      else if (code.includes("auth/weak-password")) msg = t("auth.errors.weakPassword");
       setAuthError(msg);
     } finally {
       setAuthBusy(false);
@@ -3290,22 +3322,24 @@ export default function App() {
 
   const shareDocument = async (doc) => {
     if (!doc) return;
+    const defaultFilename = t("docs.defaultFilename");
+    const defaultTitle = t("docs.defaultTitle");
     if (!navigator.share) {
-      showToast("Condivisione non supportata su questo dispositivo");
+      showToast(t("toast.shareUnsupported"));
       return;
     }
     try {
       const response = await fetch(doc.base64);
       const blob = await response.blob();
-      const file = new File([blob], doc.filename || "documento.jpg", { type: blob.type || "image/jpeg" });
+      const file = new File([blob], doc.filename || defaultFilename, { type: blob.type || "image/jpeg" });
       if (navigator.canShare && !navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: doc.filename || "Documento", url: doc.base64 });
+        await navigator.share({ title: doc.filename || defaultTitle, url: doc.base64 });
         return;
       }
-      await navigator.share({ files: [file], title: doc.filename || "Documento" });
+      await navigator.share({ files: [file], title: doc.filename || defaultTitle });
     } catch (error) {
       console.error("Share error:", error);
-      showToast("Errore condivisione");
+      showToast(t("toast.shareError"));
     }
   };
 
@@ -3316,7 +3350,7 @@ export default function App() {
         <div style={{ textAlign:"center" }}>
           <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
           <div style={{ fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
-          <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>Caricamento...</div>
+          <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>{t("app.loading")}</div>
         </div>
       </div>
     );
@@ -3332,25 +3366,25 @@ export default function App() {
         <div style={{ width:"100%", maxWidth:360, background:"#2d2b26", borderRadius:18, padding:"22px 20px", boxShadow:"0 10px 30px rgba(0,0,0,.35)" }}>
           <div style={{ textAlign:"center", marginBottom:16 }}>
             <div style={{ fontSize:40, marginBottom:6 }}>📅</div>
-            <div style={{ fontSize:18, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
-            <div style={{ fontSize:12, opacity:.6, marginTop:4 }}>Accedi per sincronizzare su tutti i dispositivi</div>
+            <div style={{ fontSize:18, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{t("app.name")}</div>
+            <div style={{ fontSize:12, opacity:.6, marginTop:4 }}>{t("auth.subtitle")}</div>
           </div>
 
-          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>Email</label>
+          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>{t("auth.email")}</label>
           <input
             type="email"
             value={authEmail}
             onChange={e => setAuthEmail(e.target.value)}
-            placeholder="nome@email.com"
+            placeholder={t("auth.emailPlaceholder")}
             style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #3a3731", background:"#1f1d19", color:"#fff", marginBottom:12, fontSize:14, outline:"none" }}
           />
 
-          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>Password</label>
+          <label style={{ display:"block", fontSize:10, fontWeight:700, color:"rgba(255,255,255,.55)", marginBottom:6, letterSpacing:".6px", textTransform:"uppercase" }}>{t("auth.password")}</label>
           <input
             type="password"
             value={authPassword}
             onChange={e => setAuthPassword(e.target.value)}
-            placeholder="••••••"
+            placeholder={t("auth.passwordPlaceholder")}
             style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #3a3731", background:"#1f1d19", color:"#fff", marginBottom:12, fontSize:14, outline:"none" }}
           />
 
@@ -3365,16 +3399,16 @@ export default function App() {
             disabled={authBusy}
             style={{ width:"100%", padding:"12px", borderRadius:12, border:"none", background:"#E8855D", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", opacity: authBusy ? 0.7 : 1 }}
           >
-            {authMode === "signup" ? "Crea account" : "Accedi"}
+            {authMode === "signup" ? t("auth.signup") : t("auth.login")}
           </button>
 
           <div style={{ marginTop:12, textAlign:"center", fontSize:12, color:"rgba(255,255,255,.6)" }}>
-            {authMode === "signup" ? "Hai già un account?" : "Non hai un account?"}{" "}
+            {authMode === "signup" ? t("auth.hasAccount") : t("auth.noAccount")}{" "}
             <button
               onClick={() => { setAuthMode(authMode === "signup" ? "login" : "signup"); setAuthError(""); }}
               style={{ background:"transparent", border:"none", color:"#E8855D", fontWeight:700, cursor:"pointer" }}
             >
-              {authMode === "signup" ? "Accedi" : "Crea account"}
+              {authMode === "signup" ? t("auth.login") : t("auth.signup")}
             </button>
           </div>
         </div>
@@ -3399,7 +3433,7 @@ export default function App() {
           borderRadius:20, fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:6
         }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", animation:"pulse 1.5s infinite" }}/>
-          Salvataggio...
+          {t("sync.saving")}
         </div>
       )}
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
@@ -3413,8 +3447,8 @@ export default function App() {
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>LifeTrack</h1>
-                <span style={{ fontSize:10, opacity:.35 }}>gestione scadenze</span>
+                <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>{t("app.name")}</h1>
+                <span style={{ fontSize:10, opacity:.35 }}>{t("app.tagline")}</span>
               </div>
               <div style={{ display:"flex", gap:6 }}>
                 <button onClick={() => setShowStats(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
@@ -3448,9 +3482,9 @@ export default function App() {
       {/* TAB: Timeline / Scadute / Completate */}
       <div style={{ display:"flex", gap:0, background:"#fff", borderBottom:"1px solid #edecea", position:"sticky", top:0, zIndex:50 }}>
         {[
-          { id:"timeline", label:"Timeline" }, 
-          { id:"overdue", label:"Scadute" },
-          { id:"done", label:"Completate" }
+          { id:"timeline", labelKey:"tabs.timeline" }, 
+          { id:"overdue", labelKey:"tabs.overdue" },
+          { id:"done", labelKey:"tabs.done" }
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
             flex:1, padding:"12px 0", border:"none", background:"transparent", cursor:"pointer",
@@ -3458,7 +3492,7 @@ export default function App() {
             color: activeTab === t.id ? (t.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
             borderBottom: activeTab === t.id ? `2.5px solid ${t.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
             transition:"all .2s", minHeight:44,
-          }}>{t.label}</button>
+          }}>{t(t.labelKey)}</button>
         ))}
       </div>
 
@@ -3482,6 +3516,8 @@ export default function App() {
         setFilterAutoPay={setFilterAutoPay}
         filterEssential={filterEssential}
         setFilterEssential={setFilterEssential}
+        filterEstimateMissing={filterEstimateMissing}
+        setFilterEstimateMissing={setFilterEstimateMissing}
       />
 
       {/* LISTA */}
@@ -3489,8 +3525,8 @@ export default function App() {
         {groups.length === 0 ? (
           <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
             <div style={{ fontSize:36, marginBottom:10 }}>{activeTab === "done" ? "🎉" : "📅"}</div>
-            <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>{activeTab === "done" ? "Nessuna scadenza completata" : "Nessuna scadenza in questo periodo"}</div>
-            <div style={{ fontSize:13, marginTop:4 }}>Prova a cambiare l'intervallo temporale</div>
+            <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>{activeTab === "done" ? t("empty.doneTitle") : t("empty.timelineTitle")}</div>
+            <div style={{ fontSize:13, marginTop:4 }}>{t("empty.hint")}</div>
           </div>
         ) : (
           groups.map(g => (
@@ -3564,14 +3600,14 @@ export default function App() {
                 ...prev,
                 [assetKey]: (prev[assetKey] || []).map(w => w.id === editId ? work : w)
               }));
-              showToast("✓ Lavoro aggiornato");
+              showToast(t("toast.worklogUpdated"));
             } else {
               // Add new
               setWorkLogs(prev => ({
                 ...prev,
                 [assetKey]: [...(prev[assetKey] || []), work]
               }));
-              showToast("✓ Lavoro aggiunto al registro");
+              showToast(t("toast.worklogAdded"));
             }
           }}
           onViewDoc={setViewingDoc}
@@ -3611,8 +3647,8 @@ export default function App() {
             animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both",
           }}>
             <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
-            <h3 style={{ margin:"0 0 14px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>Posticipa scadenza</h3>
-            <p style={{ margin:"0 0 16px", fontSize:13, color:"#6b6961" }}>Scegli la nuova data per questa scadenza</p>
+            <h3 style={{ margin:"0 0 14px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t("postpone.title")}</h3>
+            <p style={{ margin:"0 0 16px", fontSize:13, color:"#6b6961" }}>{t("postpone.subtitle")}</p>
             <input
               type="date"
               value={postponeDate}
@@ -3621,8 +3657,8 @@ export default function App() {
               autoFocus
             />
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setPostponeId(null)} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>Annulla</button>
-              <button onClick={confirmPostpone} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FB8C00", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>Conferma</button>
+              <button onClick={() => setPostponeId(null)} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
+              <button onClick={confirmPostpone} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FB8C00", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>{t("actions.confirm")}</button>
             </div>
           </div>
         </div>
@@ -3640,29 +3676,29 @@ export default function App() {
           }}>
             <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
             <h3 style={{ margin:"0 0 10px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
-              Modifica ricorrenza
+              {t("editRecurring.title")}
             </h3>
             <p style={{ margin:"0 0 10px", fontSize:13, color:"#6b6961" }}>
-              Vuoi applicare le modifiche solo a questa scadenza o anche alle altre?
+              {t("editRecurring.subtitle")}
             </p>
             {editScheduleChanged && (
               <p style={{ margin:"0 0 14px", fontSize:12, color:"#E53935", fontWeight:600 }}>
-                Attenzione: cambiando frequenza o data, “Tutta la serie” rigenera tutte le occorrenze.
+                {t("editRecurring.warning")}
               </p>
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <button onClick={() => applyEditScope("single")} style={{ padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#2d2b26" }}>
-                Solo questa
+                {t("editRecurring.onlyThis")}
               </button>
               <button onClick={() => applyEditScope("future")} style={{ padding:"12px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>
-                Da questa in poi
+                {t("editRecurring.fromThis")}
               </button>
               <button onClick={() => applyEditScope("all")} style={{ padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#6b6961" }}>
-                Tutta la serie
+                {t("editRecurring.all")}
               </button>
             </div>
             <button onClick={() => setEditConfirm(null)} style={{ marginTop:12, width:"100%", padding:"10px", borderRadius:10, border:"none", background:"#edecea", color:"#6b6961", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-              Annulla
+              {t("actions.cancel")}
             </button>
           </div>
         </div>
@@ -3680,26 +3716,26 @@ export default function App() {
           }}>
             <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
             <h3 style={{ margin:"0 0 14px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
-              Elimina serie ricorrente
+              {t("deleteSeries.title")}
             </h3>
             <p style={{ margin:"0 0 8px", fontSize:14, color:"#2d2b26", lineHeight:1.5 }}>
-              Questa scadenza fa parte di una serie ({deleteConfirm.recurringIndex}/{deleteConfirm.recurringTotal}).
+              {t("deleteSeries.subtitle", { current: deleteConfirm.recurringIndex, total: deleteConfirm.recurringTotal })}
             </p>
             <p style={{ margin:"0 0 16px", fontSize:14, color:"#2d2b26", fontWeight:600, lineHeight:1.5 }}>
-              Verranno eliminate questa e le {deleteConfirm.futureCount - 1} scadenze future della serie.
+              {t("deleteSeries.warning", { count: deleteConfirm.futureCount - 1 })}
             </p>
             <p style={{ margin:"0 0 20px", fontSize:12, color:"#8a877f", fontStyle:"italic" }}>
-              (Le scadenze passate già completate non verranno toccate)
+              {t("deleteSeries.note")}
             </p>
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setDeleteConfirm(null)} style={{ 
                 flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", 
                 cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:44 
-              }}>Annulla</button>
+              }}>{t("actions.cancel")}</button>
               <button onClick={confirmDelete} style={{ 
                 flex:1, padding:"12px", borderRadius:12, border:"none", background:"#E53935", 
                 color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:44 
-              }}>Elimina serie</button>
+              }}>{t("deleteSeries.confirm")}</button>
             </div>
           </div>
         </div>
@@ -3721,7 +3757,7 @@ export default function App() {
               style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
               onClick={e => e.stopPropagation()}
             >
-              Apri
+              {t("actions.open")}
             </a>
             <a
               href={viewingDoc.base64}
@@ -3729,15 +3765,15 @@ export default function App() {
               style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
               onClick={e => e.stopPropagation()}
             >
-              Scarica
+              {t("actions.download")}
             </a>
             <button
               onClick={(e) => { e.stopPropagation(); shareDocument(viewingDoc); }}
               style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}
             >
-              Condividi
+              {t("actions.share")}
             </button>
-            <button onClick={() => setViewingDoc(null)} style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#fff", color:"#2d2b26", fontSize:13, fontWeight:700, cursor:"pointer" }}>Chiudi</button>
+            <button onClick={() => setViewingDoc(null)} style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#fff", color:"#2d2b26", fontSize:13, fontWeight:700, cursor:"pointer" }}>{t("actions.close")}</button>
           </div>
         </div>
       )}
