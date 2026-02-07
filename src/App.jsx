@@ -274,13 +274,15 @@ function RangeSelector({ active, onChange }) {
 function BudgetBar({ deadlines, range, cats }) {
   const maxDays = RANGES.find(r => r.id === range)?.days || 30;
   const inRange = deadlines.filter(d => !d.done && diffDays(d.date) >= 0 && diffDays(d.date) <= maxDays);
-  const total   = inRange.reduce((s, d) => s + d.budget, 0);
+  const inRangeBudgeted = inRange.filter(d => !d.estimateMissing);
+  const total   = inRangeBudgeted.reduce((s, d) => s + d.budget, 0);
   const count   = inRange.length;
+  const missingCount = inRange.filter(d => d.estimateMissing).length;
   const urgent  = inRange.filter(d => diffDays(d.date) <= 7).length;
 
   const catTotals = cats.map(c => ({
     ...c,
-    amount: inRange.filter(d => d.cat === c.id).reduce((s, d) => s + d.budget, 0),
+    amount: inRangeBudgeted.filter(d => d.cat === c.id).reduce((s, d) => s + d.budget, 0),
   })).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
 
   return (
@@ -290,6 +292,9 @@ function BudgetBar({ deadlines, range, cats }) {
           <div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>Budget nel periodo</div>
             <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
+            {missingCount > 0 && (
+              <div style={{ marginTop:4, fontSize:10, color:"rgba(255,255,255,.45)" }}>⚠ {missingCount} da stimare</div>
+            )}
           </div>
           <div style={{ display:"flex", gap:10 }}>
             <div style={{ textAlign:"right" }}>
@@ -401,6 +406,11 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
                 🔄 AUTO
               </span>
             )}
+            {item.estimateMissing && !item.done && (
+              <span style={{ fontSize:10, fontWeight:800, color:"#8a6d1f", background:"#FFF8ED", borderRadius:8, padding:"3px 7px", display:"flex", alignItems:"center", gap:2 }}>
+                ❔ STIMA
+              </span>
+            )}
             <span style={{ fontSize:10, fontWeight:700, color:urg.color, background:urg.bg, borderRadius:8, padding:"3px 8px" }}>{urg.label}</span>
           </div>
           <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
@@ -423,7 +433,9 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
             <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
               <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>Budget</div>
-              <div style={{ fontSize:14, fontWeight:700, color: item.budget > 0 ? "#4CAF6E" : "#aaa", marginTop:2 }}>{item.budget > 0 ? `€${item.budget}` : "—"}</div>
+              <div style={{ fontSize:14, fontWeight:700, color: item.estimateMissing ? "#8a6d1f" : (item.budget > 0 ? "#4CAF6E" : "#aaa"), marginTop:2 }}>
+                {item.estimateMissing ? "Da stimare" : (item.budget > 0 ? `€${item.budget}` : "—")}
+              </div>
             </div>
             <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
               <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>Ripete</div>
@@ -464,6 +476,15 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           {item.skipped && item.done && (
             <div style={{ fontSize:11, color:"#6b6961", background:"#f0efe8", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
               ⏭ Scadenza saltata
+            </div>
+          )}
+
+          {item.estimateMissing && !item.done && (
+            <div style={{ fontSize:11, color:"#8a6d1f", background:"#FFF8ED", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+              <span>💡 Stima mancante</span>
+              <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{ padding:"6px 10px", borderRadius:8, border:"none", background:"#2d2b26", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                Aggiungi stima
+              </button>
             </div>
           )}
 
@@ -706,12 +727,12 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
 
 /* Group header */
 function GroupHeader({ group, cats }) {
-  const total = group.items.filter(d => !d.done).reduce((s, d) => s + d.budget, 0);
+  const total = group.items.filter(d => !d.done && !d.estimateMissing).reduce((s, d) => s + d.budget, 0);
   const activeCount = group.items.filter(d => !d.done).length;
   const doneCount = group.items.filter(d => d.done).length;
 
   const catMap = {};
-  group.items.filter(d => !d.done).forEach(d => { catMap[d.cat] = (catMap[d.cat] || 0) + d.budget; });
+  group.items.filter(d => !d.done && !d.estimateMissing).forEach(d => { catMap[d.cat] = (catMap[d.cat] || 0) + d.budget; });
   const catEntries = Object.entries(catMap).sort((a,b) => b[1] - a[1]);
 
   return (
@@ -902,7 +923,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         cat: editingItem.cat,
         asset: editingItem.asset,
         date: dateStr,
-        budget: String(editingItem.budget),
+        budget: editingItem.estimateMissing ? "" : String(editingItem.budget),
         notes: editingItem.notes || "",
         mandatory: editingItem.mandatory || false,
         essential: editingItem.essential !== undefined ? editingItem.essential : true,
@@ -935,7 +956,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const lastStep = steps.length - 1;
   const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
   const count = Math.max(1, parseInt(form.recurringCount) || 1);
-  const baseAmount = Number(form.budget) || 0;
+  const budgetMissing = form.budget === "";
+  const baseAmount = budgetMissing ? 0 : (Number(form.budget) || 0);
   const baseDate = form.date ? new Date(form.date + "T00:00:00") : null;
   const today = (() => {
     const d = new Date();
@@ -1111,6 +1133,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               <div style={{ flex:1 }}>
                 <label style={lbl}>Budget (€)</label>
                 <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="0" style={inp}/>
+                <div style={{ fontSize:11, color:"#8a877f", marginTop:6 }}>
+                  Se non sai l'importo puoi lasciarlo vuoto: non entrerà nei totali.
+                </div>
               </div>
             </div>
           </>
@@ -1254,7 +1279,10 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   )}
 
                   <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
-                    💡 Verranno create {totalOccurrences || count} scadenze con €{form.budget || 0} ciascuna
+                    {budgetMissing
+                      ? `💡 Verranno create ${totalOccurrences || count} scadenze (importo da stimare)`
+                      : `💡 Verranno create ${totalOccurrences || count} scadenze con €${form.budget} ciascuna`
+                    }
                   </div>
                 </div>
               )}
@@ -1267,11 +1295,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 </div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:6, gap:12 }}>
                   <div>
-                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.thisYearTotal)}</div>
+                    <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.thisYearTotal)}</div>
                     <div style={{ fontSize:10, opacity:.6 }}>quest'anno · {preview.thisYearCount} scadenze</div>
                   </div>
                   <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.nextYearTotal)}</div>
+                    <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.nextYearTotal)}</div>
                     <div style={{ fontSize:10, opacity:.6 }}>anno {preview.nextYear} · {preview.nextYearCount} scadenze</div>
                     {preview.next && (
                       <div style={{ fontSize:10, opacity:.6 }}>
@@ -1280,6 +1308,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                     )}
                   </div>
                 </div>
+                {budgetMissing && (
+                  <div style={{ marginTop:6, fontSize:10, opacity:.6 }}>
+                    Aggiungi una stima per calcolare l'impatto
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -1396,6 +1429,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                       asset: form.asset,
                       date: occurrenceDate,
                       budget: baseAmount,
+                      estimateMissing: budgetMissing,
                       notes: form.notes,
                       mandatory: form.mandatory,
                       essential: form.essential,
@@ -1425,6 +1459,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                     asset: form.asset,
                     date: new Date(form.date+"T00:00:00"), 
                     budget: Number(form.budget)||0,
+                    estimateMissing: budgetMissing,
                     notes: form.notes,
                     mandatory: form.mandatory,
                     essential: form.essential,
@@ -1476,7 +1511,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   const yearEnd = new Date(currentYear, 11, 31);
   
   const currentYearDeadlines = deadlines.filter(d => 
-    d.done && !d.skipped && d.date >= yearStart && d.date <= yearEnd
+    d.done && !d.skipped && !d.estimateMissing && d.date >= yearStart && d.date <= yearEnd
   );
   
   const currentYearTotal = currentYearDeadlines.reduce((sum, d) => sum + d.budget, 0);
@@ -1487,7 +1522,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   const prevYearEnd = new Date(previousYear, 11, 31);
   
   const prevYearDeadlines = deadlines.filter(d => 
-    d.done && !d.skipped && d.date >= prevYearStart && d.date <= prevYearEnd
+    d.done && !d.skipped && !d.estimateMissing && d.date >= prevYearStart && d.date <= prevYearEnd
   );
   
   const prevYearTotal = prevYearDeadlines.reduce((sum, d) => sum + d.budget, 0);
@@ -1528,15 +1563,16 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   const futureDeadlines = deadlines.filter(d => 
     !d.done && d.date >= now && d.date <= futureEnd
   );
+  const futureBudgeted = futureDeadlines.filter(d => !d.estimateMissing);
   
-  const futureTotal = futureDeadlines.reduce((sum, d) => sum + d.budget, 0);
+  const futureTotal = futureBudgeted.reduce((sum, d) => sum + d.budget, 0);
   const futureCount = futureDeadlines.length;
   const futureRecurring = futureDeadlines.filter(d => d.recurring && d.recurring.enabled).length;
   const futureAutoPay = futureDeadlines.filter(d => d.autoPay).length;
 
   // Breakdown futuro per categoria
   const futureCategoryBreakdown = cats.map(cat => {
-    const catDeadlines = futureDeadlines.filter(d => d.cat === cat.id);
+    const catDeadlines = futureBudgeted.filter(d => d.cat === cat.id);
     const catTotal = catDeadlines.reduce((sum, d) => sum + d.budget, 0);
     const percentage = futureTotal > 0 ? (catTotal / futureTotal * 100).toFixed(0) : 0;
     return { cat, total: catTotal, count: catDeadlines.length, percentage };
@@ -1553,7 +1589,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
     monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
     monthEnd.setHours(23, 59, 59, 999);
     
-    const monthDeadlines = futureDeadlines.filter(d => d.date >= monthStart && d.date <= monthEnd);
+    const monthDeadlines = futureBudgeted.filter(d => d.date >= monthStart && d.date <= monthEnd);
     const monthTotal = monthDeadlines.reduce((sum, d) => sum + d.budget, 0);
     
     futureMonthlyTrend.push({
@@ -1765,7 +1801,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
         assets: cat.assets.map(assetName => {
           const assetDeadlines = deadlines.filter(d => d.cat === cat.id && d.asset === assetName);
           const completed = assetDeadlines.filter(d => d.done);
-          const totalSpent = completed.reduce((sum, d) => sum + d.budget, 0);
+          const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
           
           return {
             name: assetName,
@@ -1874,7 +1910,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 
   const completed = assetDeadlines.filter(d => d.done);
   const upcoming = assetDeadlines.filter(d => !d.done);
-  const totalSpent = completed.reduce((sum, d) => sum + d.budget, 0);
+  const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
   
   const allDocuments = assetDeadlines
     .flatMap(d => d.documents || [])
@@ -2850,18 +2886,18 @@ export default function App() {
     
     switch(type) {
       case 'full': // Pagata per intero al budget previsto
-        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true } : d));
+        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, estimateMissing: false } : d));
         showToast(`✓ Pagata €${item.budget}`);
         break;
         
       case 'not_paid': // Non pagata - azzera budget
-        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: 0 } : d));
+        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: 0, estimateMissing: false } : d));
         showToast("✓ Segnata come non pagata");
         break;
         
       case 'partial': // Importo diverso - aggiorna budget con importo reale
         const amount = Number(paymentAmount) || 0;
-        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: amount } : d));
+        setDeadlines(p => p.map(d => d.id === item.id ? { ...d, done: true, budget: amount, estimateMissing: false } : d));
         showToast(`✓ Pagata €${amount}`);
         break;
         
@@ -2871,7 +2907,7 @@ export default function App() {
         
         // Completa la scadenza originale con il budget = acconto pagato
         setDeadlines(p => [
-          ...p.map(d => d.id === item.id ? { ...d, done: true, budget: downAmount } : d),
+          ...p.map(d => d.id === item.id ? { ...d, done: true, budget: downAmount, estimateMissing: false } : d),
           // Crea scadenza per il saldo
           {
             id: Date.now(),
@@ -2880,6 +2916,7 @@ export default function App() {
             asset: item.asset,
             date: new Date(downpaymentDate + "T00:00:00"),
             budget: remaining,
+            estimateMissing: false,
             notes: `Saldo rimanente (acconto €${downAmount} pagato)`,
             recurring: "Mai più",
             mandatory: item.mandatory,
@@ -2898,16 +2935,21 @@ export default function App() {
     setExpandedId(null);
   };
 
-  const buildFieldsFromForm = (form) => ({
-    title: form.title,
-    cat: form.cat,
-    asset: form.asset,
-    budget: Number(form.budget) || 0,
-    notes: form.notes,
-    mandatory: form.mandatory,
-    essential: form.essential,
-    autoPay: form.autoPay,
-  });
+  const buildFieldsFromForm = (form) => {
+    const estimateMissing = form.budget === "";
+    const budgetValue = estimateMissing ? 0 : (Number(form.budget) || 0);
+    return {
+      title: form.title,
+      cat: form.cat,
+      asset: form.asset,
+      budget: budgetValue,
+      estimateMissing,
+      notes: form.notes,
+      mandatory: form.mandatory,
+      essential: form.essential,
+      autoPay: form.autoPay,
+    };
+  };
 
   const handleUpdateDeadline = (form) => {
     if (!editingDeadline) return;
@@ -3650,7 +3692,26 @@ export default function App() {
         }}>
           <div style={{ fontSize:14, fontWeight:600, color:"#fff", marginBottom:16, maxWidth:"90%", textAlign:"center" }}>{viewingDoc.filename}</div>
           <img src={viewingDoc.base64} style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }} alt="Document" />
-          <button onClick={() => setViewingDoc(null)} style={{ marginTop:20, padding:"12px 24px", borderRadius:12, border:"none", background:"#fff", color:"#2d2b26", fontSize:14, fontWeight:700, cursor:"pointer" }}>Chiudi</button>
+          <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap", justifyContent:"center" }}>
+            <a
+              href={viewingDoc.base64}
+              target="_blank"
+              rel="noreferrer"
+              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
+              onClick={e => e.stopPropagation()}
+            >
+              Apri
+            </a>
+            <a
+              href={viewingDoc.base64}
+              download={viewingDoc.filename || "documento"}
+              style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
+              onClick={e => e.stopPropagation()}
+            >
+              Scarica
+            </a>
+            <button onClick={() => setViewingDoc(null)} style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#fff", color:"#2d2b26", fontSize:13, fontWeight:700, cursor:"pointer" }}>Chiudi</button>
+          </div>
         </div>
       )}
 
