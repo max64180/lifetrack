@@ -3288,6 +3288,27 @@ export default function App() {
     }
   };
 
+  const shareDocument = async (doc) => {
+    if (!doc) return;
+    if (!navigator.share) {
+      showToast("Condivisione non supportata su questo dispositivo");
+      return;
+    }
+    try {
+      const response = await fetch(doc.base64);
+      const blob = await response.blob();
+      const file = new File([blob], doc.filename || "documento.jpg", { type: blob.type || "image/jpeg" });
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: doc.filename || "Documento", url: doc.base64 });
+        return;
+      }
+      await navigator.share({ files: [file], title: doc.filename || "Documento" });
+    } catch (error) {
+      console.error("Share error:", error);
+      showToast("Errore condivisione");
+    }
+  };
+
   // 🔥 Loading Screen (after all hooks)
   if (loading) {
     return (
@@ -3710,6 +3731,12 @@ export default function App() {
             >
               Scarica
             </a>
+            <button
+              onClick={(e) => { e.stopPropagation(); shareDocument(viewingDoc); }}
+              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}
+            >
+              Condividi
+            </button>
             <button onClick={() => setViewingDoc(null)} style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#fff", color:"#2d2b26", fontSize:13, fontWeight:700, cursor:"pointer" }}>Chiudi</button>
           </div>
         </div>
