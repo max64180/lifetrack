@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { initializeFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore/lite';
 
 // 🔥 Firebase Configuration
 const firebaseConfig = {
@@ -15,11 +15,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// Use long-polling to avoid Safari/ITP/CORS issues with Firestore WebChannel
-const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false,
-});
+// Use Firestore Lite (REST) to avoid WebChannel issues in Safari
+const db = getFirestore(app);
 
 
 
