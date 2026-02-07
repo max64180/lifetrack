@@ -126,6 +126,20 @@ function groupItems(items, range) {
 function diffDays(d) { return Math.round((d - TODAY) / 86400000); }
 function fmtDate(d) { return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; }
 
+function getOccurrenceDate(startDate, i, intervalVal, unit) {
+  const d = new Date(startDate);
+  if (unit === "giorni") {
+    d.setDate(startDate.getDate() + (intervalVal * i));
+  } else if (unit === "settimane") {
+    d.setDate(startDate.getDate() + (intervalVal * 7 * i));
+  } else if (unit === "mesi") {
+    d.setMonth(startDate.getMonth() + (intervalVal * i));
+  } else if (unit === "anni") {
+    d.setFullYear(startDate.getFullYear() + (intervalVal * i));
+  }
+  return d;
+}
+
 function toDate(value) {
   if (value instanceof Date) return value;
   if (value && typeof value.toDate === 'function') return value.toDate();
@@ -186,6 +200,20 @@ function RangeSelector({ active, onChange }) {
 /* Budget summary bar */
 function BudgetBar({ deadlines, range, cats }) {
   const maxDays = RANGES.find(r => r.id === range)?.days || 30;
+  const editScheduleChanged = editConfirm ? (() => {
+    const { item, form } = editConfirm;
+    const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+    const count = Math.max(1, parseInt(form.recurringCount) || 1);
+    const itemDateStr = item.date instanceof Date
+      ? item.date.toISOString().split('T')[0]
+      : new Date(item.date).toISOString().split('T')[0];
+    return (
+      form.date !== itemDateStr ||
+      interval !== item.recurring.interval ||
+      form.recurringUnit !== item.recurring.unit ||
+      count !== item.recurring.total
+    );
+  })() : false;
   const inRange = deadlines.filter(d => !d.done && diffDays(d.date) >= 0 && diffDays(d.date) <= maxDays);
   const total   = inRange.reduce((s, d) => s + d.budget, 0);
   const count   = inRange.length;
@@ -241,7 +269,7 @@ function BudgetBar({ deadlines, range, cats }) {
 }
 
 /* Carta scadenza – ICONE PIÙ GRANDI E VISIVE */
-function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
+function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
   const cat = getCat(cats, item.cat);
   const urg = getUrgency(item.date, item.done);
   const days = diffDays(item.date);
@@ -374,6 +402,12 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
           )}
 
+          {item.skipped && item.done && (
+            <div style={{ fontSize:11, color:"#6b6961", background:"#f0efe8", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
+              ⏭ Scadenza saltata
+            </div>
+          )}
+
           {/* Documents section */}
           {((item.documents && item.documents.length > 0) || !item.done) && (
             <div style={{ background:"#faf9f7", borderRadius:10, padding:"8px 10px", marginBottom:12 }}>
@@ -427,6 +461,13 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
                 flex:1, padding:"11px", borderRadius:10, border:"none",
                 background:"#FB8C00", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
               }}>↻ Posticipa</button>
+            )}
+
+            {item.recurring && item.recurring.enabled && !item.done && (
+              <button onClick={(e) => { e.stopPropagation(); onSkip(item.id); }} style={{
+                flex:1, padding:"11px", borderRadius:10, border:"none",
+                background:"#edecea", color:"#6b6961", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+              }}>⏭ Salta</button>
             )}
             
             <button onClick={(e) => { e.stopPropagation(); onComplete(item.id); }} style={{
@@ -756,7 +797,8 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
   );
 }
 
-function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
+function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem }) {
+  const [step, setStep] = useState(0); // 0 doc, 1 base, 2 options
   const [form, setForm] = useState({ 
     title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
     mandatory:false, essential:true, autoPay:false, documents:[],
@@ -767,6 +809,7 @@ function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
   });
   useEffect(() => { 
     if (!open) {
+      setStep(0);
       setForm({ 
         title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
         mandatory:false, essential:true, autoPay:false, documents:[],
@@ -776,11 +819,10 @@ function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
         recurringCount: 12
       });
     } else if (editingItem) {
-      // Populate form with existing data for editing
+      setStep(1);
       const dateStr = editingItem.date instanceof Date 
         ? editingItem.date.toISOString().split('T')[0]
         : new Date(editingItem.date).toISOString().split('T')[0];
-      
       setForm({
         title: editingItem.title,
         cat: editingItem.cat,
@@ -798,7 +840,7 @@ function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
         recurringCount: editingItem.recurring?.count || 12
       });
     } else if (presetAsset) {
-      // Preset with asset from AssetSheet
+      setStep(1);
       setForm(prev => ({
         ...prev,
         cat: presetAsset.catId,
@@ -811,6 +853,51 @@ function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const selectedCat = getCat(cats, form.cat);
   const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
+  const steps = ["Documento", "Dettagli", "Opzioni"];
+  const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+  const count = Math.max(1, parseInt(form.recurringCount) || 1);
+  const baseAmount = Number(form.budget) || 0;
+  const baseDate = form.date ? new Date(form.date + "T00:00:00") : null;
+  const today = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
+
+  const occurrences = (() => {
+    if (!form.recurringEnabled || !baseDate || Number.isNaN(baseDate.getTime())) return [];
+    const dates = [];
+    for (let i = 0; i < count; i++) {
+      dates.push(getOccurrenceDate(baseDate, i, interval, form.recurringUnit));
+    }
+    return dates;
+  })();
+
+  const preview = (() => {
+    if (!form.recurringEnabled || occurrences.length === 0) return null;
+    const next12End = new Date(today);
+    next12End.setFullYear(next12End.getFullYear() + 1);
+    const next12 = occurrences.filter(d => d >= today && d < next12End);
+    const next12Total = next12.length * baseAmount;
+    const avg = next12Total / 12;
+    const next = occurrences.find(d => d >= today) || occurrences[0] || null;
+
+    const nextYear = today.getFullYear() + 1;
+    const nextYearStart = new Date(nextYear, 0, 1);
+    const nextYearEnd = new Date(nextYear, 11, 31, 23, 59, 59, 999);
+    const nextYearOccurrences = occurrences.filter(d => d >= nextYearStart && d <= nextYearEnd);
+    const nextYearTotal = nextYearOccurrences.length * baseAmount;
+
+    return {
+      next12Count: next12.length,
+      next12Total,
+      avg,
+      next,
+      nextYear,
+      nextYearCount: nextYearOccurrences.length,
+      nextYearTotal
+    };
+  })();
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
@@ -823,283 +910,336 @@ function AddSheet({ open, onClose, onSave, cats, presetAsset, editingItem }) {
       }}>
         <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
-        <h3 style={{ margin:"0 0 16px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
+        <h3 style={{ margin:"0 0 6px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
           {editingItem ? "Modifica scadenza" : "Nuova scadenza"}
         </h3>
-
-        <label style={lbl}>Titolo</label>
-        <input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Es. Rinnovo assicurazione" style={inp} autoFocus/>
-
-        <label style={lbl}>Categoria</label>
-        <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-          {cats.map(c => (
-            <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
-              background: form.cat === c.id ? c.light : "#f5f4f0",
-              border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
-              borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
-              fontWeight: form.cat === c.id ? 700 : 500,
-              color: form.cat === c.id ? c.color : "#6b6961",
-              minHeight:44,
-            }}>{c.icon} {c.label}</button>
+        <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+          {steps.map((s, i) => (
+            <div key={s} style={{
+              flex:1, height:4, borderRadius:4,
+              background: i <= step ? "#E8855D" : "#f0ede7"
+            }}/>
           ))}
         </div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <div style={{ fontSize:12, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+            Step {step + 1} · {steps[step]}
+          </div>
+          <div style={{ fontSize:11, color:"#b5b2a8" }}>
+            {form.title ? form.title : "Senza titolo"}
+            {form.date ? ` · ${form.date}` : ""}
+            {form.budget ? ` · €${form.budget}` : ""}
+          </div>
+        </div>
 
-        {/* ASSET PICKER – appare solo se la categoria ha assets */}
-        {hasAssets && (
+        {step === 0 && (
           <>
-            <label style={lbl}>Per quale?</label>
-            <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-              {selectedCat.assets.map(a => (
-                <button key={a} onClick={() => set("asset", a)} style={{
-                  background: form.asset === a ? selectedCat.light : "#f5f4f0",
-                  border: `2px solid ${form.asset === a ? selectedCat.color : "#e8e6e0"}`,
-                  borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
-                  fontWeight: form.asset === a ? 700 : 500,
-                  color: form.asset === a ? selectedCat.color : "#6b6961",
-                  minHeight:44,
-                }}>{a}</button>
-              ))}
+            <label style={lbl}>Documento (opzionale)</label>
+            <div style={{ background:"#faf9f7", borderRadius:12, padding:"10px 12px", border:"1px solid #edecea" }}>
+              {form.documents.length === 0 ? (
+                <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
+                  <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={async (e) => {
+                    if(e.target.files[0]) {
+                      try {
+                        const base64 = await compressImage(e.target.files[0]);
+                        const doc = { id: Date.now(), type: 'incoming', base64, filename: e.target.files[0].name, uploadDate: new Date().toISOString() };
+                        set("documents", [doc]);
+                      } catch(err) { alert("Errore caricamento file"); }
+                      e.target.value = '';
+                    }
+                  }} />
+                  📸 Carica il documento (puoi saltare)
+                </label>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
+                  <span style={{ fontSize:16 }}>📄</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
+                    <div style={{ fontSize:10, color:"#8a877f" }}>Documento allegato</div>
+                  </div>
+                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>Rimuovi</button>
+                </div>
+              )}
             </div>
           </>
         )}
 
-        <label style={lbl}>Data scadenza</label>
-        <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
+        {step === 1 && (
+          <>
+            <label style={lbl}>Titolo</label>
+            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder="Es. Rinnovo assicurazione" style={inp} autoFocus/>
 
-        <div style={{ display:"flex", gap:10 }}>
-          <div style={{ flex:1 }}>
-            <label style={lbl}>Budget (€)</label>
-            <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="0" style={inp}/>
-          </div>
-        </div>
-
-        {/* Recurring series configuration */}
-        <div style={{ marginTop:14, background:"#faf9f7", border:"1px solid #edecea", borderRadius:10, padding:"10px 12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", marginBottom:form.recurringEnabled ? 12 : 0 }}>
-            <input
-              type="checkbox"
-              checked={form.recurringEnabled}
-              onChange={e => set("recurringEnabled", e.target.checked)}
-              style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
-            />
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>🔁 Scadenza ricorrente</div>
-              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Genera automaticamente più occorrenze</div>
+            <label style={lbl}>Categoria</label>
+            <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+              {cats.map(c => (
+                <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
+                  background: form.cat === c.id ? c.light : "#f5f4f0",
+                  border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
+                  borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
+                  fontWeight: form.cat === c.id ? 700 : 500,
+                  color: form.cat === c.id ? c.color : "#6b6961",
+                  minHeight:44,
+                }}>{c.icon} {c.label}</button>
+              ))}
             </div>
-          </label>
 
-          {form.recurringEnabled && (
-            <div style={{ paddingLeft:4 }}>
-              <div style={{ display:"flex", gap:8, marginBottom:10, alignItems:"center" }}>
-                <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Si ripete ogni:</label>
-                <input 
-                  type="number" 
-                  value={form.recurringInterval} 
-                  onChange={e => set("recurringInterval", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                  onBlur={e => { if(e.target.value === "") set("recurringInterval", 1); }}
-                  min="1"
-                  style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+            {hasAssets && (
+              <>
+                <label style={lbl}>Per quale?</label>
+                <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                  {selectedCat.assets.map(a => (
+                    <button key={a} onClick={() => set("asset", a)} style={{
+                      background: form.asset === a ? selectedCat.light : "#f5f4f0",
+                      border: `2px solid ${form.asset === a ? selectedCat.color : "#e8e6e0"}`,
+                      borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
+                      fontWeight: form.asset === a ? 700 : 500,
+                      color: form.asset === a ? selectedCat.color : "#6b6961",
+                      minHeight:44,
+                    }}>{a}</button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <label style={lbl}>Data scadenza</label>
+            <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <label style={lbl}>Budget (€)</label>
+                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="0" style={inp}/>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div style={{ marginTop:2, background:"#faf9f7", border:"1px solid #edecea", borderRadius:10, padding:"10px 12px" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", marginBottom:form.recurringEnabled ? 12 : 0 }}>
+                <input
+                  type="checkbox"
+                  checked={form.recurringEnabled}
+                  onChange={e => set("recurringEnabled", e.target.checked)}
+                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
                 />
-                <select 
-                  value={form.recurringUnit} 
-                  onChange={e => set("recurringUnit", e.target.value)}
-                  style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
-                >
-                  <option value="giorni">giorni</option>
-                  <option value="settimane">settimane</option>
-                  <option value="mesi">mesi</option>
-                  <option value="anni">anni</option>
-                </select>
-              </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>🔁 Scadenza ricorrente</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Genera automaticamente più occorrenze</div>
+                </div>
+              </label>
 
-              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Per quante volte:</label>
-                <input 
-                  type="number" 
-                  value={form.recurringCount} 
-                  onChange={e => set("recurringCount", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                  onBlur={e => { if(e.target.value === "") set("recurringCount", 1); }}
-                  min="1"
-                  max="99"
-                  style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+              {form.recurringEnabled && (
+                <div style={{ paddingLeft:4 }}>
+                  <div style={{ display:"flex", gap:8, marginBottom:10, alignItems:"center" }}>
+                    <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Si ripete ogni:</label>
+                    <input 
+                      type="number" 
+                      value={form.recurringInterval} 
+                      onChange={e => set("recurringInterval", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
+                      onBlur={e => { if(e.target.value === "") set("recurringInterval", 1); }}
+                      min="1"
+                      style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+                    />
+                    <select 
+                      value={form.recurringUnit} 
+                      onChange={e => set("recurringUnit", e.target.value)}
+                      style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
+                    >
+                      <option value="giorni">giorni</option>
+                      <option value="settimane">settimane</option>
+                      <option value="mesi">mesi</option>
+                      <option value="anni">anni</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Per quante volte:</label>
+                    <input 
+                      type="number" 
+                      value={form.recurringCount} 
+                      onChange={e => set("recurringCount", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
+                      onBlur={e => { if(e.target.value === "") set("recurringCount", 1); }}
+                      min="1"
+                      max="99"
+                      style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+                    />
+                    {baseDate && !Number.isNaN(baseDate.getTime()) && (
+                      <span style={{ fontSize:11, color:"#b5b2a8" }}>
+                        (fino a {(() => {
+                          const d = getOccurrenceDate(baseDate, count - 1, interval, form.recurringUnit);
+                          return d.toLocaleDateString('it-IT', {month:'short', year:'numeric'});
+                        })()})
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
+                    💡 Verranno create {count} scadenze con €{form.budget || 0} ciascuna
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {preview && (
+              <div style={{ marginTop:12, background:"#2d2b26", color:"#fff", borderRadius:10, padding:"10px 12px" }}>
+                <div style={{ fontSize:10, opacity:.6, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                  Impatto economico
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:6, gap:12 }}>
+                  <div>
+                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.next12Total)}</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>prossimi 12 mesi · {preview.next12Count} scadenze</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>media {formatCurrency(preview.avg)}/mese</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:18, fontWeight:800 }}>{formatCurrency(preview.nextYearTotal)}</div>
+                    <div style={{ fontSize:10, opacity:.6 }}>anno {preview.nextYear} · {preview.nextYearCount} scadenze</div>
+                    {preview.next && (
+                      <div style={{ fontSize:10, opacity:.6 }}>
+                        prossima {preview.next.toLocaleDateString('it-IT', { day:'2-digit', month:'short' })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop:14, background:"#fff8f5", border:"1px solid #FBE9E7", borderRadius:10, padding:"10px 12px" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={form.mandatory}
+                  onChange={e => { 
+                    const val = e.target.checked;
+                    set("mandatory", val);
+                    if (val) set("essential", true);
+                  }}
+                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#E53935" }}
                 />
-                {form.date && (
-                  <span style={{ fontSize:11, color:"#b5b2a8" }}>
-                    (fino a {(() => {
-                      const d = new Date(form.date);
-                      const multiplier = form.recurringUnit === "giorni" ? 1 : form.recurringUnit === "settimane" ? 7 : form.recurringUnit === "mesi" ? 30 : 365;
-                      d.setDate(d.getDate() + (form.recurringInterval * multiplier * (form.recurringCount - 1)));
-                      return d.toLocaleDateString('it-IT', {month:'short', year:'numeric'});
-                    })()})
-                  </span>
-                )}
-              </div>
-
-              <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
-                💡 Verranno create {form.recurringCount} scadenze con €{form.budget || 0} ciascuna
-              </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#E53935" }}>⚠ Scadenza inderogabile</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Es. tasse, multe, documenti legali</div>
+                </div>
+              </label>
             </div>
-          )}
-        </div>
 
-        {/* Mandatory checkbox */}
-        <div style={{ marginTop:14, background:"#fff8f5", border:"1px solid #FBE9E7", borderRadius:10, padding:"10px 12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-            <input
-              type="checkbox"
-              checked={form.mandatory}
-              onChange={e => { 
-                const val = e.target.checked;
-                set("mandatory", val);
-                if (val) set("essential", true); // Auto-set essential when mandatory
-              }}
-              style={{ width:20, height:20, cursor:"pointer", accentColor:"#E53935" }}
-            />
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#E53935" }}>⚠ Scadenza inderogabile</div>
-              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Es. tasse, multe, documenti legali</div>
+            <div style={{ marginTop:10, background:"#f0f8ff", border:"1px solid #C8E6FF", borderRadius:10, padding:"10px 12px" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={form.essential}
+                  onChange={e => set("essential", e.target.checked)}
+                  disabled={form.mandatory}
+                  style={{ width:20, height:20, cursor: form.mandatory ? "not-allowed" : "pointer", accentColor:"#4CAF6E", opacity: form.mandatory ? 0.5 : 1 }}
+                />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#4CAF6E" }}>💡 Spesa essenziale</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Necessaria per vita quotidiana (bollette, spesa, affitto)</div>
+                </div>
+              </label>
             </div>
-          </label>
-        </div>
 
-        {/* Essential checkbox */}
-        <div style={{ marginTop:10, background:"#f0f8ff", border:"1px solid #C8E6FF", borderRadius:10, padding:"10px 12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-            <input
-              type="checkbox"
-              checked={form.essential}
-              onChange={e => set("essential", e.target.checked)}
-              disabled={form.mandatory}
-              style={{ width:20, height:20, cursor: form.mandatory ? "not-allowed" : "pointer", accentColor:"#4CAF6E", opacity: form.mandatory ? 0.5 : 1 }}
-            />
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#4CAF6E" }}>💡 Spesa essenziale</div>
-              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Necessaria per vita quotidiana (bollette, spesa, affitto)</div>
+            <div style={{ marginTop:14, background:"#EBF2FC", border:"1px solid #5B8DD966", borderRadius:10, padding:"10px 12px" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={form.autoPay}
+                  onChange={e => set("autoPay", e.target.checked)}
+                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
+                />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#5B8DD9" }}>🔄 Pagamento automatico</div>
+                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Domiciliazione bancaria o addebito automatico</div>
+                </div>
+              </label>
             </div>
-          </label>
-        </div>
 
-        {/* AutoPay checkbox */}
-        <div style={{ marginTop:14, background:"#EBF2FC", border:"1px solid #5B8DD966", borderRadius:10, padding:"10px 12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-            <input
-              type="checkbox"
-              checked={form.autoPay}
-              onChange={e => set("autoPay", e.target.checked)}
-              style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
-            />
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#5B8DD9" }}>🔄 Pagamento automatico</div>
-              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>Domiciliazione bancaria o addebito automatico</div>
-            </div>
-          </label>
-        </div>
-
-        <label style={lbl}>Note</label>
-        <textarea value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Appunti…" rows={2} style={{ ...inp, resize:"vertical" }}/>
-
-        {/* Document upload - opzionale */}
-        <label style={lbl}>Documento (opzionale)</label>
-        <div style={{ background:"#faf9f7", borderRadius:12, padding:"10px 12px", border:"1px solid #edecea" }}>
-          {form.documents.length === 0 ? (
-            <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
-              <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={async (e) => {
-                if(e.target.files[0]) {
-                  try {
-                    const base64 = await compressImage(e.target.files[0]);
-                    const doc = { id: Date.now(), type: 'incoming', base64, filename: e.target.files[0].name, uploadDate: new Date().toISOString() };
-                    set("documents", [doc]);
-                  } catch(err) { alert("Errore caricamento file"); }
-                  e.target.value = '';
-                }
-              }} />
-              📸 Allega documento/bolletta
-            </label>
-          ) : (
-            <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
-              <span style={{ fontSize:16 }}>📄</span>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
-                <div style={{ fontSize:10, color:"#8a877f" }}>Documento allegato</div>
-              </div>
-              <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>Rimuovi</button>
-            </div>
-          )}
-        </div>
+            <label style={lbl}>Note</label>
+            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Appunti…" rows={2} style={{ ...inp, resize:"vertical" }}/>
+          </>
+        )}
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
-          <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:48 }}>Cancella</button>
-          <button onClick={() => {
-            if (form.title && form.date) {
-              if (form.recurringEnabled) {
-                // Genera serie di scadenze
-                const series = [];
-                const seriesId = `series_${Date.now()}`;
-                const baseDate = new Date(form.date+"T00:00:00");
-                const baseAmount = Number(form.budget)||0;
-                
-                for (let i = 0; i < form.recurringCount; i++) {
-                  const occurrenceDate = new Date(baseDate);
-                  
-                  // Calcola data basata su interval e unit
-                  if (form.recurringUnit === "giorni") {
-                    occurrenceDate.setDate(baseDate.getDate() + (form.recurringInterval * i));
-                  } else if (form.recurringUnit === "settimane") {
-                    occurrenceDate.setDate(baseDate.getDate() + (form.recurringInterval * 7 * i));
-                  } else if (form.recurringUnit === "mesi") {
-                    occurrenceDate.setMonth(baseDate.getMonth() + (form.recurringInterval * i));
-                  } else if (form.recurringUnit === "anni") {
-                    occurrenceDate.setFullYear(baseDate.getFullYear() + (form.recurringInterval * i));
+          <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:48 }}>Annulla</button>
+          {step > 0 && (
+            <button onClick={() => setStep(s => Math.max(0, s - 1))} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#2d2b26", minHeight:48 }}>
+              Indietro
+            </button>
+          )}
+          {step < 2 ? (
+            <>
+              <button onClick={() => setStep(s => Math.min(2, s + 1))} style={{
+                flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", color:"#6b6961", cursor:"pointer", fontSize:14, fontWeight:600, minHeight:48
+              }}>Salta</button>
+              <button onClick={() => setStep(s => Math.min(2, s + 1))} style={{
+                flex:2, padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48,
+                boxShadow:"0 4px 14px rgba(0,0,0,.2)",
+              }}>Avanti</button>
+            </>
+          ) : (
+            <button onClick={() => {
+              if (form.title && form.date) {
+                if (editingItem) {
+                  if (onUpdate) onUpdate(form);
+                  onClose();
+                  return;
+                }
+                if (form.recurringEnabled) {
+                  const series = [];
+                  const seriesId = `series_${Date.now()}`;
+                  const startDate = baseDate || new Date(form.date+"T00:00:00");
+                  for (let i = 0; i < count; i++) {
+                    const occurrenceDate = getOccurrenceDate(startDate, i, interval, form.recurringUnit);
+                    series.push({
+                      id: Date.now() + i,
+                      title: form.title,
+                      cat: form.cat,
+                      asset: form.asset,
+                      date: occurrenceDate,
+                      budget: baseAmount,
+                      notes: form.notes,
+                      mandatory: form.mandatory,
+                      essential: form.essential,
+                      autoPay: form.autoPay,
+                      documents: i === 0 ? form.documents : [],
+                      done: false,
+                      recurring: {
+                        enabled: true,
+                        interval: interval,
+                        unit: form.recurringUnit,
+                        seriesId: seriesId,
+                        index: i + 1,
+                        total: count,
+                        baseAmount: baseAmount
+                      }
+                    });
                   }
-                  
-                  series.push({
-                    id: Date.now() + i,
+                  onSave(series);
+                } else {
+                  onSave([{ 
+                    id: Date.now(), 
                     title: form.title,
                     cat: form.cat,
                     asset: form.asset,
-                    date: occurrenceDate,
-                    budget: baseAmount,
+                    date: new Date(form.date+"T00:00:00"), 
+                    budget: Number(form.budget)||0,
                     notes: form.notes,
                     mandatory: form.mandatory,
+                    essential: form.essential,
                     autoPay: form.autoPay,
-                    documents: i === 0 ? form.documents : [], // solo prima ha documenti
+                    documents: form.documents,
                     done: false,
-                    recurring: {
-                      enabled: true,
-                      interval: form.recurringInterval,
-                      unit: form.recurringUnit,
-                      seriesId: seriesId,
-                      index: i + 1,
-                      total: form.recurringCount,
-                      baseAmount: baseAmount
-                    }
-                  });
+                    recurring: null
+                  }]);
                 }
-                
-                onSave(series); // passa array
-              } else {
-                // Scadenza singola
-                onSave([{ 
-                  id: Date.now(), 
-                  title: form.title,
-                  cat: form.cat,
-                  asset: form.asset,
-                  date: new Date(form.date+"T00:00:00"), 
-                  budget: Number(form.budget)||0,
-                  notes: form.notes,
-                  mandatory: form.mandatory,
-                  autoPay: form.autoPay,
-                  documents: form.documents,
-                  done: false,
-                  recurring: null
-                }]);
+                onClose();
               }
-              onClose();
-            }
-          }} style={{
-            flex:2, padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48,
-            boxShadow:"0 4px 14px rgba(0,0,0,.2)",
-          }}>Aggiungi</button>
+            }} style={{
+              flex:2, padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48,
+              boxShadow:"0 4px 14px rgba(0,0,0,.2)",
+            }}>Aggiungi</button>
+          )}
         </div>
       </div>
     </div>
@@ -1128,7 +1268,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   const yearEnd = new Date(currentYear, 11, 31);
   
   const currentYearDeadlines = deadlines.filter(d => 
-    d.done && d.date >= yearStart && d.date <= yearEnd
+    d.done && !d.skipped && d.date >= yearStart && d.date <= yearEnd
   );
   
   const currentYearTotal = currentYearDeadlines.reduce((sum, d) => sum + d.budget, 0);
@@ -1139,7 +1279,7 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
   const prevYearEnd = new Date(previousYear, 11, 31);
   
   const prevYearDeadlines = deadlines.filter(d => 
-    d.done && d.date >= prevYearStart && d.date <= prevYearEnd
+    d.done && !d.skipped && d.date >= prevYearStart && d.date <= prevYearEnd
   );
   
   const prevYearTotal = prevYearDeadlines.reduce((sum, d) => sum + d.budget, 0);
@@ -2399,6 +2539,7 @@ export default function App() {
   const [expandedId, setExpandedId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editingDeadline, setEditingDeadline] = useState(null); // For editing existing deadlines
+  const [editConfirm, setEditConfirm] = useState(null); // { item, form }
   const [presetAsset, setPresetAsset] = useState(null); // { catId, assetName }
   const [showCats, setShowCats] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -2455,9 +2596,21 @@ export default function App() {
       setPaymentAmount(String(item.budget)); // default = budget previsto
     } else {
       // Budget = 0 o riattivazione: completa direttamente
-      setDeadlines(p => p.map(d => d.id === id ? { ...d, done: !d.done } : d));
+      setDeadlines(p => p.map(d => d.id === id ? { 
+        ...d, 
+        done: !d.done, 
+        skipped: d.done ? false : d.skipped 
+      } : d));
       setExpandedId(null);
     }
+  };
+
+  const skip = id => {
+    const item = deadlines.find(d => d.id === id);
+    if (!item || item.done) return;
+    setDeadlines(p => p.map(d => d.id === id ? { ...d, done: true, skipped: true } : d));
+    setExpandedId(null);
+    showToast("✓ Scadenza saltata");
   };
   
   const confirmPayment = (type) => {
@@ -2511,6 +2664,193 @@ export default function App() {
     setPaymentFlow(null);
     setPaymentAmount("");
     setDownpaymentDate("");
+    setExpandedId(null);
+  };
+
+  const buildFieldsFromForm = (form) => ({
+    title: form.title,
+    cat: form.cat,
+    asset: form.asset,
+    budget: Number(form.budget) || 0,
+    notes: form.notes,
+    mandatory: form.mandatory,
+    essential: form.essential,
+    autoPay: form.autoPay,
+  });
+
+  const handleUpdateDeadline = (form) => {
+    if (!editingDeadline) return;
+    const item = editingDeadline;
+    const fields = buildFieldsFromForm(form);
+
+    if (item.recurring && item.recurring.enabled) {
+      setEditConfirm({ item, form });
+      return;
+    }
+
+    if (form.recurringEnabled) {
+      const seriesId = `series_${Date.now()}`;
+      const startDate = new Date(form.date + "T00:00:00");
+      const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+      const count = Math.max(1, parseInt(form.recurringCount) || 1);
+      const baseAmount = Number(form.budget) || 0;
+      const newSeries = [];
+      for (let i = 0; i < count; i++) {
+        newSeries.push({
+          id: Date.now() + i,
+          ...fields,
+          date: getOccurrenceDate(startDate, i, interval, form.recurringUnit),
+          documents: i === 0 ? form.documents : [],
+          done: false,
+          recurring: {
+            enabled: true,
+            interval,
+            unit: form.recurringUnit,
+            seriesId,
+            index: i + 1,
+            total: count,
+            baseAmount,
+          }
+        });
+      }
+      setDeadlines(p => [...p.filter(d => d.id !== item.id), ...newSeries]);
+    } else {
+      const newDate = new Date(form.date + "T00:00:00");
+      setDeadlines(p => p.map(d => d.id === item.id ? {
+        ...d,
+        ...fields,
+        date: newDate,
+        documents: form.documents,
+        recurring: null,
+      } : d));
+    }
+
+    setEditingDeadline(null);
+  };
+
+  const applyEditScope = (scope) => {
+    if (!editConfirm) return;
+    const { item, form } = editConfirm;
+    const seriesId = item.recurring?.seriesId;
+    const currentIndex = item.recurring?.index || 1;
+    const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+    const count = Math.max(1, parseInt(form.recurringCount) || 1);
+    const baseAmount = Number(form.budget) || 0;
+    const fields = buildFieldsFromForm(form);
+    const newDate = new Date(form.date + "T00:00:00");
+    const itemDateStr = item.date instanceof Date
+      ? item.date.toISOString().split('T')[0]
+      : new Date(item.date).toISOString().split('T')[0];
+    const scheduleChanged =
+      form.date !== itemDateStr ||
+      interval !== item.recurring.interval ||
+      form.recurringUnit !== item.recurring.unit ||
+      count !== item.recurring.total;
+
+    const buildSeries = (startDate, seriesCount, startIdx, total) => {
+      const items = [];
+      for (let i = 0; i < seriesCount; i++) {
+        items.push({
+          id: Date.now() + i,
+          ...fields,
+          date: getOccurrenceDate(startDate, i, interval, form.recurringUnit),
+          documents: i === 0 ? form.documents : [],
+          done: false,
+          recurring: {
+            enabled: true,
+            interval,
+            unit: form.recurringUnit,
+            seriesId,
+            index: startIdx + i,
+            total,
+            baseAmount,
+          }
+        });
+      }
+      return items;
+    };
+
+    if (scope === "single") {
+      setDeadlines(p => p.map(d => d.id === item.id ? {
+        ...d,
+        ...fields,
+        date: newDate,
+        documents: form.documents,
+        recurring: null,
+      } : d));
+    } else if (scope === "future") {
+      if (!form.recurringEnabled) {
+        setDeadlines(p => p.map(d => {
+          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
+          if (d.recurring.index < currentIndex) return d;
+          const isCurrent = d.id === item.id;
+          return {
+            ...d,
+            ...fields,
+            date: isCurrent ? newDate : d.date,
+            documents: isCurrent ? form.documents : d.documents,
+            recurring: null,
+          };
+        }));
+      } else {
+        setDeadlines(p => {
+          const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
+          const past = p.filter(d => d.recurring && d.recurring.seriesId === seriesId && d.recurring.index < currentIndex);
+          const newTotal = past.length + count;
+          const updatedPast = past.map(d => ({
+            ...d,
+            recurring: {
+              ...d.recurring,
+              interval,
+              unit: form.recurringUnit,
+              total: newTotal,
+              baseAmount,
+            }
+          }));
+          const future = buildSeries(newDate, count, currentIndex, newTotal);
+          return [...others, ...updatedPast, ...future];
+        });
+      }
+    } else if (scope === "all") {
+      if (!form.recurringEnabled) {
+        setDeadlines(p => p.map(d => {
+          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
+          const isCurrent = d.id === item.id;
+          return {
+            ...d,
+            ...fields,
+            date: isCurrent ? newDate : d.date,
+            documents: isCurrent ? form.documents : d.documents,
+            recurring: null,
+          };
+        }));
+      } else if (scheduleChanged) {
+        setDeadlines(p => {
+          const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
+          const regenerated = buildSeries(newDate, count, 1, count);
+          return [...others, ...regenerated];
+        });
+      } else {
+        setDeadlines(p => p.map(d => {
+          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
+          return {
+            ...d,
+            ...fields,
+            documents: d.id === item.id ? form.documents : d.documents,
+            recurring: {
+              ...d.recurring,
+              interval,
+              unit: form.recurringUnit,
+              total: d.recurring.total,
+              baseAmount,
+            }
+          };
+        }));
+      }
+    }
+
+    setEditConfirm(null);
+    setEditingDeadline(null);
     setExpandedId(null);
   };
   
@@ -2856,9 +3196,10 @@ export default function App() {
                   expanded={expandedId === item.id}
                   onToggle={() => toggle(item.id)}
                   onComplete={() => complete(item.id)}
+                  onSkip={() => skip(item.id)}
                   onDelete={() => del(item.id)}
                   onPostpone={() => postpone(item.id)}
-                  onEdit={(item) => setEditingDeadline(item)}
+                  onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
                   onUploadDoc={handleDocumentUpload}
                   onDeleteDoc={deleteDocument}
                   onViewDoc={setViewingDoc}
@@ -2880,14 +3221,17 @@ export default function App() {
       }}>+</button>
 
       <AddSheet 
-        open={showAdd} 
+        open={showAdd || !!editingDeadline} 
         onClose={() => { 
           setShowAdd(false); 
+          setEditingDeadline(null);
           setPresetAsset(null); 
         }} 
         onSave={add} 
+        onUpdate={handleUpdateDeadline}
         cats={cats}
         presetAsset={presetAsset}
+        editingItem={editingDeadline}
       />
       <StatsSheet open={showStats} onClose={() => setShowStats(false)} deadlines={deadlines} cats={cats}/>
       <AssetListSheet 
@@ -2973,6 +3317,46 @@ export default function App() {
               <button onClick={() => setPostponeId(null)} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>Annulla</button>
               <button onClick={confirmPostpone} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FB8C00", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>Conferma</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Recurring Scope Modal */}
+      {editConfirm && (
+        <div onClick={() => setEditConfirm(null)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.6)", zIndex:200,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background:"#fff", borderRadius:18, padding:"20px 22px", width:"85%", maxWidth:380,
+            animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both",
+          }}>
+            <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+            <h3 style={{ margin:"0 0 10px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
+              Modifica ricorrenza
+            </h3>
+            <p style={{ margin:"0 0 10px", fontSize:13, color:"#6b6961" }}>
+              Vuoi applicare le modifiche solo a questa scadenza o anche alle altre?
+            </p>
+            {editScheduleChanged && (
+              <p style={{ margin:"0 0 14px", fontSize:12, color:"#E53935", fontWeight:600 }}>
+                Attenzione: cambiando frequenza o data, “Tutta la serie” rigenera tutte le occorrenze.
+              </p>
+            )}
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <button onClick={() => applyEditScope("single")} style={{ padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#2d2b26" }}>
+                Solo questa
+              </button>
+              <button onClick={() => applyEditScope("future")} style={{ padding:"12px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>
+                Da questa in poi
+              </button>
+              <button onClick={() => applyEditScope("all")} style={{ padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#6b6961" }}>
+                Tutta la serie
+              </button>
+            </div>
+            <button onClick={() => setEditConfirm(null)} style={{ marginTop:12, width:"100%", padding:"10px", borderRadius:10, border:"none", background:"#edecea", color:"#6b6961", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              Annulla
+            </button>
           </div>
         </div>
       )}
