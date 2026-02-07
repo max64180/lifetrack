@@ -140,6 +140,79 @@ function getOccurrenceDate(startDate, i, intervalVal, unit) {
   return d;
 }
 
+function getAutoEndDate() {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const nextYear = now.getFullYear() + 1;
+  return new Date(nextYear, 11, 31, 23, 59, 59, 999);
+}
+
+function computeOccurrences({ startDate, interval, unit, endMode, endDate, count, max = 500 }) {
+  if (!startDate || Number.isNaN(startDate.getTime())) return [];
+  const safeInterval = Math.max(1, parseInt(interval) || 1);
+  const safeCount = Math.max(1, parseInt(count) || 1);
+  const mode = endMode || "auto";
+  let end = null;
+  if (mode === "date") {
+    if (endDate) {
+      const d = new Date(endDate + "T00:00:00");
+      if (!Number.isNaN(d.getTime())) end = d;
+    }
+  } else if (mode === "auto") {
+    end = getAutoEndDate();
+  }
+  if (end && end < startDate) end = startDate;
+
+  const dates = [];
+  if (mode === "count") {
+    const limit = Math.min(safeCount, max);
+    for (let i = 0; i < limit; i++) {
+      dates.push(getOccurrenceDate(startDate, i, safeInterval, unit));
+    }
+    return dates;
+  }
+
+  const limit = max;
+  for (let i = 0; i < limit; i++) {
+    const d = getOccurrenceDate(startDate, i, safeInterval, unit);
+    if (end && d > end) break;
+    dates.push(d);
+  }
+  if (dates.length === 0) {
+    dates.push(getOccurrenceDate(startDate, 0, safeInterval, unit));
+  }
+  return dates;
+}
+
+function inferEndMode(recurring) {
+  if (!recurring) return "auto";
+  if (recurring.endMode) return recurring.endMode;
+  if (recurring.endDate) return "date";
+  if (recurring.total) return "count";
+  return "auto";
+}
+
+function inferPreset(interval, unit) {
+  if (interval === 1 && unit === "mesi") return "mensile";
+  if (interval === 3 && unit === "mesi") return "trimestrale";
+  if (interval === 1 && unit === "anni") return "annuale";
+  return "custom";
+}
+
+function resolveRecurringSchedule(form, startDate) {
+  const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
+  const unit = form.recurringUnit || "mesi";
+  let endMode = form.recurringEndMode || "auto";
+  const count = Math.max(1, parseInt(form.recurringCount) || 1);
+  let endDate = endMode === "date" ? form.recurringEndDate : "";
+  if (endMode === "date" && !endDate) {
+    endMode = "auto";
+    endDate = "";
+  }
+  const dates = computeOccurrences({ startDate, interval, unit, endMode, endDate, count, max: 800 });
+  return { interval, unit, endMode, endDate, count, dates, total: dates.length };
+}
+
 function toDate(value) {
   if (value instanceof Date) return value;
   if (value && typeof value.toDate === 'function') return value.toDate();
@@ -785,30 +858,45 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
 
 function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem }) {
   const [step, setStep] = useState(0); // 0 doc, 1 base, 2 options
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({ 
     title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
     mandatory:false, essential:true, autoPay:false, documents:[],
     recurringEnabled: false,
     recurringInterval: 1,
     recurringUnit: "mesi",
-    recurringCount: 12
+    recurringCount: 12,
+    recurringPreset: "mensile", // mensile | trimestrale | annuale | custom
+    recurringEndMode: "auto", // auto | count | date
+    recurringEndDate: ""
   });
   useEffect(() => { 
     if (!open) {
       setStep(0);
+      setShowAdvanced(false);
       setForm({ 
         title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
         mandatory:false, essential:true, autoPay:false, documents:[],
         recurringEnabled: false,
         recurringInterval: 1,
         recurringUnit: "mesi",
-        recurringCount: 12
+        recurringCount: 12,
+        recurringPreset: "mensile",
+        recurringEndMode: "auto",
+        recurringEndDate: ""
       });
     } else if (editingItem) {
       setStep(1);
+      const interval = editingItem.recurring?.interval || 1;
+      const unit = editingItem.recurring?.unit || "mesi";
+      const preset = inferPreset(interval, unit);
+      const endMode = inferEndMode(editingItem.recurring);
       const dateStr = editingItem.date instanceof Date 
         ? editingItem.date.toISOString().split('T')[0]
         : new Date(editingItem.date).toISOString().split('T')[0];
+      setShowAdvanced(
+        preset === "custom" || endMode !== "auto"
+      );
       setForm({
         title: editingItem.title,
         cat: editingItem.cat,
@@ -821,12 +909,16 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         autoPay: editingItem.autoPay || false,
         documents: editingItem.documents || [],
         recurringEnabled: editingItem.recurring?.enabled || false,
-        recurringInterval: editingItem.recurring?.interval || 1,
-        recurringUnit: editingItem.recurring?.unit || "mesi",
-        recurringCount: editingItem.recurring?.count || 12
+        recurringInterval: interval,
+        recurringUnit: unit,
+        recurringCount: editingItem.recurring?.total || 12,
+        recurringPreset: preset,
+        recurringEndMode: endMode,
+        recurringEndDate: editingItem.recurring?.endDate || ""
       });
     } else if (presetAsset) {
       setStep(1);
+      setShowAdvanced(false);
       setForm(prev => ({
         ...prev,
         cat: presetAsset.catId,
@@ -850,14 +942,39 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     return d;
   })();
 
-  const occurrences = (() => {
-    if (!form.recurringEnabled || !baseDate || Number.isNaN(baseDate.getTime())) return [];
-    const dates = [];
-    for (let i = 0; i < count; i++) {
-      dates.push(getOccurrenceDate(baseDate, i, interval, form.recurringUnit));
-    }
-    return dates;
-  })();
+  const schedule = form.recurringEnabled && baseDate && !Number.isNaN(baseDate.getTime())
+    ? resolveRecurringSchedule(form, baseDate)
+    : null;
+  const occurrences = schedule ? schedule.dates : [];
+  const totalOccurrences = schedule ? schedule.total : 0;
+  const autoEndLabel = getAutoEndDate().toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
+  const unitSingular = ({
+    giorni: "giorno",
+    settimane: "settimana",
+    mesi: "mese",
+    anni: "anno",
+  })[form.recurringUnit] || form.recurringUnit;
+  const frequencyLabel = form.recurringPreset === "mensile"
+    ? "ogni mese"
+    : form.recurringPreset === "trimestrale"
+      ? "ogni 3 mesi"
+      : form.recurringPreset === "annuale"
+        ? "ogni anno"
+        : (interval === 1 ? `ogni ${unitSingular}` : `ogni ${interval} ${form.recurringUnit}`);
+  const endDateLabel = form.recurringEndDate
+    ? new Date(form.recurringEndDate + "T00:00:00").toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' })
+    : "";
+  const endSummary = form.recurringEndMode === "auto"
+    ? `continua (mostriamo fino al ${autoEndLabel})`
+    : form.recurringEndMode === "date"
+      ? (endDateLabel ? `fino al ${endDateLabel}` : "fino alla data scelta")
+      : `per ${count} volte`;
+  const presetOptions = [
+    { id:"mensile", label:"Mensile", interval:1, unit:"mesi" },
+    { id:"trimestrale", label:"Trimestrale", interval:3, unit:"mesi" },
+    { id:"annuale", label:"Annuale", interval:1, unit:"anni" },
+    { id:"custom", label:"Personalizzata" },
+  ];
 
   const preview = (() => {
     if (!form.recurringEnabled || occurrences.length === 0) return null;
@@ -1017,51 +1134,127 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
               {form.recurringEnabled && (
                 <div style={{ paddingLeft:4 }}>
-                  <div style={{ display:"flex", gap:8, marginBottom:10, alignItems:"center" }}>
-                    <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Si ripete ogni:</label>
-                    <input 
-                      type="number" 
-                      value={form.recurringInterval} 
-                      onChange={e => set("recurringInterval", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                      onBlur={e => { if(e.target.value === "") set("recurringInterval", 1); }}
-                      min="1"
-                      style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
-                    />
-                    <select 
-                      value={form.recurringUnit} 
-                      onChange={e => set("recurringUnit", e.target.value)}
-                      style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
-                    >
-                      <option value="giorni">giorni</option>
-                      <option value="settimane">settimane</option>
-                      <option value="mesi">mesi</option>
-                      <option value="anni">anni</option>
-                    </select>
+                  <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:6 }}>Frequenza</div>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+                    {presetOptions.map(p => {
+                      const active = form.recurringPreset === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            set("recurringPreset", p.id);
+                            if (p.interval) {
+                              set("recurringInterval", p.interval);
+                              set("recurringUnit", p.unit);
+                            }
+                            if (p.id === "custom") setShowAdvanced(true);
+                          }}
+                          style={{
+                            padding:"7px 12px", borderRadius:999, border: active ? "2px solid #2d2b26" : "2px solid transparent",
+                            background: active ? "#2d2b26" : "#fff", color: active ? "#fff" : "#6b6961",
+                            fontSize:12, fontWeight:700, cursor:"pointer",
+                            boxShadow: active ? "0 4px 10px rgba(0,0,0,.15)" : "none",
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:80 }}>Per quante volte:</label>
-                    <input 
-                      type="number" 
-                      value={form.recurringCount} 
-                      onChange={e => set("recurringCount", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                      onBlur={e => { if(e.target.value === "") set("recurringCount", 1); }}
-                      min="1"
-                      max="99"
-                      style={{ width:60, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
-                    />
-                    {baseDate && !Number.isNaN(baseDate.getTime()) && (
-                      <span style={{ fontSize:11, color:"#b5b2a8" }}>
-                        (fino a {(() => {
-                          const d = getOccurrenceDate(baseDate, count - 1, interval, form.recurringUnit);
-                          return d.toLocaleDateString('it-IT', {month:'short', year:'numeric'});
-                        })()})
-                      </span>
-                    )}
+                  <div style={{ background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"8px 10px", fontSize:11, color:"#6b6961" }}>
+                    <div style={{ fontWeight:700, color:"#2d2b26" }}>Ripete {frequencyLabel}</div>
+                    <div style={{ marginTop:4, color:"#8a877f" }}>{endSummary}</div>
                   </div>
+
+                  <button
+                    onClick={() => setShowAdvanced(v => !v)}
+                    style={{ marginTop:10, background:"transparent", border:"none", color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer" }}
+                  >
+                    {showAdvanced ? "Nascondi avanzate" : "Avanzate"}
+                  </button>
+
+                  {showAdvanced && (
+                    <div style={{ marginTop:8, background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"10px" }}>
+                      {form.recurringPreset === "custom" && (
+                        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Ogni</label>
+                          <input 
+                            type="number" 
+                            value={form.recurringInterval} 
+                            onChange={e => set("recurringInterval", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
+                            onBlur={e => { if(e.target.value === "") set("recurringInterval", 1); }}
+                            min="1"
+                            style={{ width:70, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+                          />
+                          <select 
+                            value={form.recurringUnit} 
+                            onChange={e => set("recurringUnit", e.target.value)}
+                            style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
+                          >
+                            <option value="giorni">giorni</option>
+                            <option value="settimane">settimane</option>
+                            <option value="mesi">mesi</option>
+                            <option value="anni">anni</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, display:"block", marginBottom:6 }}>Fine serie</label>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
+                        {[
+                          { id:"auto", label:"Senza fine" },
+                          { id:"count", label:"Dopo N" },
+                          { id:"date", label:"Fino al" },
+                        ].map(opt => {
+                          const active = form.recurringEndMode === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              onClick={() => set("recurringEndMode", opt.id)}
+                              style={{
+                                padding:"6px 10px", borderRadius:999, border: active ? "2px solid #5B8DD9" : "2px solid transparent",
+                                background: active ? "#EBF2FC" : "#f5f4f0", color: active ? "#2d2b26" : "#6b6961",
+                                fontSize:11, fontWeight:700, cursor:"pointer",
+                              }}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {form.recurringEndMode === "count" && (
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Ripetizioni</label>
+                          <input 
+                            type="number" 
+                            value={form.recurringCount} 
+                            onChange={e => set("recurringCount", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
+                            onBlur={e => { if(e.target.value === "") set("recurringCount", 1); }}
+                            min="1"
+                            max="999"
+                            style={{ width:80, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
+                          />
+                        </div>
+                      )}
+
+                      {form.recurringEndMode === "date" && (
+                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>Fino al</label>
+                          <input 
+                            type="date" 
+                            value={form.recurringEndDate}
+                            onChange={e => set("recurringEndDate", e.target.value)}
+                            style={{ flex:1, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13 }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
-                    💡 Verranno create {count} scadenze con €{form.budget || 0} ciascuna
+                    💡 Verranno create {totalOccurrences || count} scadenze con €{form.budget || 0} ciascuna
                   </div>
                 </div>
               )}
@@ -1175,8 +1368,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   const series = [];
                   const seriesId = `series_${Date.now()}`;
                   const startDate = baseDate || new Date(form.date+"T00:00:00");
-                  for (let i = 0; i < count; i++) {
-                    const occurrenceDate = getOccurrenceDate(startDate, i, interval, form.recurringUnit);
+                  const schedule = resolveRecurringSchedule(form, startDate);
+                  schedule.dates.forEach((occurrenceDate, i) => {
                     series.push({
                       id: Date.now() + i,
                       title: form.title,
@@ -1192,15 +1385,18 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                       done: false,
                       recurring: {
                         enabled: true,
-                        interval: interval,
-                        unit: form.recurringUnit,
+                        interval: schedule.interval,
+                        unit: schedule.unit,
                         seriesId: seriesId,
                         index: i + 1,
-                        total: count,
-                        baseAmount: baseAmount
+                        total: schedule.total,
+                        baseAmount: baseAmount,
+                        endMode: schedule.endMode,
+                        endDate: schedule.endDate,
+                        preset: form.recurringPreset,
                       }
                     });
-                  }
+                  });
                   onSave(series);
                 } else {
                   onSave([{ 
@@ -2546,14 +2742,22 @@ export default function App() {
     const { item, form } = editConfirm;
     const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
     const count = Math.max(1, parseInt(form.recurringCount) || 1);
+    const formEndMode = form.recurringEndMode || "auto";
+    const itemEndMode = inferEndMode(item.recurring);
+    const itemEndDate = item.recurring?.endDate || "";
     const itemDateStr = item.date instanceof Date
       ? item.date.toISOString().split('T')[0]
       : new Date(item.date).toISOString().split('T')[0];
+    const endModeChanged = formEndMode !== itemEndMode;
+    const endDateChanged = formEndMode === "date" && form.recurringEndDate !== itemEndDate;
+    const countChanged = formEndMode === "count" && count !== item.recurring.total;
     return (
       form.date !== itemDateStr ||
       interval !== item.recurring.interval ||
       form.recurringUnit !== item.recurring.unit ||
-      count !== item.recurring.total
+      endModeChanged ||
+      endDateChanged ||
+      countChanged
     );
   })() : false;
 
@@ -2692,28 +2896,30 @@ export default function App() {
     if (form.recurringEnabled) {
       const seriesId = `series_${Date.now()}`;
       const startDate = new Date(form.date + "T00:00:00");
-      const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
-      const count = Math.max(1, parseInt(form.recurringCount) || 1);
+      const schedule = resolveRecurringSchedule(form, startDate);
       const baseAmount = Number(form.budget) || 0;
       const newSeries = [];
-      for (let i = 0; i < count; i++) {
+      schedule.dates.forEach((occurrenceDate, i) => {
         newSeries.push({
           id: Date.now() + i,
           ...fields,
-          date: getOccurrenceDate(startDate, i, interval, form.recurringUnit),
+          date: occurrenceDate,
           documents: i === 0 ? form.documents : [],
           done: false,
           recurring: {
             enabled: true,
-            interval,
-            unit: form.recurringUnit,
+            interval: schedule.interval,
+            unit: schedule.unit,
             seriesId,
             index: i + 1,
-            total: count,
+            total: schedule.total,
             baseAmount,
+            endMode: schedule.endMode,
+            endDate: schedule.endDate,
+            preset: form.recurringPreset,
           }
         });
-      }
+      });
       setDeadlines(p => [...p.filter(d => d.id !== item.id), ...newSeries]);
     } else {
       const newDate = new Date(form.date + "T00:00:00");
@@ -2734,41 +2940,45 @@ export default function App() {
     const { item, form } = editConfirm;
     const seriesId = item.recurring?.seriesId;
     const currentIndex = item.recurring?.index || 1;
-    const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
-    const count = Math.max(1, parseInt(form.recurringCount) || 1);
     const baseAmount = Number(form.budget) || 0;
     const fields = buildFieldsFromForm(form);
     const newDate = new Date(form.date + "T00:00:00");
+    const schedule = resolveRecurringSchedule(form, newDate);
+    const interval = schedule.interval;
+    const formEndMode = schedule.endMode;
+    const itemEndMode = inferEndMode(item.recurring);
+    const itemEndDate = item.recurring?.endDate || "";
     const itemDateStr = item.date instanceof Date
       ? item.date.toISOString().split('T')[0]
       : new Date(item.date).toISOString().split('T')[0];
     const scheduleChanged =
       form.date !== itemDateStr ||
       interval !== item.recurring.interval ||
-      form.recurringUnit !== item.recurring.unit ||
-      count !== item.recurring.total;
+      schedule.unit !== item.recurring.unit ||
+      formEndMode !== itemEndMode ||
+      (formEndMode === "date" && schedule.endDate !== itemEndDate) ||
+      (formEndMode === "count" && schedule.count !== item.recurring.total);
 
-    const buildSeries = (startDate, seriesCount, startIdx, total) => {
-      const items = [];
-      for (let i = 0; i < seriesCount; i++) {
-        items.push({
-          id: Date.now() + i,
-          ...fields,
-          date: getOccurrenceDate(startDate, i, interval, form.recurringUnit),
-          documents: i === 0 ? form.documents : [],
-          done: false,
-          recurring: {
-            enabled: true,
-            interval,
-            unit: form.recurringUnit,
-            seriesId,
-            index: startIdx + i,
-            total,
-            baseAmount,
-          }
-        });
-      }
-      return items;
+    const buildSeries = (dates, startIdx, total) => {
+      return dates.map((occurrenceDate, i) => ({
+        id: Date.now() + i,
+        ...fields,
+        date: occurrenceDate,
+        documents: i === 0 ? form.documents : [],
+        done: false,
+        recurring: {
+          enabled: true,
+          interval: schedule.interval,
+          unit: schedule.unit,
+          seriesId,
+          index: startIdx + i,
+          total,
+          baseAmount,
+          endMode: schedule.endMode,
+          endDate: schedule.endDate,
+          preset: form.recurringPreset,
+        }
+      }));
     };
 
     if (scope === "single") {
@@ -2797,18 +3007,22 @@ export default function App() {
         setDeadlines(p => {
           const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
           const past = p.filter(d => d.recurring && d.recurring.seriesId === seriesId && d.recurring.index < currentIndex);
-          const newTotal = past.length + count;
+          const futureDates = schedule.dates;
+          const newTotal = past.length + futureDates.length;
           const updatedPast = past.map(d => ({
             ...d,
             recurring: {
               ...d.recurring,
-              interval,
-              unit: form.recurringUnit,
+              interval: schedule.interval,
+              unit: schedule.unit,
               total: newTotal,
               baseAmount,
+              endMode: schedule.endMode,
+              endDate: schedule.endDate,
+              preset: form.recurringPreset,
             }
           }));
-          const future = buildSeries(newDate, count, currentIndex, newTotal);
+          const future = buildSeries(futureDates, currentIndex, newTotal);
           return [...others, ...updatedPast, ...future];
         });
       }
@@ -2828,7 +3042,7 @@ export default function App() {
       } else if (scheduleChanged) {
         setDeadlines(p => {
           const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
-          const regenerated = buildSeries(newDate, count, 1, count);
+          const regenerated = buildSeries(schedule.dates, 1, schedule.total);
           return [...others, ...regenerated];
         });
       } else {
@@ -2840,10 +3054,13 @@ export default function App() {
             documents: d.id === item.id ? form.documents : d.documents,
             recurring: {
               ...d.recurring,
-              interval,
-              unit: form.recurringUnit,
+              interval: schedule.interval,
+              unit: schedule.unit,
               total: d.recurring.total,
               baseAmount,
+              endMode: schedule.endMode,
+              endDate: schedule.endDate,
+              preset: form.recurringPreset,
             }
           };
         }));
