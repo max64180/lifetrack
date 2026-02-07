@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { initializeFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { initializeFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
 // 🔥 Firebase Configuration
 const firebaseConfig = {
@@ -21,7 +21,6 @@ const db = initializeFirestore(app, {
   useFetchStreams: false,
 });
 
-const isSafari = typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 
 
@@ -2266,7 +2265,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 Firebase Sync (polling on Safari to avoid WebChannel issues)
+  // 🔥 Firebase Sync (polling to avoid WebChannel issues)
   useEffect(() => {
     if (!user) return;
     const docRef = doc(db, 'users', user.uid);
@@ -2302,32 +2301,21 @@ export default function App() {
       setWorkLogs(parsedWorkLogs);
     };
 
-    if (isSafari) {
-      let cancelled = false;
-      const fetchOnce = async () => {
-        try {
-          const snap = await getDoc(docRef);
-          if (!cancelled) applySnapshot(snap);
-        } catch (error) {
-          console.error("Firebase poll error:", error);
-        }
-      };
-      fetchOnce();
-      const interval = setInterval(fetchOnce, 5000);
-      return () => {
-        cancelled = true;
-        clearInterval(interval);
-      };
-    }
-
-    const unsubscribe = onSnapshot(
-      docRef,
-      applySnapshot,
-      (error) => {
-        console.error("Firebase sync error:", error);
+    let cancelled = false;
+    const fetchOnce = async () => {
+      try {
+        const snap = await getDoc(docRef);
+        if (!cancelled) applySnapshot(snap);
+      } catch (error) {
+        console.error("Firebase poll error:", error);
       }
-    );
-    return () => unsubscribe();
+    };
+    fetchOnce();
+    const interval = setInterval(fetchOnce, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [user]);
 
   // 🔥 Firebase Auto-Save
