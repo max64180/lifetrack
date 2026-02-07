@@ -2295,19 +2295,6 @@ export default function App() {
     return () => clearTimeout(saveTimer);
   }, [deadlines, cats, workLogs, user, loading]);
 
-  // 🔥 Loading Screen
-  if (loading) {
-    return (
-      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#1e1c18", color:"#fff" }}>
-        <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
-          <div style={{ fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
-          <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>Caricamento...</div>
-        </div>
-      </div>
-    );
-  }
-
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
     localStorage.setItem('lifetrack_categories', JSON.stringify(cats));
@@ -2598,6 +2585,19 @@ export default function App() {
     setDeadlines(p => p.map(d => d.id === deadlineId ? { ...d, documents: d.documents.filter(doc => doc.id !== docId) } : d));
     showToast("✓ Documento eliminato");
   };
+
+  // 🔥 Loading Screen (after all hooks)
+  if (loading) {
+    return (
+      <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#1e1c18", color:"#fff" }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
+          <div style={{ fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
+          <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>Caricamento...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:"#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
