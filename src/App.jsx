@@ -18,7 +18,6 @@ const auth = getAuth(app);
 // Use long-polling to avoid Safari/ITP/CORS issues with Firestore WebChannel
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
-  experimentalAutoDetectLongPolling: true,
   useFetchStreams: false,
 });
 
