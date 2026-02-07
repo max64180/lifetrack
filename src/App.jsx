@@ -200,6 +200,44 @@ function getUrgency(date, done) {
 
 /* ── COMPONENTI ────────────────────────────────────────── */
 
+function LanguageToggle({ tone = "dark", size = 28 }) {
+  const { i18n } = useTranslation();
+  const current = (i18n.language || "it").toLowerCase().startsWith("it") ? "it" : "en";
+  const setLang = (lng) => {
+    if (lng === current) return;
+    i18n.changeLanguage(lng);
+  };
+  const inactiveBg = tone === "dark" ? "rgba(255,255,255,.08)" : "#f0ede7";
+  const inactiveColor = tone === "dark" ? "rgba(255,255,255,.7)" : "#6b6961";
+  return (
+    <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+      {[
+        { id:"it", label:"Italiano", flag:"🇮🇹" },
+        { id:"en", label:"English", flag:"🇬🇧" },
+      ].map(lang => {
+        const active = current === lang.id;
+        return (
+          <button
+            key={lang.id}
+            onClick={() => setLang(lang.id)}
+            title={lang.label}
+            aria-label={lang.label}
+            style={{
+              width:size, height:size, borderRadius:"50%", border:"none", cursor:"pointer",
+              background: active ? "#E8855D" : inactiveBg,
+              color: active ? "#fff" : inactiveColor,
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:15, lineHeight:1, boxShadow: active ? "0 4px 12px rgba(0,0,0,.2)" : "none"
+            }}
+          >
+            {lang.flag}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* Range Selector */
 function RangeSelector({ active, onChange }) {
   const { t } = useTranslation();
@@ -3363,7 +3401,11 @@ export default function App() {
           @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
           *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
         `}</style>
-        <div style={{ width:"100%", maxWidth:360, background:"#2d2b26", borderRadius:18, padding:"22px 20px", boxShadow:"0 10px 30px rgba(0,0,0,.35)" }}>
+        <div style={{ width:"100%", maxWidth:360 }}>
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+            <LanguageToggle size={26} />
+          </div>
+          <div style={{ background:"#2d2b26", borderRadius:18, padding:"22px 20px", boxShadow:"0 10px 30px rgba(0,0,0,.35)" }}>
           <div style={{ textAlign:"center", marginBottom:16 }}>
             <div style={{ fontSize:40, marginBottom:6 }}>📅</div>
             <div style={{ fontSize:18, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{t("app.name")}</div>
@@ -3411,6 +3453,7 @@ export default function App() {
               {authMode === "signup" ? t("auth.login") : t("auth.signup")}
             </button>
           </div>
+          </div>
         </div>
       </div>
     );
@@ -3450,7 +3493,8 @@ export default function App() {
                 <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>{t("app.name")}</h1>
                 <span style={{ fontSize:10, opacity:.35 }}>{t("app.tagline")}</span>
               </div>
-              <div style={{ display:"flex", gap:6 }}>
+              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                <LanguageToggle size={26} />
                 <button onClick={() => setShowStats(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
                   <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>📈</span>
                 </button>
