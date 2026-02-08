@@ -4156,34 +4156,41 @@ export default function App() {
           padding:"12px 14px", display:"flex", flexDirection:"column", gap:8,
           boxShadow:"0 4px 12px rgba(0,0,0,.05)"
         }}>
-          <div style={{ display:"flex", justifyContent:"center" }}>
-            <RangeSelector
-              active={range}
-              onChange={r => { setRange(r); setPeriodOffset(0); setExpandedId(null); }}
-              tone="light"
-              compact
-              padding="0"
-            />
-          </div>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setPeriodOffset(o => o - 1)} style={{
               width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
               background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
             }}>‹</button>
             <div style={{ flex:1, textAlign:"center" }}>
-              <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
-              {periodOffset !== 0 && (
-                <button onClick={() => setPeriodOffset(0)} style={{
-                  marginTop:6, background:"#f5f4f0", border:"1px solid #e8e6e0",
-                  color:"#6b6961", borderRadius:999, padding:"3px 12px",
-                  fontSize:10, fontWeight:700, cursor:"pointer"
-                }}>{t("urgency.today")}</button>
-              )}
+              <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
             </div>
             <button onClick={() => setPeriodOffset(o => o + 1)} style={{
               width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
               background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
             }}>›</button>
+          </div>
+          <div style={{ display:"flex", justifyContent:"center", gap:18, marginTop:2 }}>
+            {[
+              { id:"mese", label: t("range.month", { defaultValue:"Mese" }) },
+              { id:"anno", label: t("range.year", { defaultValue:"Anno" }) }
+            ].map(opt => {
+              const activeRange = range === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => { setRange(opt.id); setPeriodOffset(0); setExpandedId(null); }}
+                  style={{
+                    background:"transparent", border:"none", cursor:"pointer",
+                    fontSize:11, fontWeight: activeRange ? 800 : 600,
+                    color: activeRange ? "#2d2b26" : "#b2afa7",
+                    padding:"2px 4px", borderBottom: activeRange ? "2px solid #2d2b26" : "2px solid transparent",
+                    letterSpacing:".2px", textTransform:"uppercase"
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
