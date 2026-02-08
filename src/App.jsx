@@ -391,10 +391,21 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
   const count   = inRange.length;
   const missingCount = inRange.filter(d => d.estimateMissing).length;
   const urgent  = inRange.filter(d => diffDays(d.date) <= 7).length;
+  const manualCount = inRange.filter(d => !d.autoPay).length;
+  const currentYear = new Date().getFullYear();
+  const yearStart = new Date(currentYear, 0, 1, 0, 0, 0, 0);
+  const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+  const yearTotal = deadlines
+    .filter(d => d.date >= yearStart && d.date <= yearEnd && !d.estimateMissing)
+    .reduce((s, d) => s + d.budget, 0);
 
   return (
     <div style={{ padding:"12px 18px 0" }}>
       <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"14px 16px" }}>
+        <div style={{ fontSize:10, color:"rgba(255,255,255,.45)", fontWeight:600 }}>
+          {t("budgetBar.yearTotal", { defaultValue: "Spesa anno in corso" })}: <strong style={{ color:"#fff" }}>{formatCurrency(yearTotal)}</strong>
+        </div>
+        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"8px 0 10px" }} />
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
           <div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>{t("budgetBar.title")}</div>
@@ -417,6 +428,14 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
               <span style={{ fontSize:11 }}>⚡</span>
               <span style={{ fontSize:11, fontWeight:800, color:"#E8855D" }}>
                 {t("budgetBar.urgent", { count: urgent, defaultValue: `Urgenti ${urgent}` })}
+              </span>
+            </div>
+          )}
+          {manualCount > 0 && (
+            <div style={{ background:"rgba(255,248,237,.2)", borderRadius:999, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:11 }}>✋</span>
+              <span style={{ fontSize:11, fontWeight:800, color:"#8a6d1f" }}>
+                {t("budgetBar.manual", { count: manualCount, defaultValue: `Da pagare ${manualCount}` })}
               </span>
             </div>
           )}
