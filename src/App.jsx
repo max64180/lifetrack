@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore/lite';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch } from 'firebase/firestore/lite';
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
 import { compressImage } from "./utils/files";
@@ -186,6 +186,34 @@ function toDate(value) {
 
 function isValidDate(d) {
   return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+function normalizeDeadline(raw) {
+  if (!raw) return null;
+  const date = toDate(raw.date);
+  if (!isValidDate(date)) return null;
+  const rawId = raw.id ?? raw.docId;
+  const parsedId = typeof rawId === "string" && /^\d+$/.test(rawId) ? Number(rawId) : rawId;
+  return { ...raw, id: parsedId ?? rawId, date };
+}
+
+function normalizeWorkLogs(raw = {}) {
+  const parsed = {};
+  Object.keys(raw || {}).forEach(key => {
+    parsed[key] = (raw[key] || [])
+      .map(log => {
+        const date = toDate(log.date);
+        const nextDate = log.nextDate ? toDate(log.nextDate) : null;
+        if (!isValidDate(date)) return null;
+        return {
+          ...log,
+          date,
+          nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
+        };
+      })
+      .filter(Boolean);
+  });
+  return parsed;
 }
 
 function getUrgency(date, done) {
@@ -2664,7 +2692,15 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const suppressSaveRef = useRef(false);
+  const suppressDeadlinesRef = useRef(false);
+  const suppressMetaRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const needsSaveRef = useRef(false);
+  const deadlinesRef = useRef([]);
+  const prevDeadlinesRef = useRef([]);
+  const saveRetryRef = useRef(null);
+  const deadlinesSaveTimerRef = useRef(null);
+  const syncingCountRef = useRef(0);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authMode, setAuthMode] = useState("login"); // login | signup
@@ -2677,26 +2713,29 @@ export default function App() {
   const [workLogs, setWorkLogs] = useState(() => {
     const saved = localStorage.getItem('lifetrack_worklogs');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Convert date values back to Date objects (supports Firestore Timestamps)
-      Object.keys(parsed).forEach(key => {
-        parsed[key] = parsed[key]
-          .map(log => {
-            const date = toDate(log.date);
-            const nextDate = log.nextDate ? toDate(log.nextDate) : null;
-            if (!isValidDate(date)) return null;
-            return {
-              ...log,
-              date,
-              nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
-            };
-          })
-          .filter(Boolean);
-      });
-      return parsed;
+      try {
+        const parsed = JSON.parse(saved);
+        return normalizeWorkLogs(parsed);
+      } catch (err) {
+        console.warn("WorkLogs parse error:", err);
+      }
     }
     return {}; // { "casa_colico": [...], "auto_micro": [...] }
   });
+
+  useEffect(() => {
+    deadlinesRef.current = deadlines;
+  }, [deadlines]);
+
+  const startSync = () => {
+    syncingCountRef.current += 1;
+    setSyncing(true);
+  };
+
+  const endSync = () => {
+    syncingCountRef.current = Math.max(0, syncingCountRef.current - 1);
+    if (syncingCountRef.current === 0) setSyncing(false);
+  };
 
   // 🔥 Firebase Authentication
   useEffect(() => {
@@ -2707,51 +2746,59 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 Firebase Sync (polling to avoid WebChannel issues)
+  // 🔥 Firebase Sync (polling per-document)
   useEffect(() => {
     if (!user) return;
-    const docRef = doc(db, 'users', user.uid);
+    const userRef = doc(db, 'users', user.uid);
+    const deadlinesCol = collection(db, 'users', user.uid, 'deadlines');
+    let cancelled = false;
 
-    const applySnapshot = (docSnap) => {
-      if (!docSnap.exists()) return;
-      const data = docSnap.data();
-      const parsedDeadlines = (data.deadlines || [])
-        .map(d => {
-          const date = toDate(d.date);
-          if (!isValidDate(date)) return null;
-          return { ...d, date };
-        })
-        .filter(Boolean);
-      const parsedWorkLogs = {};
-      Object.keys(data.workLogs || {}).forEach(key => {
-        parsedWorkLogs[key] = (data.workLogs[key] || [])
-          .map(log => {
-            const date = toDate(log.date);
-            const nextDate = log.nextDate ? toDate(log.nextDate) : null;
-            if (!isValidDate(date)) return null;
-            return {
-              ...log,
-              date,
-              nextDate: nextDate && isValidDate(nextDate) ? nextDate : null
-            };
-          })
-          .filter(Boolean);
+    const migrateLegacyDeadlines = async (data) => {
+      const legacy = data?.deadlines || [];
+      const alreadyMigrated = data?.schemaVersion >= 2;
+      if (!legacy.length || alreadyMigrated) return false;
+      const batch = writeBatch(db);
+      legacy.forEach(d => {
+        const rawId = d.id ?? Date.now();
+        const docId = String(rawId);
+        batch.set(doc(db, 'users', user.uid, 'deadlines', docId), { ...d, id: d.id ?? rawId }, { merge: true });
       });
-      suppressSaveRef.current = true;
-      setDeadlines(parsedDeadlines);
-      setCats(data.categories || DEFAULT_CATS);
-      setWorkLogs(parsedWorkLogs);
+      batch.set(userRef, { schemaVersion: 2, migratedAt: new Date().toISOString() }, { merge: true });
+      await batch.commit();
+      return true;
     };
 
-    let cancelled = false;
     const fetchOnce = async () => {
       try {
-        const snap = await getDoc(docRef);
-        if (!cancelled) applySnapshot(snap);
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.exists() ? userSnap.data() : {};
+        if (!userSnap.exists()) {
+          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
+        }
+        await migrateLegacyDeadlines(userData);
+
+        const deadlinesSnap = await getDocs(deadlinesCol);
+        const remoteDeadlines = deadlinesSnap.docs
+          .map(snap => {
+            const data = snap.data();
+            const id = data.id ?? snap.id;
+            return normalizeDeadline({ ...data, id });
+          })
+          .filter(Boolean);
+        const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
+
+        if (!cancelled && !pendingSaveRef.current) {
+          suppressDeadlinesRef.current = true;
+          suppressMetaRef.current = true;
+          setDeadlines(remoteDeadlines);
+          setCats(userData.categories || DEFAULT_CATS);
+          setWorkLogs(parsedWorkLogs);
+        }
       } catch (error) {
         console.error("Firebase poll error:", error);
       }
     };
+
     fetchOnce();
     const interval = setInterval(fetchOnce, 5000);
     return () => {
@@ -2760,32 +2807,93 @@ export default function App() {
     };
   }, [user]);
 
-  // 🔥 Firebase Auto-Save
+  const saveDeadlines = async (force = false) => {
+    if (!user || loading) return;
+    if (pendingSaveRef.current && !force) return;
+    pendingSaveRef.current = true;
+    startSync();
+    const current = deadlinesRef.current || [];
+    const prev = prevDeadlinesRef.current || [];
+    const prevIds = new Set(prev.map(d => String(d.id)));
+    const nextIds = new Set(current.map(d => String(d.id)));
+    const removedIds = [...prevIds].filter(id => !nextIds.has(id));
+
+    try {
+      const batch = writeBatch(db);
+      const now = Date.now();
+      current.forEach(d => {
+        const docId = String(d.id);
+        batch.set(doc(db, 'users', user.uid, 'deadlines', docId), { ...d, id: d.id, updatedAt: now }, { merge: true });
+      });
+      removedIds.forEach(id => {
+        batch.delete(doc(db, 'users', user.uid, 'deadlines', id));
+      });
+      await batch.commit();
+      prevDeadlinesRef.current = current;
+      pendingSaveRef.current = false;
+      if (saveRetryRef.current) {
+        clearTimeout(saveRetryRef.current);
+        saveRetryRef.current = null;
+      }
+      endSync();
+      if (needsSaveRef.current) {
+        needsSaveRef.current = false;
+        if (deadlinesSaveTimerRef.current) clearTimeout(deadlinesSaveTimerRef.current);
+        deadlinesSaveTimerRef.current = setTimeout(() => saveDeadlines(), 800);
+      }
+    } catch (error) {
+      console.error("Firebase deadline save error:", error);
+      endSync();
+      if (!saveRetryRef.current) {
+        saveRetryRef.current = setTimeout(() => {
+          saveRetryRef.current = null;
+          saveDeadlines(true);
+        }, 5000);
+      }
+    }
+  };
+
+  // 🔥 Firebase Auto-Save (deadlines)
   useEffect(() => {
     if (!user || loading) return;
-    if (suppressSaveRef.current) {
-      suppressSaveRef.current = false;
+    if (suppressDeadlinesRef.current) {
+      suppressDeadlinesRef.current = false;
+      prevDeadlinesRef.current = deadlines;
       return;
     }
-    
+    if (pendingSaveRef.current) {
+      needsSaveRef.current = true;
+      return;
+    }
+    if (deadlinesSaveTimerRef.current) clearTimeout(deadlinesSaveTimerRef.current);
+    deadlinesSaveTimerRef.current = setTimeout(() => saveDeadlines(), 800);
+    return () => clearTimeout(deadlinesSaveTimerRef.current);
+  }, [deadlines, user, loading]);
+
+  // 🔥 Firebase Auto-Save (categories + worklogs)
+  useEffect(() => {
+    if (!user || loading) return;
+    if (suppressMetaRef.current) {
+      suppressMetaRef.current = false;
+      return;
+    }
     const saveTimer = setTimeout(async () => {
       try {
-        setSyncing(true);
+        startSync();
         await setDoc(doc(db, 'users', user.uid), {
-          deadlines,
           categories: cats,
           workLogs,
+          schemaVersion: 2,
           lastUpdate: new Date().toISOString()
-        });
-        setSyncing(false);
+        }, { merge: true });
+        endSync();
       } catch (error) {
         console.error("Firebase save error:", error);
-        setSyncing(false);
+        endSync();
       }
     }, 1000);
-    
     return () => clearTimeout(saveTimer);
-  }, [deadlines, cats, workLogs, user, loading]);
+  }, [cats, workLogs, user, loading]);
 
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
