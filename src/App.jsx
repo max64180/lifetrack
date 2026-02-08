@@ -23,6 +23,9 @@ const auth = getAuth(app);
 // Use Firestore Lite (REST) to avoid WebChannel issues in Safari
 const db = getFirestore(app);
 
+const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
+const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ !== "undefined" ? __APP_BUILD_TIME__ : "";
+
 
 
 
@@ -2996,9 +2999,12 @@ export default function App() {
           suppressDeadlinesRef.current = true;
           suppressMetaRef.current = true;
           const localCurrent = deadlinesRef.current || [];
-          const nextDeadlines = dirtyDeadlinesRef.current
-            ? mergeDeadlines(remoteDeadlines, localCurrent)
-            : remoteDeadlines;
+          let nextDeadlines = remoteDeadlines;
+          if (remoteDeadlines.length === 0 && localCurrent.length > 0) {
+            nextDeadlines = localCurrent;
+          } else if (dirtyDeadlinesRef.current) {
+            nextDeadlines = mergeDeadlines(remoteDeadlines, localCurrent);
+          }
           setDeadlines(nextDeadlines);
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
@@ -4163,6 +4169,9 @@ export default function App() {
             </div>
           ))
         )}
+        <div style={{ textAlign:"center", color:"#b5b2a8", fontSize:10, padding:"14px 0 6px" }}>
+          v{APP_VERSION}{APP_BUILD_TIME ? ` · ${new Date(APP_BUILD_TIME).toLocaleDateString(getLocale())}` : ""}
+        </div>
       </div>
 
       {/* FAB */}
