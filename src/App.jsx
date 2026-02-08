@@ -392,53 +392,43 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
   const missingCount = inRange.filter(d => d.estimateMissing).length;
   const urgent  = inRange.filter(d => diffDays(d.date) <= 7).length;
 
-  const catTotals = cats.map(c => ({
-    ...c,
-    amount: inRangeBudgeted.filter(d => d.cat === c.id).reduce((s, d) => s + d.budget, 0),
-  })).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
-
   return (
     <div style={{ padding:"12px 18px 0" }}>
       <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"14px 16px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:10 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
           <div>
             <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>{t("budgetBar.title")}</div>
             <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
-            {missingCount > 0 && (
-              <div style={{ marginTop:4, fontSize:10, color:"rgba(255,255,255,.45)" }}>{t("budgetBar.missing", { count: missingCount })}</div>
-            )}
           </div>
           <div style={{ display:"flex", gap:10 }}>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
               <div style={{ fontSize:16, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
             </div>
-            {urgent > 0 && (
-              <div style={{ background:"rgba(232,133,93,.25)", borderRadius:8, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12 }}>⚡</span>
-                <span style={{ fontSize:13, fontWeight:800, color:"#E8855D" }}>{urgent}</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {catTotals.length > 0 && (
-          <>
-            <div style={{ display:"flex", height:6, borderRadius:3, overflow:"hidden", gap:2, background:"rgba(255,255,255,.08)" }}>
-              {catTotals.map(c => (
-                <div key={c.id} style={{ flex: c.amount, background: c.color, borderRadius:3, transition:"flex .4s ease", minWidth: c.amount > 0 ? 6 : 0 }}/>
-              ))}
+        <div style={{ display:"flex", height:6, borderRadius:3, overflow:"hidden", background:"rgba(255,255,255,.08)" }}>
+          <div style={{ width:"100%", background:"#E8855D" }}/>
+        </div>
+        <div style={{ display:"flex", gap:6, marginTop:8, flexWrap:"wrap" }}>
+          {urgent > 0 && (
+            <div style={{ background:"rgba(232,133,93,.25)", borderRadius:999, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:11 }}>⚡</span>
+              <span style={{ fontSize:11, fontWeight:800, color:"#E8855D" }}>
+                {t("budgetBar.urgent", { count: urgent, defaultValue: `Urgenti ${urgent}` })}
+              </span>
             </div>
-            <div style={{ display:"flex", gap:10, marginTop:7, flexWrap:"wrap" }}>
-              {catTotals.map(c => (
-                <div key={c.id} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                  <div style={{ width:8, height:8, borderRadius:"50%", background:c.color }}/>
-                  <span style={{ fontSize:10, color:"rgba(255,255,255,.45)", fontWeight:600 }}>{c.icon} {formatCurrency(c.amount)}</span>
-                </div>
-              ))}
+          )}
+          {missingCount > 0 && (
+            <div style={{ background:"rgba(255,248,237,.2)", borderRadius:999, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:11 }}>❔</span>
+              <span style={{ fontSize:11, fontWeight:800, color:"#E6C97A" }}>
+                {t("budgetBar.missing", { count: missingCount, defaultValue: `Da stimare ${missingCount}` })}
+              </span>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -745,255 +735,67 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 }
 
 /* Smart Category Filter with asset sub-filters */
-function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, periodStart, periodEnd, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterManual, setFilterManual, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
+function PriorityFilter({ activeTab, filterMandatory, setFilterMandatory, filterAutoPay, setFilterAutoPay, filterManual, setFilterManual, filterEstimateMissing, setFilterEstimateMissing }) {
   const { t } = useTranslation();
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  // Count deadlines per category (only active timeline deadlines)
-  const catCounts = useMemo(() => {
-    const counts = {};
-    deadlines.forEach(d => {
-      const isInScope = activeTab === "done"
-        ? d.done
-        : activeTab === "overdue"
-          ? (d.date < TODAY && !d.done)
-          : (d.date >= periodStart && d.date <= periodEnd && !d.done);
-      if (isInScope) {
-        counts[d.cat] = (counts[d.cat] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [deadlines, activeTab, periodStart, periodEnd]);
+  const [open, setOpen] = useState(false);
+  const options = [
+    { id:"all", label: t("filters.all") },
+    { id:"mandatory", label: t("filters.mandatory") },
+    { id:"manual", label: t("filters.manualPay", { defaultValue:"Da pagare" }) },
+    { id:"estimate", label: t("filters.estimate") },
+    { id:"auto", label: t("filters.autoPay") },
+  ];
+  const current = useMemo(() => {
+    if (filterMandatory) return "mandatory";
+    if (filterManual) return "manual";
+    if (filterEstimateMissing) return "estimate";
+    if (filterAutoPay) return "auto";
+    return "all";
+  }, [filterMandatory, filterManual, filterEstimateMissing, filterAutoPay]);
 
-  // Sort categories by deadline count (descending)
-  const sortedCats = useMemo(() => {
-    return [...cats].sort((a, b) => (catCounts[b.id] || 0) - (catCounts[a.id] || 0));
-  }, [cats, catCounts]);
-
-  const handleCatClick = (catId) => {
-    const cat = getCat(cats, catId);
-    const hasAssets = cat.assets && cat.assets.length > 0;
-    
-    if (filterCat === catId) {
-      // Already filtered by this cat - clear filter
-      onSelectCat(null);
-      onSelectAsset(null);
-      onToggleExpand(null);
-    } else {
-      // New category selected
-      onSelectCat(catId);
-      onSelectAsset(null);
-      // Auto-expand if has assets
-      if (hasAssets) {
-        onToggleExpand(catId);
-      } else {
-        onToggleExpand(null);
-      }
-    }
-  };
-
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filterCat) count += 1;
-    if (filterAsset) count += 1;
-    if (filterMandatory) count += 1;
-    if (filterAutoPay) count += 1;
-    if (filterManual) count += 1;
-    if (filterRecurring) count += 1;
-    if (filterEssential) count += 1;
-    if (filterEstimateMissing) count += 1;
-    return count;
-  }, [filterCat, filterAsset, filterMandatory, filterAutoPay, filterManual, filterRecurring, filterEssential, filterEstimateMissing]);
-
-  const clearAllFilters = () => {
-    onSelectCat(null);
-    onSelectAsset(null);
-    onToggleExpand(null);
+  const applyPriority = (id) => {
     setFilterMandatory(false);
-    setFilterAutoPay(false);
     setFilterManual(false);
-    setFilterRecurring(false);
-    setFilterEssential(false);
     setFilterEstimateMissing(false);
+    setFilterAutoPay(false);
+    if (id === "mandatory") setFilterMandatory(true);
+    if (id === "manual") setFilterManual(true);
+    if (id === "estimate") setFilterEstimateMissing(true);
+    if (id === "auto") setFilterAutoPay(true);
+    setOpen(false);
   };
 
   return (
     <div style={{ background:"#f5f4f0", paddingBottom:8 }}>
-      <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"10px 18px 4px", scrollbarWidth:"none" }}>
-        <button onClick={clearAllFilters} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 14px", border:"none", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: activeFiltersCount === 0 ? "#2d2b26" : "#edecea",
-          color: activeFiltersCount === 0 ? "#fff" : "#6b6961", minHeight:36,
-        }}>{t("filters.all")}</button>
-
-        <button onClick={() => setFilterMandatory(!filterMandatory)} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: filterMandatory ? "#FFF0EC" : "#edecea",
-          color: filterMandatory ? "#E53935" : "#6b6961",
-          border: `1.5px solid ${filterMandatory ? "#E5393555" : "transparent"}`, minHeight:36,
-        }}>{t("filters.mandatory")}</button>
-
-        <button onClick={() => {
-          const next = !filterManual;
-          setFilterManual(next);
-          if (next) setFilterAutoPay(false);
-        }} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: filterManual ? "#FFF8ED" : "#edecea",
-          color: filterManual ? "#8a6d1f" : "#6b6961",
-          border: `1.5px solid ${filterManual ? "#E6C97A55" : "transparent"}`, minHeight:36,
-        }}>{t("filters.manualPay", { defaultValue:"Da pagare" })}</button>
-
-        <button onClick={() => {
-          const next = !filterAutoPay;
-          setFilterAutoPay(next);
-          if (next) setFilterManual(false);
-        }} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: filterAutoPay ? "#EBF2FC" : "#edecea",
-          color: filterAutoPay ? "#5B8DD9" : "#6b6961",
-          border: `1.5px solid ${filterAutoPay ? "#5B8DD955" : "transparent"}`, minHeight:36,
-        }}>{t("filters.autoPay")}</button>
-
-        <button onClick={() => setFilterEstimateMissing(!filterEstimateMissing)} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: filterEstimateMissing ? "#FFF8ED" : "#edecea",
-          color: filterEstimateMissing ? "#8a6d1f" : "#6b6961",
-          border: `1.5px solid ${filterEstimateMissing ? "#E6C97A55" : "transparent"}`, minHeight:36,
-        }}>{t("filters.estimate")}</button>
-
-        <button onClick={() => setShowAdvanced(v => !v)} style={{
-          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: showAdvanced ? "#2d2b26" : "#edecea",
-          color: showAdvanced ? "#fff" : "#6b6961", minHeight:36,
-        }}>
-          {t("filters.more", { defaultValue:"Filtri" })}{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
-        </button>
-      </div>
-
-      {showAdvanced && (
-        <div
-          onClick={(e) => e.target === e.currentTarget && setShowAdvanced(false)}
-          style={{
-            position:"fixed", inset:0, background:"rgba(18,17,13,.45)", zIndex:220,
-            display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(2px)"
-          }}
-        >
-          <div style={{
-            background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 18px 24px",
-            width:"100%", maxWidth:480, maxHeight:"78vh", overflowY:"auto",
-            boxShadow:"0 -12px 30px rgba(0,0,0,.2)"
+      <div style={{ padding:"10px 18px 4px" }}>
+        <div style={{ position:"relative", display:"inline-block" }}>
+          <button onClick={() => setOpen(o => !o)} style={{
+            border:"1px solid #e8e6e0", background:"#fff", borderRadius:14, padding:"8px 12px",
+            fontSize:12, fontWeight:700, color:"#2d2b26", cursor:"pointer", minHeight:36,
+            display:"flex", alignItems:"center", gap:8
           }}>
-            <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"10px auto 12px" }}/>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-              <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>{t("filters.more", { defaultValue:"Filtri" })}</div>
-              <button onClick={() => setShowAdvanced(false)} style={{
-                border:"none", background:"#f0efe8", color:"#6b6961", borderRadius:999, padding:"6px 10px",
-                fontSize:11, fontWeight:700, cursor:"pointer"
-              }}>{t("actions.close", { defaultValue:"Chiudi" })}</button>
+            {t("filters.priority", { defaultValue:"Priorità" })}: {options.find(o => o.id === current)?.label}
+            <span style={{ fontSize:12, color:"#8a877f" }}>▾</span>
+          </button>
+          {open && (
+            <div style={{
+              position:"absolute", left:0, top:"calc(100% + 6px)", minWidth:220,
+              background:"#fff", border:"1px solid #e8e6e0", borderRadius:12,
+              boxShadow:"0 10px 24px rgba(0,0,0,.08)", zIndex:90, overflow:"hidden"
+            }}>
+              {options.map(opt => (
+                <button key={opt.id} onClick={() => applyPriority(opt.id)} style={{
+                  width:"100%", textAlign:"left", padding:"10px 12px", border:"none", cursor:"pointer",
+                  background: current === opt.id ? "#f5f4f0" : "#fff",
+                  fontSize:12, fontWeight:700, color:"#2d2b26"
+                }}>
+                  {opt.label}
+                </button>
+              ))}
             </div>
-
-            {/* Categories */}
-            <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px", margin:"6px 0" }}>
-              {t("filters.categories", { defaultValue:"Categorie" })}
-            </div>
-            <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"4px 0 6px", scrollbarWidth:"none" }}>
-              {sortedCats.map(c => {
-                const count = catCounts[c.id] || 0;
-                if (count === 0) return null;
-                return (
-                  <button key={c.id} onClick={() => handleCatClick(c.id)} style={{
-                    flexShrink:0, borderRadius:18, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:700,
-                    background: filterCat === c.id ? c.light : "#edecea",
-                    color: filterCat === c.id ? c.color : "#6b6961",
-                    border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
-                    position:"relative",
-                  }}>
-                    {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
-                    <span style={{ 
-                      marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
-                      background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
-                      borderRadius:8, padding:"1px 5px",
-                    }}>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Asset sub-filters */}
-            {filterCat && expandedCat === filterCat && (() => {
-              const cat = getCat(cats, filterCat);
-              if (!cat.assets || cat.assets.length === 0) return null;
-              return (
-                <div style={{ padding:"0 0 6px" }}>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    <button onClick={() => onSelectAsset(null)} style={{
-                      borderRadius:14, padding:"4px 11px", border:"none", cursor:"pointer", fontSize:11, fontWeight:600,
-                      background: filterAsset === null ? cat.color : "rgba(255,255,255,.7)",
-                      color: filterAsset === null ? "#fff" : "#6b6961",
-                      minHeight:32,
-                    }}>{t("filters.all")}</button>
-                    {cat.assets.map(asset => {
-                      const assetCount = deadlines.filter(d => {
-                        const isInScope = activeTab === "done"
-                          ? d.done
-                          : activeTab === "overdue"
-                            ? (d.date < TODAY && !d.done)
-                            : (d.date >= periodStart && d.date <= periodEnd && !d.done);
-                        return isInScope && d.cat === filterCat && d.asset === asset;
-                      }).length;
-                      return (
-                        <button key={asset} onClick={() => onSelectAsset(asset)} style={{
-                          borderRadius:14, padding:"4px 11px", cursor:"pointer", fontSize:11, fontWeight:600,
-                          background: filterAsset === asset ? cat.color : "rgba(255,255,255,.7)",
-                          color: filterAsset === asset ? "#fff" : "#6b6961",
-                          border: `1px solid ${filterAsset === asset ? cat.color : "#e8e6e0"}`,
-                          minHeight:32,
-                        }}>
-                          {asset}
-                          <span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>({assetCount})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Advanced filters */}
-            <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px", margin:"10px 0 6px" }}>
-              {t("filters.advanced", { defaultValue:"Avanzati" })}
-            </div>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-              <button onClick={() => setFilterRecurring(!filterRecurring)} style={{
-                borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-                background: filterRecurring ? "#EBF2FC" : "#edecea",
-                color: filterRecurring ? "#5B8DD9" : "#8a877f",
-                border: `1.5px solid ${filterRecurring ? "#5B8DD955" : "transparent"}`,
-                minHeight:32,
-              }}>{t("filters.recurring")}</button>
-
-              <button onClick={() => setFilterEssential(!filterEssential)} style={{
-                borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-                background: filterEssential ? "#EDFBF2" : "#edecea",
-                color: filterEssential ? "#4CAF6E" : "#8a877f",
-                border: `1.5px solid ${filterEssential ? "#4CAF6E55" : "transparent"}`,
-                minHeight:32,
-              }}>{t("filters.essential")}</button>
-            </div>
-
-            <div style={{ marginTop:14, display:"flex", justifyContent:"space-between" }}>
-              <button onClick={clearAllFilters} style={{
-                border:"none", background:"#edecea", color:"#6b6961", borderRadius:12,
-                padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
-              }}>{t("filters.reset", { defaultValue:"Reset filtri" })}</button>
-              <button onClick={() => setShowAdvanced(false)} style={{
-                border:"none", background:"#2d2b26", color:"#fff", borderRadius:12,
-                padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer"
-              }}>{t("actions.done", { defaultValue:"Fatto" })}</button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -4323,28 +4125,14 @@ export default function App() {
       </div>
 
       {/* FILTRO SMART */}
-      <CategoryFilter
-        cats={cats}
-        deadlines={deadlines}
-        filterCat={filterCat}
-        filterAsset={filterAsset}
-        expandedCat={expandedFilterCat}
-        onSelectCat={setFilterCat}
-        onSelectAsset={setFilterAsset}
-        onToggleExpand={setExpandedFilterCat}
+      <PriorityFilter
         activeTab={activeTab}
-        periodStart={periodStart}
-        periodEnd={periodEnd}
         filterMandatory={filterMandatory}
         setFilterMandatory={setFilterMandatory}
-        filterRecurring={filterRecurring}
-        setFilterRecurring={setFilterRecurring}
         filterAutoPay={filterAutoPay}
         setFilterAutoPay={setFilterAutoPay}
         filterManual={filterManual}
         setFilterManual={setFilterManual}
-        filterEssential={filterEssential}
-        setFilterEssential={setFilterEssential}
         filterEstimateMissing={filterEstimateMissing}
         setFilterEstimateMissing={setFilterEstimateMissing}
       />
