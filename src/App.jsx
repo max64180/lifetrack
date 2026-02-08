@@ -1118,7 +1118,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     }}>
       <div style={{
         background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 20px 34px", width:"100%", maxWidth:480,
-        animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto",
+        animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden",
       }}>
         <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
@@ -1133,11 +1133,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             }}/>
           ))}
         </div>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <div style={{ fontSize:12, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, gap:8, flexWrap:"wrap" }}>
+          <div style={{ fontSize:12, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px", flex:"1 1 160px", minWidth:0 }}>
             Step {step + 1} · {steps[step]}
           </div>
-          <div style={{ fontSize:11, color:"#b5b2a8" }}>
+          <div style={{ fontSize:11, color:"#b5b2a8", textAlign:"right", flex:"0 1 55%", minWidth:0 }}>
             {form.title ? form.title : t("wizard.untitled")}
             {form.date ? ` · ${form.date}` : ""}
             {form.budget ? ` · €${form.budget}` : ""}
