@@ -326,6 +326,7 @@
     "downpaymentCreated": "✓ Acconto €{{down}} - Saldo €{{remaining}} creato",
     "deadlineDeleted": "✓ Scadenza eliminata",
     "futureDeleted": "✓ Eliminate {{count}} scadenze future",
+    "deleteSyncError": "✗ Errore eliminazione ({{code}})",
     "seriesCreatedRange": "✓ Serie creata! {{outside}}/{{total}} oltre {{range}}",
     "deadlineAddedOutside": "✓ Scadenza aggiunta! È oltre {{range}} - cambia range per vederla",
     "seriesCreated": "✓ {{count}} scadenze create",

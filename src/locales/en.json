@@ -326,6 +326,7 @@
     "downpaymentCreated": "✓ Down payment €{{down}} - Balance €{{remaining}} created",
     "deadlineDeleted": "✓ Deadline deleted",
     "futureDeleted": "✓ Deleted {{count}} future deadlines",
+    "deleteSyncError": "✗ Delete error ({{code}})",
     "seriesCreatedRange": "✓ Series created! {{outside}}/{{total}} beyond {{range}}",
     "deadlineAddedOutside": "✓ Deadline added! It's beyond {{range}} - change range to see it",
     "seriesCreated": "✓ {{count}} deadlines created",

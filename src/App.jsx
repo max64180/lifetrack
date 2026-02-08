@@ -2717,6 +2717,7 @@ export default function App() {
   const suppressMetaRef = useRef(false);
   const pendingSaveRef = useRef(false);
   const needsSaveRef = useRef(false);
+  const pendingDeleteRef = useRef(new Set());
   const deadlinesRef = useRef([]);
   const prevDeadlinesRef = useRef([]);
   const saveRetryRef = useRef(null);
@@ -2824,6 +2825,9 @@ export default function App() {
             return normalizeDeadline({ ...data, id });
           })
           .filter(Boolean);
+        if (pendingDeleteRef.current.size > 0) {
+          remoteDeadlines = remoteDeadlines.filter(d => !pendingDeleteRef.current.has(String(d.id)));
+        }
         const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
 
         if (remoteDeadlines.length === 0) {
@@ -3128,6 +3132,32 @@ export default function App() {
       pendingSaveRef.current = false;
       needsSaveRef.current = false;
       showToast(t("toast.resetError"));
+    } finally {
+      endSync();
+    }
+  };
+
+  const queuePendingDelete = (ids) => {
+    ids.forEach(id => pendingDeleteRef.current.add(String(id)));
+  };
+
+  const clearPendingDelete = (ids) => {
+    ids.forEach(id => pendingDeleteRef.current.delete(String(id)));
+  };
+
+  const deleteDeadlinesRemote = async (ids) => {
+    if (!user || ids.length === 0) return;
+    startSync();
+    try {
+      const batch = writeBatch(db);
+      ids.forEach(id => {
+        batch.delete(doc(db, 'users', user.uid, 'deadlines', String(id)));
+      });
+      await batch.commit();
+      clearPendingDelete(ids);
+    } catch (error) {
+      console.error("Firebase delete error:", error);
+      showToast(t("toast.deleteSyncError", { code: error?.code || "unknown" }));
     } finally {
       endSync();
     }
@@ -3474,13 +3504,19 @@ export default function App() {
         });
       } else {
         // È l'ultima della serie, elimina direttamente
+        const idsToDelete = [id];
+        queuePendingDelete(idsToDelete);
         setDeadlines(p => p.filter(d => d.id !== id));
+        deleteDeadlinesRemote(idsToDelete);
         setExpandedId(null);
         showToast(t("toast.deadlineDeleted"));
       }
     } else {
       // Non fa parte di una serie, elimina direttamente
+      const idsToDelete = [id];
+      queuePendingDelete(idsToDelete);
       setDeadlines(p => p.filter(d => d.id !== id));
+      deleteDeadlinesRemote(idsToDelete);
       setExpandedId(null);
       showToast(t("toast.deadlineDeleted"));
     }
@@ -3490,11 +3526,16 @@ export default function App() {
     if (!deleteConfirm) return;
     
     // Elimina questa + tutte le future
+    const idsToDelete = deadlines
+      .filter(d => d.recurring && d.recurring.seriesId === deleteConfirm.seriesId && d.recurring.index >= deleteConfirm.currentIndex)
+      .map(d => d.id);
+    queuePendingDelete(idsToDelete);
     setDeadlines(p => p.filter(d => 
       !d.recurring || 
       d.recurring.seriesId !== deleteConfirm.seriesId || 
       d.recurring.index < deleteConfirm.currentIndex
     ));
+    deleteDeadlinesRemote(idsToDelete);
     setExpandedId(null);
     showToast(t("toast.futureDeleted", { count: deleteConfirm.futureCount }));
     setDeleteConfirm(null);
