@@ -1130,6 +1130,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               font-size: 16px !important;
             }
           }
+          .wizard-sheet input[type="date"]{
+            -webkit-appearance: none;
+            appearance: none;
+          }
+          .wizard-sheet input[type="date"]::-webkit-date-and-time-value{
+            text-align:left;
+          }
         `}</style>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
         <h3 style={{ margin:"0 0 6px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
@@ -3098,6 +3105,87 @@ export default function App() {
     const timer = setTimeout(autoCompleteDeadlines, 500);
     return () => clearTimeout(timer);
   }, [deadlines.length]); // Dipende solo dalla lunghezza per evitare loop infiniti
+
+  // Rolling recurring series: keep coverage through end of next year
+  useEffect(() => {
+    if (!user || loading) return;
+    if (!deadlines.length) return;
+
+    const horizon = getAutoEndDate();
+    const seriesMap = new Map();
+
+    deadlines.forEach(d => {
+      if (!d?.recurring?.enabled) return;
+      const endMode = d.recurring.endMode || "auto";
+      if (endMode !== "auto") return;
+      const seriesId = d.recurring.seriesId;
+      if (!seriesId) return;
+      if (!seriesMap.has(seriesId)) seriesMap.set(seriesId, []);
+      seriesMap.get(seriesId).push(d);
+    });
+
+    if (seriesMap.size === 0) return;
+
+    let updated = false;
+    let nextDeadlines = deadlines;
+    const newItems = [];
+
+    seriesMap.forEach((items, seriesId) => {
+      const ordered = items
+        .slice()
+        .sort((a, b) => (a.recurring?.index || 0) - (b.recurring?.index || 0));
+      const last = ordered[ordered.length - 1];
+      if (!last || !isValidDate(last.date)) return;
+      if (last.date >= horizon) return;
+
+      const interval = last.recurring?.interval || 1;
+      const unit = last.recurring?.unit || "mesi";
+      const lastIndex = Math.max(...ordered.map(d => d.recurring?.index || 0));
+      const template = last;
+
+      const additions = [];
+      let guard = 0;
+      let step = 1;
+      let nextDate = getOccurrenceDate(last.date, step, interval, unit);
+
+      while (nextDate <= horizon && guard < 800) {
+        guard += 1;
+        const newIndex = lastIndex + additions.length + 1;
+        const newId = `${seriesId}_${newIndex}`;
+        additions.push({
+          ...template,
+          id: newId,
+          date: nextDate,
+          done: false,
+          skipped: false,
+          documents: [],
+          recurring: {
+            ...template.recurring,
+            index: newIndex,
+          }
+        });
+        step += 1;
+        nextDate = getOccurrenceDate(last.date, step, interval, unit);
+      }
+
+      if (additions.length > 0) {
+        const newTotal = lastIndex + additions.length;
+        updated = true;
+        nextDeadlines = nextDeadlines.map(d => (
+          d.recurring?.seriesId === seriesId
+            ? { ...d, recurring: { ...d.recurring, total: newTotal } }
+            : d
+        ));
+        newItems.push(
+          ...additions.map(d => ({ ...d, recurring: { ...d.recurring, total: newTotal } }))
+        );
+      }
+    });
+
+    if (updated) {
+      setDeadlines([...nextDeadlines, ...newItems]);
+    }
+  }, [deadlines, user, loading]);
 
   const [range, setRange] = useState("mese");
   const [filterCat, setFilterCat] = useState(null);
