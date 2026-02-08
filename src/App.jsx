@@ -2808,6 +2808,7 @@ export default function App() {
   const needsSaveRef = useRef(false);
   const pendingDeleteRef = useRef(new Set());
   const dirtyDeadlinesRef = useRef(false);
+  const [remoteInfo, setRemoteInfo] = useState({ count: null, lastSync: null });
   const deadlinesRef = useRef([]);
   const prevDeadlinesRef = useRef([]);
   const saveRetryRef = useRef(null);
@@ -2929,14 +2930,15 @@ export default function App() {
     const mergeDeadlines = (remote, local) => {
       const merged = [];
       const seen = new Set();
-      (local || []).forEach(d => {
+      // Remote wins for same id, but keep local items missing in remote
+      (remote || []).forEach(d => {
         if (!d) return;
         const id = String(d.id);
         if (pendingDeleteRef.current.has(id)) return;
         seen.add(id);
         merged.push(d);
       });
-      (remote || []).forEach(d => {
+      (local || []).forEach(d => {
         if (!d) return;
         const id = String(d.id);
         if (pendingDeleteRef.current.has(id)) return;
@@ -2995,16 +2997,12 @@ export default function App() {
           }
         }
 
+        setRemoteInfo({ count: remoteDeadlines.length, lastSync: Date.now() });
         if (!cancelled && !pendingSaveRef.current) {
           suppressDeadlinesRef.current = true;
           suppressMetaRef.current = true;
           const localCurrent = deadlinesRef.current || [];
-          let nextDeadlines = remoteDeadlines;
-          if (remoteDeadlines.length === 0 && localCurrent.length > 0) {
-            nextDeadlines = localCurrent;
-          } else if (dirtyDeadlinesRef.current) {
-            nextDeadlines = mergeDeadlines(remoteDeadlines, localCurrent);
-          }
+          const nextDeadlines = mergeDeadlines(remoteDeadlines, localCurrent);
           setDeadlines(nextDeadlines);
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
@@ -4164,10 +4162,14 @@ export default function App() {
             </div>
           ))
         )}
-        <div style={{ textAlign:"center", color:"#b5b2a8", fontSize:10, padding:"14px 0 6px" }}>
-          v{APP_VERSION}{APP_BUILD_TIME ? ` · ${new Date(APP_BUILD_TIME).toLocaleDateString(getLocale())}` : ""}
+          <div style={{ textAlign:"center", color:"#b5b2a8", fontSize:10, padding:"14px 0 6px", lineHeight:1.4 }}>
+            v{APP_VERSION}{APP_BUILD_TIME ? ` · ${new Date(APP_BUILD_TIME).toLocaleDateString(getLocale())}` : ""}
+            {user?.email ? ` · ${user.email}` : ""}
+            {user?.uid ? ` · uid:${user.uid.slice(0, 6)}` : ""}
+            {remoteInfo.count !== null ? ` · cloud:${remoteInfo.count}` : ""}
+            {remoteInfo.lastSync ? ` · sync:${new Date(remoteInfo.lastSync).toLocaleTimeString(getLocale(), { hour:'2-digit', minute:'2-digit' })}` : ""}
+          </div>
         </div>
-      </div>
 
       {/* FAB */}
       <button onClick={() => setShowAdd(true)} style={{
