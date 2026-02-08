@@ -2818,7 +2818,20 @@ export default function App() {
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
-  const [deadlines, setDeadlines] = useState([]);
+  const [deadlines, setDeadlines] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lifetrack_deadlines');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(normalizeDeadline).filter(Boolean);
+        }
+      }
+    } catch (err) {
+      console.warn("Local deadlines parse error:", err);
+    }
+    return [];
+  });
   const [workLogs, setWorkLogs] = useState(() => {
     const saved = localStorage.getItem('lifetrack_worklogs');
     if (saved) {
