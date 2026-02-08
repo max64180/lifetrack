@@ -1116,11 +1116,21 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:200,
       display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)",
     }}>
-      <div style={{
+      <div className="wizard-sheet" style={{
         background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 20px 34px", width:"100%", maxWidth:480, boxSizing:"border-box",
         animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden",
       }}>
-        <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+        <style>{`
+          @keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+          .wizard-sheet, .wizard-sheet * { box-sizing: border-box; }
+          @media (hover:none) and (pointer:coarse) {
+            .wizard-sheet input,
+            .wizard-sheet select,
+            .wizard-sheet textarea {
+              font-size: 16px !important;
+            }
+          }
+        `}</style>
         <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
         <h3 style={{ margin:"0 0 6px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
           {editingItem ? t("wizard.editTitle") : t("wizard.newTitle")}
