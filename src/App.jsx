@@ -1365,7 +1365,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                             type="date" 
                             value={form.recurringEndDate}
                             onChange={e => set("recurringEndDate", e.target.value)}
-                            style={{ flex:1, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13 }}
+                            style={{ flex:1, minWidth:0, maxWidth:"100%", padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, boxSizing:"border-box" }}
                           />
                         </div>
                       )}
@@ -1584,7 +1584,22 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 }
 
 const lbl = { display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginTop:14, marginBottom:5, letterSpacing:".5px", textTransform:"uppercase" };
-const inp = { width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #edecea", fontSize:14, fontFamily:"'Sora',sans-serif", color:"#2d2b26", background:"#faf9f7", outline:"none", boxSizing:"border-box", minHeight:44 };
+const inp = {
+  width:"100%",
+  maxWidth:"100%",
+  minWidth:0,
+  display:"block",
+  padding:"12px 14px",
+  borderRadius:12,
+  border:"2px solid #edecea",
+  fontSize:14,
+  fontFamily:"'Sora',sans-serif",
+  color:"#2d2b26",
+  background:"#faf9f7",
+  outline:"none",
+  boxSizing:"border-box",
+  minHeight:44
+};
 
 /* ── CATEGORY MANAGEMENT SHEET ─────────────────────────── */
 /* ── STATISTICHE SHEET ──────────────────────────────────── */
