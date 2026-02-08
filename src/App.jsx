@@ -4051,32 +4051,6 @@ export default function App() {
           <RangeSelector active={range} onChange={r => { setRange(r); setPeriodOffset(0); setExpandedId(null); }}/>
         </div>
 
-        {/* Period navigator */}
-        <div style={{ background:"#1e1c18", padding:"6px 18px 0" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={() => setPeriodOffset(o => o - 1)} style={{
-              width:32, height:32, borderRadius:"50%", border:"none", cursor:"pointer",
-              background:"rgba(255,255,255,.1)", color:"rgba(255,255,255,.8)",
-              fontSize:16, fontWeight:800
-            }}>‹</button>
-            <div style={{ flex:1, textAlign:"center" }}>
-              <div style={{ fontSize:13, fontWeight:800, color:"#fff", letterSpacing:"-.2px" }}>{periodLabel}</div>
-              {periodOffset !== 0 && (
-                <button onClick={() => setPeriodOffset(0)} style={{
-                  marginTop:4, background:"transparent", border:"1px solid rgba(255,255,255,.2)",
-                  color:"rgba(255,255,255,.7)", borderRadius:999, padding:"2px 8px",
-                  fontSize:10, fontWeight:700, cursor:"pointer"
-                }}>{t("urgency.today")}</button>
-              )}
-            </div>
-            <button onClick={() => setPeriodOffset(o => o + 1)} style={{
-              width:32, height:32, borderRadius:"50%", border:"none", cursor:"pointer",
-              background:"rgba(255,255,255,.1)", color:"rgba(255,255,255,.8)",
-              fontSize:16, fontWeight:800
-            }}>›</button>
-          </div>
-        </div>
-
         {/* Budget bar */}
         <div style={{ background:"#1e1c18" }}>
           <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
@@ -4124,6 +4098,34 @@ export default function App() {
         filterEstimateMissing={filterEstimateMissing}
         setFilterEstimateMissing={setFilterEstimateMissing}
       />
+
+      {/* Period navigator (above list) */}
+      <div style={{ padding:"10px 18px 6px", background:"#f5f4f0" }}>
+        <div style={{
+          background:"#fff", borderRadius:16, border:"1px solid #edecea",
+          padding:"10px 12px", display:"flex", alignItems:"center", gap:12,
+          boxShadow:"0 4px 12px rgba(0,0,0,.05)"
+        }}>
+          <button onClick={() => setPeriodOffset(o => o - 1)} style={{
+            width:36, height:36, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+            background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+          }}>‹</button>
+          <div style={{ flex:1, textAlign:"center" }}>
+            <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+            {periodOffset !== 0 && (
+              <button onClick={() => setPeriodOffset(0)} style={{
+                marginTop:4, background:"#f5f4f0", border:"1px solid #e8e6e0",
+                color:"#6b6961", borderRadius:999, padding:"2px 10px",
+                fontSize:10, fontWeight:700, cursor:"pointer"
+              }}>{t("urgency.today")}</button>
+            )}
+          </div>
+          <button onClick={() => setPeriodOffset(o => o + 1)} style={{
+            width:36, height:36, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+            background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+          }}>›</button>
+        </div>
+      </div>
 
       {/* LISTA */}
       <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
