@@ -871,98 +871,128 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
       </div>
 
       {showAdvanced && (
-        <>
-      {/* Asset sub-filters - appear when category with assets is selected */}
-      {filterCat && expandedCat === filterCat && (() => {
-        const cat = getCat(cats, filterCat);
-        if (!cat.assets || cat.assets.length === 0) return null;
-        
-        return (
-          <div style={{ 
-            padding:"0 18px 6px", 
-            animation:"slideDown .2s ease both",
+        <div
+          onClick={(e) => e.target === e.currentTarget && setShowAdvanced(false)}
+          style={{
+            position:"fixed", inset:0, background:"rgba(18,17,13,.45)", zIndex:220,
+            display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(2px)"
+          }}
+        >
+          <div style={{
+            background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 18px 24px",
+            width:"100%", maxWidth:480, maxHeight:"78vh", overflowY:"auto",
+            boxShadow:"0 -12px 30px rgba(0,0,0,.2)"
           }}>
-            <style>{`@keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:100px}}`}</style>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap", paddingLeft:8 }}>
-              <button onClick={() => onSelectAsset(null)} style={{
-                borderRadius:14, padding:"4px 11px", border:"none", cursor:"pointer", fontSize:11, fontWeight:600,
-                background: filterAsset === null ? cat.color : "rgba(255,255,255,.7)",
-                color: filterAsset === null ? "#fff" : "#6b6961",
-                minHeight:32,
-              }}>{t("filters.all")}</button>
-              
-              {cat.assets.map(asset => {
-                // Count deadlines per asset
-                const assetCount = deadlines.filter(d => {
-                  const isInScope = activeTab === "done"
-                    ? d.done
-                    : activeTab === "overdue"
-                      ? (d.date < TODAY && !d.done)
-                      : (d.date >= periodStart && d.date <= periodEnd && !d.done);
-                  return isInScope && d.cat === filterCat && d.asset === asset;
-                }).length;
-                
+            <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"10px auto 12px" }}/>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>{t("filters.more", { defaultValue:"Filtri" })}</div>
+              <button onClick={() => setShowAdvanced(false)} style={{
+                border:"none", background:"#f0efe8", color:"#6b6961", borderRadius:999, padding:"6px 10px",
+                fontSize:11, fontWeight:700, cursor:"pointer"
+              }}>{t("actions.close", { defaultValue:"Chiudi" })}</button>
+            </div>
+
+            {/* Categories */}
+            <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px", margin:"6px 0" }}>
+              {t("filters.categories", { defaultValue:"Categorie" })}
+            </div>
+            <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"4px 0 6px", scrollbarWidth:"none" }}>
+              {sortedCats.map(c => {
+                const count = catCounts[c.id] || 0;
+                if (count === 0) return null;
                 return (
-                  <button key={asset} onClick={() => onSelectAsset(asset)} style={{
-                    borderRadius:14, padding:"4px 11px", cursor:"pointer", fontSize:11, fontWeight:600,
-                    background: filterAsset === asset ? cat.color : "rgba(255,255,255,.7)",
-                    color: filterAsset === asset ? "#fff" : "#6b6961",
-                    border: `1px solid ${filterAsset === asset ? cat.color : "#e8e6e0"}`,
-                    minHeight:32,
+                  <button key={c.id} onClick={() => handleCatClick(c.id)} style={{
+                    flexShrink:0, borderRadius:18, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:700,
+                    background: filterCat === c.id ? c.light : "#edecea",
+                    color: filterCat === c.id ? c.color : "#6b6961",
+                    border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
+                    position:"relative",
                   }}>
-                    {asset}
-                    <span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>({assetCount})</span>
+                    {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
+                    <span style={{ 
+                      marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
+                      background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
+                      borderRadius:8, padding:"1px 5px",
+                    }}>{count}</span>
                   </button>
                 );
               })}
             </div>
+
+            {/* Asset sub-filters */}
+            {filterCat && expandedCat === filterCat && (() => {
+              const cat = getCat(cats, filterCat);
+              if (!cat.assets || cat.assets.length === 0) return null;
+              return (
+                <div style={{ padding:"0 0 6px" }}>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    <button onClick={() => onSelectAsset(null)} style={{
+                      borderRadius:14, padding:"4px 11px", border:"none", cursor:"pointer", fontSize:11, fontWeight:600,
+                      background: filterAsset === null ? cat.color : "rgba(255,255,255,.7)",
+                      color: filterAsset === null ? "#fff" : "#6b6961",
+                      minHeight:32,
+                    }}>{t("filters.all")}</button>
+                    {cat.assets.map(asset => {
+                      const assetCount = deadlines.filter(d => {
+                        const isInScope = activeTab === "done"
+                          ? d.done
+                          : activeTab === "overdue"
+                            ? (d.date < TODAY && !d.done)
+                            : (d.date >= periodStart && d.date <= periodEnd && !d.done);
+                        return isInScope && d.cat === filterCat && d.asset === asset;
+                      }).length;
+                      return (
+                        <button key={asset} onClick={() => onSelectAsset(asset)} style={{
+                          borderRadius:14, padding:"4px 11px", cursor:"pointer", fontSize:11, fontWeight:600,
+                          background: filterAsset === asset ? cat.color : "rgba(255,255,255,.7)",
+                          color: filterAsset === asset ? "#fff" : "#6b6961",
+                          border: `1px solid ${filterAsset === asset ? cat.color : "#e8e6e0"}`,
+                          minHeight:32,
+                        }}>
+                          {asset}
+                          <span style={{ marginLeft:4, fontSize:9, opacity:.7 }}>({assetCount})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Advanced filters */}
+            <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px", margin:"10px 0 6px" }}>
+              {t("filters.advanced", { defaultValue:"Avanzati" })}
+            </div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              <button onClick={() => setFilterRecurring(!filterRecurring)} style={{
+                borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
+                background: filterRecurring ? "#EBF2FC" : "#edecea",
+                color: filterRecurring ? "#5B8DD9" : "#8a877f",
+                border: `1.5px solid ${filterRecurring ? "#5B8DD955" : "transparent"}`,
+                minHeight:32,
+              }}>{t("filters.recurring")}</button>
+
+              <button onClick={() => setFilterEssential(!filterEssential)} style={{
+                borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
+                background: filterEssential ? "#EDFBF2" : "#edecea",
+                color: filterEssential ? "#4CAF6E" : "#8a877f",
+                border: `1.5px solid ${filterEssential ? "#4CAF6E55" : "transparent"}`,
+                minHeight:32,
+              }}>{t("filters.essential")}</button>
+            </div>
+
+            <div style={{ marginTop:14, display:"flex", justifyContent:"space-between" }}>
+              <button onClick={clearAllFilters} style={{
+                border:"none", background:"#edecea", color:"#6b6961", borderRadius:12,
+                padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
+              }}>{t("filters.reset", { defaultValue:"Reset filtri" })}</button>
+              <button onClick={() => setShowAdvanced(false)} style={{
+                border:"none", background:"#2d2b26", color:"#fff", borderRadius:12,
+                padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer"
+              }}>{t("actions.done", { defaultValue:"Fatto" })}</button>
+            </div>
           </div>
-        );
-      })()}
-
-      {/* Categories row */}
-      <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"4px 18px 6px", scrollbarWidth:"none" }}>
-        {sortedCats.map(c => {
-          const count = catCounts[c.id] || 0;
-          if (count === 0) return null;
-          return (
-            <button key={c.id} onClick={() => handleCatClick(c.id)} style={{
-              flexShrink:0, borderRadius:18, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:700,
-              background: filterCat === c.id ? c.light : "#edecea",
-              color: filterCat === c.id ? c.color : "#6b6961",
-              border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
-              position:"relative",
-            }}>
-              {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
-              <span style={{ 
-                marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
-                background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
-                borderRadius:8, padding:"1px 5px",
-              }}>{count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Advanced filters row */}
-      <div style={{ display:"flex", gap:6, overflowX:"auto", padding:"0 18px 6px", scrollbarWidth:"none", marginTop:2 }}>
-        <button onClick={() => setFilterRecurring(!filterRecurring)} style={{
-          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-          background: filterRecurring ? "#EBF2FC" : "#edecea",
-          color: filterRecurring ? "#5B8DD9" : "#8a877f",
-          border: `1.5px solid ${filterRecurring ? "#5B8DD955" : "transparent"}`,
-          minHeight:32,
-        }}>{t("filters.recurring")}</button>
-
-        <button onClick={() => setFilterEssential(!filterEssential)} style={{
-          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-          background: filterEssential ? "#EDFBF2" : "#edecea",
-          color: filterEssential ? "#4CAF6E" : "#8a877f",
-          border: `1.5px solid ${filterEssential ? "#4CAF6E55" : "transparent"}`,
-          minHeight:32,
-        }}>{t("filters.essential")}</button>
-      </div>
-        </>
+        </div>
       )}
     </div>
   );
