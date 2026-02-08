@@ -8,10 +8,7 @@ export const DEFAULT_CATS = [
 ];
 
 export const RANGES = [
-  { id:"settimana",  label:"Settimana",  labelKey:"range.week", days:7   },
   { id:"mese",       label:"Mese",       labelKey:"range.month", days:30  },
-  { id:"trimestre",  label:"Trimestre",  labelKey:"range.quarter", days:90  },
-  { id:"semestre",   label:"Semestre",   labelKey:"range.semester", days:180 },
   { id:"anno",       label:"Anno",       labelKey:"range.year", days:365 },
 ];
 

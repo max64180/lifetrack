@@ -25,6 +25,10 @@ const db = getFirestore(app);
 
 const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ !== "undefined" ? __APP_BUILD_TIME__ : "";
+const POLL_BASE_MS = 60000;
+const POLL_MAX_MS = 5 * 60 * 1000;
+const RANGE_IDS = new Set(RANGES.map(r => r.id));
+const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
 
 
 
@@ -253,6 +257,22 @@ function normalizeWorkLogs(raw = {}) {
   return parsed;
 }
 
+function deadlineForCompare(raw) {
+  if (!raw) return raw;
+  const { updatedAt, ...rest } = raw;
+  const date = rest.date instanceof Date ? rest.date.toISOString() : rest.date;
+  return { ...rest, date };
+}
+
+function isSameDeadline(a, b) {
+  if (!a || !b) return false;
+  try {
+    return JSON.stringify(deadlineForCompare(a)) === JSON.stringify(deadlineForCompare(b));
+  } catch (err) {
+    return false;
+  }
+}
+
 function stripUndefined(value) {
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -323,6 +343,7 @@ function LanguageToggle({ tone = "dark", size = 28 }) {
 function RangeSelector({ active, onChange }) {
   const { t } = useTranslation();
   const ref = useRef(null);
+  const isCompact = RANGES.length <= 2;
   useEffect(() => {
     const el = ref.current?.querySelector(`[data-active="true"]`);
     el?.scrollIntoView({ inline:"center", behavior:"smooth", block:"nearest" });
@@ -330,9 +351,10 @@ function RangeSelector({ active, onChange }) {
 
   return (
     <div ref={ref} style={{
-      display:"flex", gap:8, overflowX:"auto", padding:"0 18px",
-      scrollbarWidth:"none", WebkitOverflowScrolling:"touch", scrollSnapType:"x mandatory",
-      touchAction:"pan-x", // only allow horizontal scroll, prevent vertical page scroll
+      display:"flex", gap:8, padding:"0 18px", justifyContent: isCompact ? "center" : "flex-start",
+      overflowX: isCompact ? "visible" : "auto",
+      scrollbarWidth:"none", WebkitOverflowScrolling:"touch", scrollSnapType: isCompact ? "none" : "x mandatory",
+      touchAction: isCompact ? "auto" : "pan-x", // only allow horizontal scroll when needed
     }}>
       <style>{`::-webkit-scrollbar{display:none}`}</style>
       {RANGES.map(r => {
@@ -2814,6 +2836,7 @@ export default function App() {
   const saveRetryRef = useRef(null);
   const deadlinesSaveTimerRef = useRef(null);
   const syncingCountRef = useRef(0);
+  const pollStateRef = useRef({ timer: null, backoffMs: POLL_BASE_MS });
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authMode, setAuthMode] = useState("login"); // login | signup
@@ -2850,7 +2873,8 @@ export default function App() {
   });
   const [range, setRange] = useState(() => {
     try {
-      return localStorage.getItem('lifetrack_range') || "mese";
+      const saved = localStorage.getItem('lifetrack_range') || "mese";
+      return getSafeRange(saved);
     } catch (err) {
       return "mese";
     }
@@ -2947,7 +2971,18 @@ export default function App() {
       return merged;
     };
 
-    const fetchOnce = async () => {
+    const scheduleNext = (delay) => {
+      if (cancelled) return;
+      if (pollStateRef.current.timer) clearTimeout(pollStateRef.current.timer);
+      pollStateRef.current.timer = setTimeout(() => fetchOnce("poll"), delay);
+    };
+
+    const fetchOnce = async (reason = "poll") => {
+      if (cancelled) return;
+      if (document.visibilityState === "hidden") {
+        scheduleNext(Math.max(pollStateRef.current.backoffMs, POLL_BASE_MS * 2));
+        return;
+      }
       try {
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
@@ -2997,6 +3032,7 @@ export default function App() {
           }
         }
 
+        pollStateRef.current.backoffMs = POLL_BASE_MS;
         setRemoteInfo({ count: remoteDeadlines.length, lastSync: Date.now(), error: null });
         if (!cancelled && !pendingSaveRef.current) {
           suppressDeadlinesRef.current = true;
@@ -3009,15 +3045,26 @@ export default function App() {
         }
       } catch (error) {
         console.error("Firebase poll error:", error);
-        setRemoteInfo({ count: null, lastSync: null, error: error?.code || error?.message || "unknown" });
+        const code = error?.code || error?.message || "unknown";
+        const multiplier = code === "resource-exhausted" ? 2 : 1.5;
+        pollStateRef.current.backoffMs = Math.min(Math.round(pollStateRef.current.backoffMs * multiplier), POLL_MAX_MS);
+        setRemoteInfo({ count: null, lastSync: null, error: code });
+      } finally {
+        scheduleNext(pollStateRef.current.backoffMs);
       }
     };
 
-    fetchOnce();
-    const interval = setInterval(fetchOnce, 5000);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchOnce("focus");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    fetchOnce("init");
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (pollStateRef.current.timer) clearTimeout(pollStateRef.current.timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [user]);
 
@@ -3027,16 +3074,26 @@ export default function App() {
     pendingSaveRef.current = true;
     startSync();
     const current = deadlinesRef.current || [];
+    const prevMap = new Map((prevDeadlinesRef.current || []).map(d => [String(d.id), d]));
+    const changed = current.filter(d => {
+      const prev = prevMap.get(String(d.id));
+      return !prev || !isSameDeadline(prev, d);
+    });
 
     try {
-      const batch = writeBatch(db);
-      const now = Date.now();
-      current.forEach(d => {
-        const docId = String(d.id);
-        const payload = stripUndefined({ ...d, id: d.id, updatedAt: now });
-        batch.set(doc(db, 'users', user.uid, 'deadlines', docId), payload, { merge: true });
-      });
-      await batch.commit();
+      if (changed.length) {
+        const now = Date.now();
+        const chunkSize = 400;
+        for (let i = 0; i < changed.length; i += chunkSize) {
+          const batch = writeBatch(db);
+          changed.slice(i, i + chunkSize).forEach(d => {
+            const docId = String(d.id);
+            const payload = stripUndefined({ ...d, id: d.id, updatedAt: now });
+            batch.set(doc(db, 'users', user.uid, 'deadlines', docId), payload, { merge: true });
+          });
+          await batch.commit();
+        }
+      }
       prevDeadlinesRef.current = current;
       pendingSaveRef.current = false;
       dirtyDeadlinesRef.current = false;
