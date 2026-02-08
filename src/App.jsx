@@ -41,36 +41,15 @@ function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); ret
 
 /* ── GROUPING LOGIC ────────────────────────────────────── */
 function getGroupKey(date, range) {
-  const y = date.getFullYear(), m = date.getMonth();
-  switch(range) {
-    case "settimana": {
-      const diff = Math.floor((date - TODAY) / 86400000);
-      const w = Math.floor(diff / 7);
-      const label = w === 0
-        ? i18n.t("group.weekThis", "Questa settimana")
-        : w === 1
-          ? i18n.t("group.weekNext", "Prossima settimana")
-          : i18n.t("group.weekPlus", { count: w, defaultValue: `Settimana +${w}` });
-      return { key: `w${w}`, label, order: w };
-    }
-    case "mese":
-      return { key: `${y}-${m}`, label: `${capitalize(date.toLocaleDateString(getLocale(), { month:"long" }))} ${y}`, order: y * 12 + m };
-    case "trimestre": {
-      const q = Math.floor(m / 3);
-      return { key: `${y}-Q${q}`, label: i18n.t("group.quarter", { num: q + 1, year: y, defaultValue: `Q${q+1} ${y}` }), order: y * 4 + q };
-    }
-    case "semestre": {
-      const s = m < 6 ? 0 : 1;
-      const label = s === 0
-        ? i18n.t("group.semesterFirst", { year: y, defaultValue: `1° semestre ${y}` })
-        : i18n.t("group.semesterSecond", { year: y, defaultValue: `2° semestre ${y}` });
-      return { key: `${y}-S${s}`, label, order: y * 2 + s };
-    }
-    case "anno":
-      return { key: `${y}`, label: `${y}`, order: y };
-    default:
-      return { key: "all", label: i18n.t("group.all", "Tutte"), order: 0 };
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  if (range === "settimana" || range === "mese") {
+    const key = date.toISOString().split("T")[0];
+    const label = capitalize(date.toLocaleDateString(getLocale(), { weekday:"short", day:"2-digit", month:"short" }));
+    return { key, label, order: date.getTime() };
   }
+  // trimestre / semestre / anno → raggruppa per mese
+  return { key: `${y}-${m}`, label: `${capitalize(date.toLocaleDateString(getLocale(), { month:"long" }))} ${y}`, order: y * 12 + m };
 }
 
 function groupItems(items, range) {
@@ -81,6 +60,61 @@ function groupItems(items, range) {
     map[g.key].items.push(item);
   });
   return Object.values(map).sort((a, b) => a.order - b.order);
+}
+
+/* ── PERIOD RANGE ───────────────────────────────────────── */
+function getPeriodRange(range, offset = 0) {
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+
+  if (range === "settimana") {
+    const day = (base.getDay() + 6) % 7; // Monday = 0
+    const start = new Date(base);
+    start.setDate(base.getDate() - day + offset * 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (range === "mese") {
+    const target = new Date(base);
+    target.setMonth(target.getMonth() + offset);
+    const year = target.getFullYear();
+    const month = target.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    return { start, end, year, month };
+  }
+
+  if (range === "trimestre") {
+    const baseQuarter = Math.floor(base.getMonth() / 3);
+    const totalQuarter = base.getFullYear() * 4 + baseQuarter + offset;
+    const year = Math.floor(totalQuarter / 4);
+    const quarter = totalQuarter - year * 4;
+    const startMonth = quarter * 3;
+    const start = new Date(year, startMonth, 1);
+    const end = new Date(year, startMonth + 3, 0, 23, 59, 59, 999);
+    return { start, end, year, quarter };
+  }
+
+  if (range === "semestre") {
+    const baseHalf = base.getMonth() < 6 ? 0 : 1;
+    const totalHalf = base.getFullYear() * 2 + baseHalf + offset;
+    const year = Math.floor(totalHalf / 2);
+    const half = totalHalf - year * 2;
+    const startMonth = half * 6;
+    const start = new Date(year, startMonth, 1);
+    const end = new Date(year, startMonth + 6, 0, 23, 59, 59, 999);
+    return { start, end, year, half };
+  }
+
+  // anno
+  const year = base.getFullYear() + offset;
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
+  return { start, end, year };
 }
 
 /* ── HELPERS ───────────────────────────────────────────── */
@@ -318,10 +352,9 @@ function RangeSelector({ active, onChange }) {
 }
 
 /* Budget summary bar */
-function BudgetBar({ deadlines, range, cats }) {
+function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
   const { t } = useTranslation();
-  const maxDays = RANGES.find(r => r.id === range)?.days || 30;
-  const inRange = deadlines.filter(d => !d.done && diffDays(d.date) >= 0 && diffDays(d.date) <= maxDays);
+  const inRange = deadlines.filter(d => !d.done && d.date >= periodStart && d.date <= periodEnd);
   const inRangeBudgeted = inRange.filter(d => !d.estimateMissing);
   const total   = inRangeBudgeted.reduce((s, d) => s + d.budget, 0);
   const count   = inRange.length;
@@ -635,20 +668,23 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 }
 
 /* Smart Category Filter with asset sub-filters */
-function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, maxDays, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
+function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, periodStart, periodEnd, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
   const { t } = useTranslation();
   // Count deadlines per category (only active timeline deadlines)
   const catCounts = useMemo(() => {
     const counts = {};
     deadlines.forEach(d => {
-      const days = diffDays(d.date);
-      const isInScope = activeTab === "done" ? d.done : (days >= 0 && days <= maxDays && !d.done);
+      const isInScope = activeTab === "done"
+        ? d.done
+        : activeTab === "overdue"
+          ? (d.date < TODAY && !d.done)
+          : (d.date >= periodStart && d.date <= periodEnd && !d.done);
       if (isInScope) {
         counts[d.cat] = (counts[d.cat] || 0) + 1;
       }
     });
     return counts;
-  }, [deadlines, activeTab, maxDays]);
+  }, [deadlines, activeTab, periodStart, periodEnd]);
 
   // Sort categories by deadline count (descending)
   const sortedCats = useMemo(() => {
@@ -731,8 +767,11 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
               {cat.assets.map(asset => {
                 // Count deadlines per asset
                 const assetCount = deadlines.filter(d => {
-                  const days = diffDays(d.date);
-                  const isInScope = activeTab === "done" ? d.done : (days >= 0 && days <= maxDays && !d.done);
+                  const isInScope = activeTab === "done"
+                    ? d.done
+                    : activeTab === "overdue"
+                      ? (d.date < TODAY && !d.done)
+                      : (d.date >= periodStart && d.date <= periodEnd && !d.done);
                   return isInScope && d.cat === filterCat && d.asset === asset;
                 }).length;
                 
@@ -3188,6 +3227,7 @@ export default function App() {
   }, [deadlines, user, loading]);
 
   const [range, setRange] = useState("mese");
+  const [periodOffset, setPeriodOffset] = useState(0);
   const [filterCat, setFilterCat] = useState(null);
   const [filterAsset, setFilterAsset] = useState(null);
   const [filterMandatory, setFilterMandatory] = useState(false);
@@ -3317,14 +3357,37 @@ export default function App() {
     }
   };
 
-  const maxDays = RANGES.find(r => r.id === range)?.days || 30;
+  const period = useMemo(() => getPeriodRange(range, periodOffset), [range, periodOffset]);
+  const periodStart = period.start;
+  const periodEnd = period.end;
+  const periodLabel = useMemo(() => {
+    const locale = getLocale();
+    const isIt = locale.startsWith("it");
+    if (range === "settimana") {
+      const startStr = periodStart.toLocaleDateString(locale, { day:"2-digit", month:"short" });
+      const endStr = periodEnd.toLocaleDateString(locale, { day:"2-digit", month:"short", year:"numeric" });
+      return isIt ? `Settimana ${startStr}–${endStr}` : `Week ${startStr}–${endStr}`;
+    }
+    if (range === "mese") {
+      return capitalize(periodStart.toLocaleDateString(locale, { month:"long", year:"numeric" }));
+    }
+    if (range === "trimestre") {
+      return `Q${(period.quarter ?? 0) + 1} ${period.year}`;
+    }
+    if (range === "semestre") {
+      const half = period.half ?? 0;
+      return half === 0
+        ? t("group.semesterFirst", { year: period.year, defaultValue: `1° semestre ${period.year}` })
+        : t("group.semesterSecond", { year: period.year, defaultValue: `2° semestre ${period.year}` });
+    }
+    return String(period.year);
+  }, [range, periodStart, periodEnd, period.year, period.quarter, period.half, t, i18n.language]);
 
   const filtered = useMemo(() => {
     let list = deadlines.filter(d => {
-      const days = diffDays(d.date);
       if (activeTab === "done") return d.done;
-      if (activeTab === "overdue") return days < 0 && !d.done; // scadute non completate
-      if (activeTab === "timeline") return days >= 0 && days <= maxDays && !d.done;
+      if (activeTab === "overdue") return d.date < TODAY && !d.done; // scadute non completate
+      if (activeTab === "timeline") return d.date >= periodStart && d.date <= periodEnd && !d.done;
       return true;
     });
     if (filterCat) list = list.filter(d => d.cat === filterCat);
@@ -3336,7 +3399,7 @@ export default function App() {
     if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
     list.sort((a, b) => a.date - b.date);
     return list;
-  }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, activeTab, maxDays]);
+  }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
 
@@ -3699,10 +3762,9 @@ export default function App() {
     setDeadlines(p => [...p, ...itemsArray]); 
     
     // Check if any deadline is outside current range
-    const outsideRange = itemsArray.filter(item => diffDays(item.date) > maxDays);
+    const outsideRange = itemsArray.filter(item => item.date < periodStart || item.date > periodEnd);
     if (outsideRange.length > 0) {
-      const rangeInfo = RANGES.find(r => r.id === range);
-      const rangeLabel = rangeInfo ? t(rangeInfo.labelKey, { defaultValue: rangeInfo.label }) : range;
+      const rangeLabel = periodLabel;
       if (itemsArray.length > 1) {
         showToast(t("toast.seriesCreatedRange", { outside: outsideRange.length, total: itemsArray.length, range: rangeLabel }));
       } else {
@@ -3945,12 +4007,38 @@ export default function App() {
         
         {/* Range selector - fuori dal padding principale */}
         <div style={{ marginTop:0, background:"#1e1c18", paddingBottom:8 }}>
-          <RangeSelector active={range} onChange={r => { setRange(r); setExpandedId(null); }}/>
+          <RangeSelector active={range} onChange={r => { setRange(r); setPeriodOffset(0); setExpandedId(null); }}/>
         </div>
-        
+
+        {/* Period navigator */}
+        <div style={{ background:"#1e1c18", padding:"6px 18px 0" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={() => setPeriodOffset(o => o - 1)} style={{
+              width:32, height:32, borderRadius:"50%", border:"none", cursor:"pointer",
+              background:"rgba(255,255,255,.1)", color:"rgba(255,255,255,.8)",
+              fontSize:16, fontWeight:800
+            }}>‹</button>
+            <div style={{ flex:1, textAlign:"center" }}>
+              <div style={{ fontSize:13, fontWeight:800, color:"#fff", letterSpacing:"-.2px" }}>{periodLabel}</div>
+              {periodOffset !== 0 && (
+                <button onClick={() => setPeriodOffset(0)} style={{
+                  marginTop:4, background:"transparent", border:"1px solid rgba(255,255,255,.2)",
+                  color:"rgba(255,255,255,.7)", borderRadius:999, padding:"2px 8px",
+                  fontSize:10, fontWeight:700, cursor:"pointer"
+                }}>{t("urgency.today")}</button>
+              )}
+            </div>
+            <button onClick={() => setPeriodOffset(o => o + 1)} style={{
+              width:32, height:32, borderRadius:"50%", border:"none", cursor:"pointer",
+              background:"rgba(255,255,255,.1)", color:"rgba(255,255,255,.8)",
+              fontSize:16, fontWeight:800
+            }}>›</button>
+          </div>
+        </div>
+
         {/* Budget bar */}
         <div style={{ background:"#1e1c18" }}>
-          <BudgetBar deadlines={deadlines} range={range} cats={cats}/>
+          <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
         </div>
       </div>
 
@@ -3982,7 +4070,8 @@ export default function App() {
         onSelectAsset={setFilterAsset}
         onToggleExpand={setExpandedFilterCat}
         activeTab={activeTab}
-        maxDays={maxDays}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
         filterMandatory={filterMandatory}
         setFilterMandatory={setFilterMandatory}
         filterRecurring={filterRecurring}
