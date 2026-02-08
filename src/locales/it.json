@@ -279,7 +279,9 @@
     "shareTipTitle": "Per condividere:",
     "shareTip": "Esporta → invia file via WhatsApp → destinatario fa Importa",
     "resetConfirm": "Resettare tutti i dati? Questa azione non può essere annullata.",
-    "reset": "🗑 Reset dati (per test)"
+    "reset": "🗑 Reset dati (per test)",
+    "resetCloudConfirm": "Cancellare TUTTI i dati cloud? Questa azione eliminerà scadenze, categorie e lavori su tutti i dispositivi.",
+    "resetCloud": "🔥 Reset totale (cloud)"
   },
   "payment": {
     "expected": "Budget previsto:",
@@ -334,7 +336,9 @@
     "shareUnsupported": "Condivisione non supportata su questo dispositivo",
     "shareError": "Errore condivisione",
     "worklogUpdated": "✓ Lavoro aggiornato",
-    "worklogAdded": "✓ Lavoro aggiunto al registro"
+    "worklogAdded": "✓ Lavoro aggiunto al registro",
+    "resetDone": "✓ Dati cloud eliminati",
+    "resetError": "✗ Errore reset dati"
   },
   "budgetBar": {
     "title": "Budget nel periodo",

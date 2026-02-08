@@ -2437,7 +2437,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     </div>
   );
 }
-function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs }) {
+function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs, onResetAll }) {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [newAsset, setNewAsset] = useState("");
@@ -2680,6 +2680,11 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs 
         }} style={{ 
           width:"100%", padding:"12px", borderRadius:14, border:"1px solid #FBE9E7", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:12, fontWeight:600, marginTop:10 
         }}>{t("backup.reset")}</button>
+        {onResetAll && (
+          <button onClick={onResetAll} style={{ 
+            width:"100%", padding:"12px", borderRadius:14, border:"1px solid #E53935", background:"#E53935", color:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, marginTop:8 
+          }}>{t("backup.resetCloud")}</button>
+        )}
       </div>
     </div>
   );
@@ -3049,6 +3054,52 @@ export default function App() {
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const resetCloudData = async () => {
+    if (!user) return;
+    if (!window.confirm(t("backup.resetCloudConfirm"))) return;
+    try {
+      startSync();
+      localStorage.removeItem('lifetrack_categories');
+      localStorage.removeItem('lifetrack_deadlines');
+      localStorage.removeItem('lifetrack_worklogs');
+      suppressDeadlinesRef.current = true;
+      suppressMetaRef.current = true;
+      setDeadlines([]);
+      setCats(DEFAULT_CATS);
+      setWorkLogs({});
+      prevDeadlinesRef.current = [];
+      pendingSaveRef.current = true;
+
+      const userRef = doc(db, 'users', user.uid);
+      const deadlinesCol = collection(db, 'users', user.uid, 'deadlines');
+      const snap = await getDocs(deadlinesCol);
+      const docs = snap.docs || [];
+      const chunkSize = 400;
+      for (let i = 0; i < docs.length; i += chunkSize) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + chunkSize).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      await setDoc(userRef, {
+        categories: DEFAULT_CATS,
+        workLogs: {},
+        deadlines: [],
+        schemaVersion: 2,
+        lastUpdate: new Date().toISOString()
+      }, { merge: true });
+      pendingSaveRef.current = false;
+      needsSaveRef.current = false;
+      showToast(t("toast.resetDone"));
+    } catch (error) {
+      console.error("Reset cloud data error:", error);
+      pendingSaveRef.current = false;
+      needsSaveRef.current = false;
+      showToast(t("toast.resetError"));
+    } finally {
+      endSync();
+    }
   };
 
   const maxDays = RANGES.find(r => r.id === range)?.days || 30;
@@ -3818,6 +3869,7 @@ export default function App() {
         onUpdateCats={setCats}
         deadlines={deadlines}
         workLogs={workLogs}
+        onResetAll={resetCloudData}
       />
       
       {/* Payment Flow Modal */}

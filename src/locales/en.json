@@ -279,7 +279,9 @@
     "shareTipTitle": "To share:",
     "shareTip": "Export → send via WhatsApp → recipient imports",
     "resetConfirm": "Reset all data? This action cannot be undone.",
-    "reset": "🗑 Reset data (for test)"
+    "reset": "🗑 Reset data (for test)",
+    "resetCloudConfirm": "Delete ALL cloud data? This will remove deadlines, categories and logs across all devices.",
+    "resetCloud": "🔥 Full reset (cloud)"
   },
   "payment": {
     "expected": "Expected budget:",
@@ -334,7 +336,9 @@
     "shareUnsupported": "Sharing is not supported on this device",
     "shareError": "Share error",
     "worklogUpdated": "✓ Work log updated",
-    "worklogAdded": "✓ Work log added"
+    "worklogAdded": "✓ Work log added",
+    "resetDone": "✓ Cloud data deleted",
+    "resetError": "✗ Data reset error"
   },
   "budgetBar": {
     "title": "Budget in range",
