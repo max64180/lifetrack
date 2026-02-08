@@ -745,8 +745,9 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 }
 
 /* Smart Category Filter with asset sub-filters */
-function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, periodStart, periodEnd, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
+function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, onSelectCat, onSelectAsset, onToggleExpand, activeTab, periodStart, periodEnd, filterMandatory, setFilterMandatory, filterRecurring, setFilterRecurring, filterAutoPay, setFilterAutoPay, filterManual, setFilterManual, filterEssential, setFilterEssential, filterEstimateMissing, setFilterEstimateMissing }) {
   const { t } = useTranslation();
+  const [showAdvanced, setShowAdvanced] = useState(false);
   // Count deadlines per category (only active timeline deadlines)
   const catCounts = useMemo(() => {
     const counts = {};
@@ -790,38 +791,87 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
     }
   };
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterCat) count += 1;
+    if (filterAsset) count += 1;
+    if (filterMandatory) count += 1;
+    if (filterAutoPay) count += 1;
+    if (filterManual) count += 1;
+    if (filterRecurring) count += 1;
+    if (filterEssential) count += 1;
+    if (filterEstimateMissing) count += 1;
+    return count;
+  }, [filterCat, filterAsset, filterMandatory, filterAutoPay, filterManual, filterRecurring, filterEssential, filterEstimateMissing]);
+
+  const clearAllFilters = () => {
+    onSelectCat(null);
+    onSelectAsset(null);
+    onToggleExpand(null);
+    setFilterMandatory(false);
+    setFilterAutoPay(false);
+    setFilterManual(false);
+    setFilterRecurring(false);
+    setFilterEssential(false);
+    setFilterEstimateMissing(false);
+  };
+
   return (
     <div style={{ background:"#f5f4f0", paddingBottom:8 }}>
       <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"10px 18px 4px", scrollbarWidth:"none" }}>
-        <button onClick={() => { onSelectCat(null); onSelectAsset(null); onToggleExpand(null); }} style={{
+        <button onClick={clearAllFilters} style={{
           flexShrink:0, borderRadius:18, padding:"6px 14px", border:"none", cursor:"pointer", fontSize:12, fontWeight:700,
-          background: filterCat === null ? "#2d2b26" : "#edecea",
-          color: filterCat === null ? "#fff" : "#6b6961", minHeight:36,
+          background: activeFiltersCount === 0 ? "#2d2b26" : "#edecea",
+          color: activeFiltersCount === 0 ? "#fff" : "#6b6961", minHeight:36,
         }}>{t("filters.all")}</button>
-        
-        {sortedCats.map(c => {
-          const count = catCounts[c.id] || 0;
-          if (count === 0) return null; // Hide categories with no deadlines
-          
-          return (
-            <button key={c.id} onClick={() => handleCatClick(c.id)} style={{
-              flexShrink:0, borderRadius:18, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:700,
-              background: filterCat === c.id ? c.light : "#edecea",
-              color: filterCat === c.id ? c.color : "#6b6961",
-              border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
-              position:"relative",
-            }}>
-              {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
-              <span style={{ 
-                marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
-                background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
-                borderRadius:8, padding:"1px 5px",
-              }}>{count}</span>
-            </button>
-          );
-        })}
+
+        <button onClick={() => setFilterMandatory(!filterMandatory)} style={{
+          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
+          background: filterMandatory ? "#FFF0EC" : "#edecea",
+          color: filterMandatory ? "#E53935" : "#6b6961",
+          border: `1.5px solid ${filterMandatory ? "#E5393555" : "transparent"}`, minHeight:36,
+        }}>{t("filters.mandatory")}</button>
+
+        <button onClick={() => {
+          const next = !filterManual;
+          setFilterManual(next);
+          if (next) setFilterAutoPay(false);
+        }} style={{
+          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
+          background: filterManual ? "#FFF8ED" : "#edecea",
+          color: filterManual ? "#8a6d1f" : "#6b6961",
+          border: `1.5px solid ${filterManual ? "#E6C97A55" : "transparent"}`, minHeight:36,
+        }}>{t("filters.manualPay", { defaultValue:"Da pagare" })}</button>
+
+        <button onClick={() => {
+          const next = !filterAutoPay;
+          setFilterAutoPay(next);
+          if (next) setFilterManual(false);
+        }} style={{
+          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
+          background: filterAutoPay ? "#EBF2FC" : "#edecea",
+          color: filterAutoPay ? "#5B8DD9" : "#6b6961",
+          border: `1.5px solid ${filterAutoPay ? "#5B8DD955" : "transparent"}`, minHeight:36,
+        }}>{t("filters.autoPay")}</button>
+
+        <button onClick={() => setFilterEstimateMissing(!filterEstimateMissing)} style={{
+          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
+          background: filterEstimateMissing ? "#FFF8ED" : "#edecea",
+          color: filterEstimateMissing ? "#8a6d1f" : "#6b6961",
+          border: `1.5px solid ${filterEstimateMissing ? "#E6C97A55" : "transparent"}`, minHeight:36,
+        }}>{t("filters.estimate")}</button>
+
+        <button onClick={() => setShowAdvanced(v => !v)} style={{
+          flexShrink:0, borderRadius:18, padding:"6px 12px", cursor:"pointer", fontSize:12, fontWeight:700,
+          background: showAdvanced ? "#2d2b26" : "#edecea",
+          color: showAdvanced ? "#fff" : "#6b6961", minHeight:36,
+        }}>
+          {t("filters.more", { defaultValue:"Filtri" })}{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ""}
+        </button>
       </div>
 
+      {showAdvanced && (
+        <>
       {/* Asset sub-filters - appear when category with assets is selected */}
       {filterCat && expandedCat === filterCat && (() => {
         const cat = getCat(cats, filterCat);
@@ -870,16 +920,32 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
         );
       })()}
 
-      {/* Advanced filters row */}
-      <div style={{ display:"flex", gap:6, overflowX:"auto", padding:"0 18px 6px", scrollbarWidth:"none", marginTop:4 }}>
-        <button onClick={() => setFilterMandatory(!filterMandatory)} style={{
-          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-          background: filterMandatory ? "#FFF0EC" : "#edecea",
-          color: filterMandatory ? "#E53935" : "#8a877f",
-          border: `1.5px solid ${filterMandatory ? "#E5393555" : "transparent"}`,
-          minHeight:32,
-        }}>{t("filters.mandatory")}</button>
+      {/* Categories row */}
+      <div style={{ display:"flex", gap:7, overflowX:"auto", padding:"4px 18px 6px", scrollbarWidth:"none" }}>
+        {sortedCats.map(c => {
+          const count = catCounts[c.id] || 0;
+          if (count === 0) return null;
+          return (
+            <button key={c.id} onClick={() => handleCatClick(c.id)} style={{
+              flexShrink:0, borderRadius:18, padding:"6px 14px", cursor:"pointer", fontSize:12, fontWeight:700,
+              background: filterCat === c.id ? c.light : "#edecea",
+              color: filterCat === c.id ? c.color : "#6b6961",
+              border: `1.5px solid ${filterCat === c.id ? c.color + "55" : "transparent"}`, minHeight:36,
+              position:"relative",
+            }}>
+              {c.icon} {t(c.labelKey || "", { defaultValue: c.label })}
+              <span style={{ 
+                marginLeft:4, fontSize:10, opacity:.6, fontWeight:800,
+                background: filterCat === c.id ? c.color + "22" : "rgba(0,0,0,.08)",
+                borderRadius:8, padding:"1px 5px",
+              }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
 
+      {/* Advanced filters row */}
+      <div style={{ display:"flex", gap:6, overflowX:"auto", padding:"0 18px 6px", scrollbarWidth:"none", marginTop:2 }}>
         <button onClick={() => setFilterRecurring(!filterRecurring)} style={{
           flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
           background: filterRecurring ? "#EBF2FC" : "#edecea",
@@ -888,14 +954,6 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           minHeight:32,
         }}>{t("filters.recurring")}</button>
 
-        <button onClick={() => setFilterAutoPay(!filterAutoPay)} style={{
-          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-          background: filterAutoPay ? "#EBF2FC" : "#edecea",
-          color: filterAutoPay ? "#5B8DD9" : "#8a877f",
-          border: `1.5px solid ${filterAutoPay ? "#5B8DD955" : "transparent"}`,
-          minHeight:32,
-        }}>{t("filters.autoPay")}</button>
-
         <button onClick={() => setFilterEssential(!filterEssential)} style={{
           flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
           background: filterEssential ? "#EDFBF2" : "#edecea",
@@ -903,15 +961,9 @@ function CategoryFilter({ cats, deadlines, filterCat, filterAsset, expandedCat, 
           border: `1.5px solid ${filterEssential ? "#4CAF6E55" : "transparent"}`,
           minHeight:32,
         }}>{t("filters.essential")}</button>
-
-        <button onClick={() => setFilterEstimateMissing(!filterEstimateMissing)} style={{
-          flexShrink:0, borderRadius:14, padding:"5px 11px", cursor:"pointer", fontSize:11, fontWeight:700,
-          background: filterEstimateMissing ? "#FFF8ED" : "#edecea",
-          color: filterEstimateMissing ? "#8a6d1f" : "#8a877f",
-          border: `1.5px solid ${filterEstimateMissing ? "#E6C97A55" : "transparent"}`,
-          minHeight:32,
-        }}>{t("filters.estimate")}</button>
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -3377,6 +3429,7 @@ export default function App() {
   const [filterMandatory, setFilterMandatory] = useState(false);
   const [filterRecurring, setFilterRecurring] = useState(false);
   const [filterAutoPay, setFilterAutoPay] = useState(false);
+  const [filterManual, setFilterManual] = useState(false);
   const [filterEssential, setFilterEssential] = useState(false);
   const [filterEstimateMissing, setFilterEstimateMissing] = useState(false);
   const [expandedFilterCat, setExpandedFilterCat] = useState(null);
@@ -3539,6 +3592,7 @@ export default function App() {
     if (filterMandatory) list = list.filter(d => d.mandatory);
     if (filterRecurring) list = list.filter(d => d.recurring && d.recurring.enabled);
     if (filterAutoPay) list = list.filter(d => d.autoPay);
+    if (filterManual) list = list.filter(d => !d.autoPay);
     if (filterEssential) list = list.filter(d => d.essential);
     if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
     list.sort((a, b) => a.date - b.date);
@@ -4257,6 +4311,8 @@ export default function App() {
         setFilterRecurring={setFilterRecurring}
         filterAutoPay={filterAutoPay}
         setFilterAutoPay={setFilterAutoPay}
+        filterManual={filterManual}
+        setFilterManual={setFilterManual}
         filterEssential={filterEssential}
         setFilterEssential={setFilterEssential}
         filterEstimateMissing={filterEstimateMissing}
