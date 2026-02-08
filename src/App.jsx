@@ -444,6 +444,52 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
   );
 }
 
+function YearDetailRow({ item, cats }) {
+  const { t } = useTranslation();
+  const cat = getCat(cats, item.cat) || {};
+  const amountText = item.estimateMissing ? "—" : formatCurrency(item.budget || 0);
+  const amountColor = item.estimateMissing ? "#8a6d1f" : "#E8855D";
+  const subParts = [cat.label, item.asset, fmtDate(item.date)].filter(Boolean);
+
+  return (
+    <div style={{
+      background:"#fff", borderRadius:14, border:"1px solid #edecea",
+      padding:"10px 12px", marginBottom:8, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12
+    }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+        <div style={{
+          width:38, height:38, borderRadius:12,
+          background: cat.light || "#f5f4f0", display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:18
+        }}>
+          {cat.icon || "📌"}
+        </div>
+        <div style={{ minWidth:0 }}>
+          <div style={{ fontSize:13, fontWeight:800, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {item.title}
+          </div>
+          <div style={{ fontSize:11, color:"#8a877f", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {subParts.join(" · ")}
+          </div>
+        </div>
+      </div>
+      <div style={{ textAlign:"right", minWidth:60 }}>
+        <div style={{ fontSize:13, fontWeight:800, color: amountColor }}>{amountText}</div>
+        {item.mandatory && (
+          <div style={{ fontSize:9, fontWeight:700, color:"#E53935", textTransform:"uppercase", letterSpacing:".3px" }}>
+            {t("card.mandatory")}
+          </div>
+        )}
+        {item.estimateMissing && !item.mandatory && (
+          <div style={{ fontSize:9, fontWeight:700, color:"#8a6d1f", textTransform:"uppercase", letterSpacing:".3px" }}>
+            {t("card.estimateMissing")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* Carta scadenza – ICONE PIÙ GRANDI E VISIVE */
 function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
   const { t } = useTranslation();
@@ -2848,6 +2894,8 @@ export default function App() {
   const [authMode, setAuthMode] = useState("login"); // login | signup
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [showAllMandatory, setShowAllMandatory] = useState(false);
+  const [showAllOneOff, setShowAllOneOff] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -3499,11 +3547,23 @@ export default function App() {
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
   const isYearCompact = range === "anno" && activeTab === "timeline";
+  const yearDetailLimit = 6;
+  const mandatoryItems = useMemo(() => {
+    if (!isYearCompact) return [];
+    return filtered.filter(d => d.mandatory).sort((a, b) => a.date - b.date);
+  }, [filtered, isYearCompact]);
+
+  const oneOffItems = useMemo(() => {
+    if (!isYearCompact) return [];
+    return filtered.filter(d => !d.mandatory && !d?.recurring?.enabled).sort((a, b) => a.date - b.date);
+  }, [filtered, isYearCompact]);
+
   const recurringSummary = useMemo(() => {
     if (!isYearCompact) return [];
     const map = new Map();
     filtered.forEach(item => {
       if (!item?.recurring?.enabled) return;
+      if (item.mandatory) return;
       const seriesId = item.recurring.seriesId || String(item.id);
       if (!map.has(seriesId)) map.set(seriesId, []);
       map.get(seriesId).push(item);
@@ -3544,23 +3604,12 @@ export default function App() {
     }).sort((a, b) => (a.nextDate?.getTime?.() || 0) - (b.nextDate?.getTime?.() || 0));
   }, [filtered, isYearCompact, i18n.language]);
 
-  const oneOffSummary = useMemo(() => {
-    if (!isYearCompact) return [];
-    const oneOff = filtered.filter(d => !d?.recurring?.enabled);
-    const map = new Map();
-    oneOff.forEach(item => {
-      const y = item.date.getFullYear();
-      const m = item.date.getMonth();
-      const key = `${y}-${m}`;
-      if (!map.has(key)) map.set(key, { year:y, month:m, count:0, total:0, missing:0 });
-      const entry = map.get(key);
-      entry.count += 1;
-      if (item.estimateMissing) entry.missing += 1;
-      else entry.total += Number(item.budget) || 0;
-    });
-    return Array.from(map.values())
-      .sort((a, b) => (a.year * 12 + a.month) - (b.year * 12 + b.month));
-  }, [filtered, isYearCompact]);
+  useEffect(() => {
+    if (!isYearCompact) {
+      setShowAllMandatory(false);
+      setShowAllOneOff(false);
+    }
+  }, [isYearCompact]);
 
   const toggle   = id => setExpandedId(prev => prev === id ? null : id);
   
@@ -4261,7 +4310,7 @@ export default function App() {
       {/* LISTA */}
       <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
         {isYearCompact ? (
-          (recurringSummary.length === 0 && oneOffSummary.length === 0) ? (
+          (recurringSummary.length === 0 && oneOffItems.length === 0 && mandatoryItems.length === 0) ? (
             <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
               <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
@@ -4274,6 +4323,52 @@ export default function App() {
           ) : (
             <div style={{ paddingTop:8 }}>
               <div style={{ marginBottom:10, color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                {t("year.mandatoryTitle", { defaultValue:"Inderogabili" })}
+              </div>
+              {mandatoryItems.length === 0 ? (
+                <div style={{ color:"#b5b2a8", fontSize:13, marginBottom:16 }}>
+                  {t("year.mandatoryEmpty", { defaultValue:"Nessuna inderogabile nel periodo." })}
+                </div>
+              ) : (
+                <>
+                  {(showAllMandatory ? mandatoryItems : mandatoryItems.slice(0, yearDetailLimit)).map(item => (
+                    <YearDetailRow key={item.id} item={item} cats={cats} />
+                  ))}
+                  {mandatoryItems.length > yearDetailLimit && !showAllMandatory && (
+                    <button onClick={() => setShowAllMandatory(true)} style={{
+                      background:"transparent", border:"none", cursor:"pointer", color:"#6b6961",
+                      fontSize:12, fontWeight:700, padding:"6px 0"
+                    }}>
+                      {t("year.showMore", { defaultValue:`Mostra altre ${mandatoryItems.length - yearDetailLimit}` })}
+                    </button>
+                  )}
+                </>
+              )}
+
+              <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                {t("year.oneOffTitle", { defaultValue:"Una‑tantum" })}
+              </div>
+              {oneOffItems.length === 0 ? (
+                <div style={{ color:"#b5b2a8", fontSize:13 }}>
+                  {t("year.oneOffEmpty", { defaultValue:"Nessuna una‑tantum nel periodo." })}
+                </div>
+              ) : (
+                <>
+                  {(showAllOneOff ? oneOffItems : oneOffItems.slice(0, yearDetailLimit)).map(item => (
+                    <YearDetailRow key={item.id} item={item} cats={cats} />
+                  ))}
+                  {oneOffItems.length > yearDetailLimit && !showAllOneOff && (
+                    <button onClick={() => setShowAllOneOff(true)} style={{
+                      background:"transparent", border:"none", cursor:"pointer", color:"#6b6961",
+                      fontSize:12, fontWeight:700, padding:"6px 0"
+                    }}>
+                      {t("year.showMore", { defaultValue:`Mostra altre ${oneOffItems.length - yearDetailLimit}` })}
+                    </button>
+                  )}
+                </>
+              )}
+
+              <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
                 {t("year.recurringTitle", { defaultValue:"Ricorrenti" })}
               </div>
               {recurringSummary.length === 0 ? (
@@ -4316,41 +4411,6 @@ export default function App() {
                     </div>
                   </div>
                 ))
-              )}
-
-              <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
-                {t("year.oneOffTitle", { defaultValue:"Una‑tantum" })}
-              </div>
-              {oneOffSummary.length === 0 ? (
-                <div style={{ color:"#b5b2a8", fontSize:13 }}>
-                  {t("year.oneOffEmpty", { defaultValue:"Nessuna una‑tantum nel periodo." })}
-                </div>
-              ) : (
-                oneOffSummary.map(entry => {
-                  const locale = getLocale();
-                  const label = capitalize(new Date(entry.year, entry.month, 1).toLocaleDateString(locale, { month:"long", year:"numeric" }));
-                  return (
-                    <div key={`${entry.year}-${entry.month}`} style={{
-                      background:"#fff", borderRadius:14, border:"1px solid #edecea",
-                      padding:"10px 12px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center"
-                    }}>
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:800, color:"#2d2b26" }}>{label}</div>
-                        <div style={{ fontSize:11, color:"#8a877f" }}>
-                          {t("year.occurrences", { count: entry.count, defaultValue: `${entry.count} occ.` })}
-                        </div>
-                      </div>
-                      <div style={{ textAlign:"right" }}>
-                        <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>{formatCurrency(entry.total)}</div>
-                        {entry.missing > 0 && (
-                          <div style={{ fontSize:10, color:"#d08b6a", marginTop:2 }}>
-                            {t("year.missing", { count: entry.missing, defaultValue: "stima mancante" })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
               )}
             </div>
           )
