@@ -340,10 +340,16 @@ function LanguageToggle({ tone = "dark", size = 28 }) {
 }
 
 /* Range Selector */
-function RangeSelector({ active, onChange }) {
+function RangeSelector({ active, onChange, tone = "dark", compact = false, padding = "0 18px" }) {
   const { t } = useTranslation();
   const ref = useRef(null);
-  const isCompact = RANGES.length <= 2;
+  const isCompact = RANGES.length <= 2 || compact;
+  const inactiveBg = tone === "dark" ? "rgba(255,255,255,.12)" : "#f2f1ed";
+  const inactiveColor = tone === "dark" ? "rgba(255,255,255,.55)" : "#7b7871";
+  const activeBg = "#2d2b26";
+  const activeColor = "#fff";
+  const buttonPadding = isCompact ? "6px 14px" : "8px 18px";
+  const buttonFont = isCompact ? 12 : 13;
   useEffect(() => {
     const el = ref.current?.querySelector(`[data-active="true"]`);
     el?.scrollIntoView({ inline:"center", behavior:"smooth", block:"nearest" });
@@ -351,7 +357,7 @@ function RangeSelector({ active, onChange }) {
 
   return (
     <div ref={ref} style={{
-      display:"flex", gap:8, padding:"0 18px", justifyContent: isCompact ? "center" : "flex-start",
+      display:"flex", gap:8, padding, justifyContent: isCompact ? "center" : "flex-start",
       overflowX: isCompact ? "visible" : "auto",
       scrollbarWidth:"none", WebkitOverflowScrolling:"touch", scrollSnapType: isCompact ? "none" : "x mandatory",
       touchAction: isCompact ? "auto" : "pan-x", // only allow horizontal scroll when needed
@@ -362,13 +368,13 @@ function RangeSelector({ active, onChange }) {
         return (
           <button key={r.id} data-active={isActive} onClick={() => onChange(r.id)} style={{
             flexShrink:0, scrollSnapAlign:"center",
-            padding:"8px 18px", borderRadius:22, border:"none", cursor:"pointer",
-            background: isActive ? "#2d2b26" : "rgba(255,255,255,.12)",
-            color: isActive ? "#fff" : "rgba(255,255,255,.55)",
-            fontSize:13, fontWeight:700, fontFamily:"'Sora',sans-serif",
+            padding: buttonPadding, borderRadius:22, border:"none", cursor:"pointer",
+            background: isActive ? activeBg : inactiveBg,
+            color: isActive ? activeColor : inactiveColor,
+            fontSize: buttonFont, fontWeight:700, fontFamily:"'Sora',sans-serif",
             transition:"background .2s, color .2s, transform .15s",
             transform: isActive ? "scale(1.04)" : "scale(1)",
-            boxShadow: isActive ? "0 3px 12px rgba(0,0,0,.25)" : "none",
+            boxShadow: isActive ? "0 3px 12px rgba(0,0,0,.15)" : "none",
           }}>{t(r.labelKey, { defaultValue: r.label })}</button>
         );
       })}
@@ -4095,11 +4101,6 @@ export default function App() {
           </div>
         </div>
         
-        {/* Range selector - fuori dal padding principale */}
-        <div style={{ marginTop:0, background:"#1e1c18", paddingBottom:8 }}>
-          <RangeSelector active={range} onChange={r => { setRange(r); setPeriodOffset(0); setExpandedId(null); }}/>
-        </div>
-
         {/* Budget bar */}
         <div style={{ background:"#1e1c18" }}>
           <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
@@ -4160,6 +4161,13 @@ export default function App() {
             background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
           }}>‹</button>
           <div style={{ flex:1, textAlign:"center" }}>
+            <RangeSelector
+              active={range}
+              onChange={r => { setRange(r); setPeriodOffset(0); setExpandedId(null); }}
+              tone="light"
+              compact
+              padding="0"
+            />
             <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
             {periodOffset !== 0 && (
               <button onClick={() => setPeriodOffset(0)} style={{
