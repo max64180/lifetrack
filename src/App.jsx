@@ -1192,19 +1192,20 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp} autoFocus/>
 
             <label style={lbl}>{t("wizard.category")}</label>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:8, width:"100%" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(100px, 1fr))", gap:8, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
                   background: form.cat === c.id ? c.light : "#f5f4f0",
                   border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
-                  borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
+                  borderRadius:12, padding:"6px 8px", cursor:"pointer", fontSize:12,
                   fontWeight: form.cat === c.id ? 700 : 500,
                   color: form.cat === c.id ? c.color : "#6b6961",
-                  minHeight:44, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                  whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
+                  minHeight:40, width:"100%", display:"flex", flexDirection:"column",
+                  alignItems:"center", justifyContent:"center", gap:4, textAlign:"center",
+                  lineHeight:1.1, overflow:"hidden"
                 }}>
                   <span>{c.icon}</span>
-                  <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{t(c.labelKey || "", { defaultValue: c.label })}</span>
+                  <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"100%" }}>{t(c.labelKey || "", { defaultValue: c.label })}</span>
                 </button>
               ))}
             </div>
@@ -1212,15 +1213,15 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             {hasAssets && (
               <>
                 <label style={lbl}>{t("wizard.asset")}</label>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:8, width:"100%" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8, width:"100%" }}>
                   {selectedCat.assets.map(a => (
                     <button key={a} onClick={() => set("asset", a)} style={{
                       background: form.asset === a ? selectedCat.light : "#f5f4f0",
                       border: `2px solid ${form.asset === a ? selectedCat.color : "#e8e6e0"}`,
-                      borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
+                      borderRadius:12, padding:"6px 8px", cursor:"pointer", fontSize:12,
                       fontWeight: form.asset === a ? 700 : 500,
                       color: form.asset === a ? selectedCat.color : "#6b6961",
-                      minHeight:44, width:"100%", display:"flex", alignItems:"center", justifyContent:"center",
+                      minHeight:40, width:"100%", display:"flex", alignItems:"center", justifyContent:"center",
                       whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
                     }}>
                       <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{a}</span>
