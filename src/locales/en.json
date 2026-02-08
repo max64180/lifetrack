@@ -127,7 +127,8 @@
   "empty": {
     "timelineTitle": "No deadlines in this period",
     "doneTitle": "No completed deadlines",
-    "hint": "Try changing the time range"
+    "hint": "Try changing the time range",
+    "periodHint": "Use the arrows above to move between periods."
   },
   "filters": {
     "all": "All",

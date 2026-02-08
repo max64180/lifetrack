@@ -127,7 +127,8 @@
   "empty": {
     "timelineTitle": "Nessuna scadenza in questo periodo",
     "doneTitle": "Nessuna scadenza completata",
-    "hint": "Prova a cambiare l'intervallo temporale"
+    "hint": "Prova a cambiare l'intervallo temporale",
+    "periodHint": "Usa le frecce sopra per cambiare periodo."
   },
   "filters": {
     "all": "Tutte",

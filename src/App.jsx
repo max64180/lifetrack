@@ -3106,6 +3106,15 @@ export default function App() {
     }
   }, [workLogs]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_range', range);
+      localStorage.setItem('lifetrack_period_offset', String(periodOffset));
+    } catch (err) {
+      console.warn("LocalStorage range error:", err);
+    }
+  }, [range, periodOffset]);
+
   // Listen for openAddSheetWithAsset event from AssetSheet
   useEffect(() => {
     const handleOpenAddWithAsset = (e) => {
@@ -3226,8 +3235,21 @@ export default function App() {
     }
   }, [deadlines, user, loading]);
 
-  const [range, setRange] = useState("mese");
-  const [periodOffset, setPeriodOffset] = useState(0);
+  const [range, setRange] = useState(() => {
+    try {
+      return localStorage.getItem('lifetrack_range') || "mese";
+    } catch (err) {
+      return "mese";
+    }
+  });
+  const [periodOffset, setPeriodOffset] = useState(() => {
+    try {
+      const raw = localStorage.getItem('lifetrack_period_offset');
+      return raw ? parseInt(raw, 10) || 0 : 0;
+    } catch (err) {
+      return 0;
+    }
+  });
   const [filterCat, setFilterCat] = useState(null);
   const [filterAsset, setFilterAsset] = useState(null);
   const [filterMandatory, setFilterMandatory] = useState(false);
@@ -4089,8 +4111,19 @@ export default function App() {
         {groups.length === 0 ? (
           <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
             <div style={{ fontSize:36, marginBottom:10 }}>{activeTab === "done" ? "🎉" : "📅"}</div>
-            <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>{activeTab === "done" ? t("empty.doneTitle") : t("empty.timelineTitle")}</div>
-            <div style={{ fontSize:13, marginTop:4 }}>{t("empty.hint")}</div>
+            <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
+              {activeTab === "done" ? t("empty.doneTitle") : t("empty.timelineTitle")}
+            </div>
+            <div style={{ fontSize:13, marginTop:4 }}>
+              {activeTab === "timeline"
+                ? t("empty.hint") + " · " + periodLabel
+                : t("empty.hint")}
+            </div>
+            {activeTab === "timeline" && (
+              <div style={{ fontSize:12, marginTop:6, color:"#b5b2a8" }}>
+                {t("empty.periodHint", { defaultValue: "Use the arrows to move between periods." })}
+              </div>
+            )}
           </div>
         ) : (
           groups.map(g => (
