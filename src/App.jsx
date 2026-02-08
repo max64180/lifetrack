@@ -2831,6 +2831,21 @@ export default function App() {
     }
     return {}; // { "casa_colico": [...], "auto_micro": [...] }
   });
+  const [range, setRange] = useState(() => {
+    try {
+      return localStorage.getItem('lifetrack_range') || "mese";
+    } catch (err) {
+      return "mese";
+    }
+  });
+  const [periodOffset, setPeriodOffset] = useState(() => {
+    try {
+      const raw = localStorage.getItem('lifetrack_period_offset');
+      return raw ? parseInt(raw, 10) || 0 : 0;
+    } catch (err) {
+      return 0;
+    }
+  });
 
   useEffect(() => {
     deadlinesRef.current = deadlines;
@@ -3235,21 +3250,6 @@ export default function App() {
     }
   }, [deadlines, user, loading]);
 
-  const [range, setRange] = useState(() => {
-    try {
-      return localStorage.getItem('lifetrack_range') || "mese";
-    } catch (err) {
-      return "mese";
-    }
-  });
-  const [periodOffset, setPeriodOffset] = useState(() => {
-    try {
-      const raw = localStorage.getItem('lifetrack_period_offset');
-      return raw ? parseInt(raw, 10) || 0 : 0;
-    } catch (err) {
-      return 0;
-    }
-  });
   const [filterCat, setFilterCat] = useState(null);
   const [filterAsset, setFilterAsset] = useState(null);
   const [filterMandatory, setFilterMandatory] = useState(false);
