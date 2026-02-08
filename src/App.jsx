@@ -216,6 +216,22 @@ function normalizeWorkLogs(raw = {}) {
   return parsed;
 }
 
+function stripUndefined(value) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map(stripUndefined).filter(v => v !== undefined);
+  if (typeof value === "object") {
+    const out = {};
+    Object.entries(value).forEach(([k, v]) => {
+      const cleaned = stripUndefined(v);
+      if (cleaned !== undefined) out[k] = cleaned;
+    });
+    return out;
+  }
+  return value;
+}
+
 function getUrgency(date, done) {
   if (done) return { color:"#aaa", bg:"#f0efe8", label:i18n.t("urgency.done", "Fatto") };
   const days = diffDays(date);
@@ -2874,7 +2890,8 @@ export default function App() {
       const now = Date.now();
       current.forEach(d => {
         const docId = String(d.id);
-        batch.set(doc(db, 'users', user.uid, 'deadlines', docId), { ...d, id: d.id, updatedAt: now }, { merge: true });
+        const payload = stripUndefined({ ...d, id: d.id, updatedAt: now });
+        batch.set(doc(db, 'users', user.uid, 'deadlines', docId), payload, { merge: true });
       });
       removedIds.forEach(id => {
         batch.delete(doc(db, 'users', user.uid, 'deadlines', id));
@@ -2894,7 +2911,9 @@ export default function App() {
       }
     } catch (error) {
       console.error("Firebase deadline save error:", error);
+      pendingSaveRef.current = false;
       endSync();
+      showToast(t("toast.syncError", { code: error?.code || "unknown" }));
       if (!saveRetryRef.current) {
         saveRetryRef.current = setTimeout(() => {
           saveRetryRef.current = null;
@@ -2948,15 +2967,27 @@ export default function App() {
 
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
-    localStorage.setItem('lifetrack_categories', JSON.stringify(cats));
+    try {
+      localStorage.setItem('lifetrack_categories', JSON.stringify(cats));
+    } catch (err) {
+      console.warn("LocalStorage categories error:", err);
+    }
   }, [cats]);
 
   useEffect(() => {
-    localStorage.setItem('lifetrack_deadlines', JSON.stringify(deadlines));
+    try {
+      localStorage.setItem('lifetrack_deadlines', JSON.stringify(deadlines));
+    } catch (err) {
+      console.warn("LocalStorage deadlines error:", err);
+    }
   }, [deadlines]);
 
   useEffect(() => {
-    localStorage.setItem('lifetrack_worklogs', JSON.stringify(workLogs));
+    try {
+      localStorage.setItem('lifetrack_worklogs', JSON.stringify(workLogs));
+    } catch (err) {
+      console.warn("LocalStorage worklogs error:", err);
+    }
   }, [workLogs]);
 
   // Listen for openAddSheetWithAsset event from AssetSheet

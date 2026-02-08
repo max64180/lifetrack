@@ -337,6 +337,7 @@
     "shareError": "Share error",
     "worklogUpdated": "✓ Work log updated",
     "worklogAdded": "✓ Work log added",
+    "syncError": "✗ Save error ({{code}})",
     "resetDone": "✓ Cloud data deleted",
     "resetError": "✗ Data reset error"
   },

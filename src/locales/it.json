@@ -337,6 +337,7 @@
     "shareError": "Errore condivisione",
     "worklogUpdated": "✓ Lavoro aggiornato",
     "worklogAdded": "✓ Lavoro aggiunto al registro",
+    "syncError": "✗ Errore salvataggio ({{code}})",
     "resetDone": "✓ Dati cloud eliminati",
     "resetError": "✗ Errore reset dati"
   },
