@@ -2768,6 +2768,24 @@ export default function App() {
       return true;
     };
 
+    const seedDeadlines = async (items) => {
+      if (!items.length) return false;
+      const batch = writeBatch(db);
+      const now = Date.now();
+      items.forEach((d, i) => {
+        const rawId = d.id ?? `${now}_${i}`;
+        const docId = String(rawId);
+        batch.set(
+          doc(db, 'users', user.uid, 'deadlines', docId),
+          { ...d, id: d.id ?? rawId, updatedAt: now },
+          { merge: true }
+        );
+      });
+      batch.set(userRef, { schemaVersion: 2, migratedAt: new Date().toISOString() }, { merge: true });
+      await batch.commit();
+      return true;
+    };
+
     const fetchOnce = async () => {
       try {
         const userSnap = await getDoc(userRef);
@@ -2778,7 +2796,7 @@ export default function App() {
         await migrateLegacyDeadlines(userData);
 
         const deadlinesSnap = await getDocs(deadlinesCol);
-        const remoteDeadlines = deadlinesSnap.docs
+        let remoteDeadlines = deadlinesSnap.docs
           .map(snap => {
             const data = snap.data();
             const id = data.id ?? snap.id;
@@ -2786,6 +2804,34 @@ export default function App() {
           })
           .filter(Boolean);
         const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
+
+        if (remoteDeadlines.length === 0) {
+          const legacyDeadlines = (userData.deadlines || [])
+            .map(normalizeDeadline)
+            .filter(Boolean);
+          let localDeadlines = [];
+          const localRaw = localStorage.getItem('lifetrack_deadlines');
+          if (localRaw) {
+            try {
+              const parsedLocal = JSON.parse(localRaw);
+              if (Array.isArray(parsedLocal)) {
+                localDeadlines = parsedLocal.map(normalizeDeadline).filter(Boolean);
+              }
+            } catch (err) {
+              console.warn("Local deadlines parse error:", err);
+            }
+          }
+          const fallback = legacyDeadlines.length ? legacyDeadlines : localDeadlines;
+          if (fallback.length) {
+            try {
+              await seedDeadlines(fallback);
+              remoteDeadlines = fallback;
+            } catch (err) {
+              console.error("Deadline seed error:", err);
+              remoteDeadlines = fallback;
+            }
+          }
+        }
 
         if (!cancelled && !pendingSaveRef.current) {
           suppressDeadlinesRef.current = true;
