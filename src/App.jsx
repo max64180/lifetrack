@@ -1117,7 +1117,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)",
     }}>
       <div style={{
-        background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 20px 34px", width:"100%", maxWidth:480,
+        background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 20px 34px", width:"100%", maxWidth:480, boxSizing:"border-box",
         animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden",
       }}>
         <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
@@ -1182,7 +1182,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp} autoFocus/>
 
             <label style={lbl}>{t("wizard.category")}</label>
-            <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:8, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
                   background: form.cat === c.id ? c.light : "#f5f4f0",
@@ -1190,15 +1190,19 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
                   fontWeight: form.cat === c.id ? 700 : 500,
                   color: form.cat === c.id ? c.color : "#6b6961",
-                  minHeight:44,
-                }}>{c.icon} {t(c.labelKey || "", { defaultValue: c.label })}</button>
+                  minHeight:44, width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                  whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
+                }}>
+                  <span>{c.icon}</span>
+                  <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{t(c.labelKey || "", { defaultValue: c.label })}</span>
+                </button>
               ))}
             </div>
 
             {hasAssets && (
               <>
                 <label style={lbl}>{t("wizard.asset")}</label>
-                <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))", gap:8, width:"100%" }}>
                   {selectedCat.assets.map(a => (
                     <button key={a} onClick={() => set("asset", a)} style={{
                       background: form.asset === a ? selectedCat.light : "#f5f4f0",
@@ -1206,8 +1210,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                       borderRadius:12, padding:"8px 12px", cursor:"pointer", fontSize:13,
                       fontWeight: form.asset === a ? 700 : 500,
                       color: form.asset === a ? selectedCat.color : "#6b6961",
-                      minHeight:44,
-                    }}>{a}</button>
+                      minHeight:44, width:"100%", display:"flex", alignItems:"center", justifyContent:"center",
+                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
+                    }}>
+                      <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{a}</span>
+                    </button>
                   ))}
                 </div>
               </>
