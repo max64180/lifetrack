@@ -348,7 +348,6 @@
     "deadlines": "Scadenze",
     "missing": "⚠ {{count}} da stimare",
     "urgent": "Urgenti {{count}}",
-    "manual": "Da pagare {{count}}",
     "yearTotal": "Spesa anno in corso"
   },
   "common": {

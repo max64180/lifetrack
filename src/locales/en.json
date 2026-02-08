@@ -348,7 +348,6 @@
     "deadlines": "Deadlines",
     "missing": "⚠ {{count}} to estimate",
     "urgent": "Urgent {{count}}",
-    "manual": "To pay {{count}}",
     "yearTotal": "Current year spend"
   },
   "common": {
