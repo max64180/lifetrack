@@ -1232,7 +1232,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             )}
 
             <label style={lbl}>{t("wizard.dueDate")}</label>
-            <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
+            <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={dateInp}/>
 
             <div style={{ display:"flex", gap:10 }}>
               <div style={{ flex:1 }}>
@@ -1610,6 +1610,13 @@ const inp = {
   outline:"none",
   boxSizing:"border-box",
   minHeight:44
+};
+const dateInp = {
+  ...inp,
+  WebkitAppearance:"none",
+  appearance:"none",
+  backgroundClip:"padding-box",
+  paddingRight:36
 };
 
 /* ── CATEGORY MANAGEMENT SHEET ─────────────────────────── */
@@ -2751,6 +2758,7 @@ export default function App() {
   const pendingSaveRef = useRef(false);
   const needsSaveRef = useRef(false);
   const pendingDeleteRef = useRef(new Set());
+  const dirtyDeadlinesRef = useRef(false);
   const deadlinesRef = useRef([]);
   const prevDeadlinesRef = useRef([]);
   const saveRetryRef = useRef(null);
@@ -2841,6 +2849,25 @@ export default function App() {
       return true;
     };
 
+    const mergeDeadlines = (remote, local) => {
+      const merged = [];
+      const seen = new Set();
+      (local || []).forEach(d => {
+        if (!d) return;
+        const id = String(d.id);
+        if (pendingDeleteRef.current.has(id)) return;
+        seen.add(id);
+        merged.push(d);
+      });
+      (remote || []).forEach(d => {
+        if (!d) return;
+        const id = String(d.id);
+        if (pendingDeleteRef.current.has(id)) return;
+        if (!seen.has(id)) merged.push(d);
+      });
+      return merged;
+    };
+
     const fetchOnce = async () => {
       try {
         const userSnap = await getDoc(userRef);
@@ -2894,7 +2921,11 @@ export default function App() {
         if (!cancelled && !pendingSaveRef.current) {
           suppressDeadlinesRef.current = true;
           suppressMetaRef.current = true;
-          setDeadlines(remoteDeadlines);
+          const localCurrent = deadlinesRef.current || [];
+          const nextDeadlines = dirtyDeadlinesRef.current
+            ? mergeDeadlines(remoteDeadlines, localCurrent)
+            : remoteDeadlines;
+          setDeadlines(nextDeadlines);
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
         }
@@ -2936,6 +2967,7 @@ export default function App() {
       await batch.commit();
       prevDeadlinesRef.current = current;
       pendingSaveRef.current = false;
+      dirtyDeadlinesRef.current = false;
       if (saveRetryRef.current) {
         clearTimeout(saveRetryRef.current);
         saveRetryRef.current = null;
@@ -2968,6 +3000,7 @@ export default function App() {
       prevDeadlinesRef.current = deadlines;
       return;
     }
+    dirtyDeadlinesRef.current = true;
     if (pendingSaveRef.current) {
       needsSaveRef.current = true;
       return;
