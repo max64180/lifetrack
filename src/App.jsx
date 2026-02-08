@@ -4381,10 +4381,10 @@ export default function App() {
                 <>
                   {recurringAuto.length > 0 && recurringManual.length > 0 && (
                     <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", letterSpacing:".4px", marginBottom:6 }}>
-                      {t("year.recurringAuto", { defaultValue:"Automatiche" })}
+                      {t("year.recurringManual", { defaultValue:"Da pagare" })}
                     </div>
                   )}
-                  {recurringAuto.map(item => (
+                  {recurringManual.map(item => (
                     <div key={item.id} style={{
                       background:"#fff", borderRadius:16, border:"1px solid #edecea",
                       padding:"12px 14px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,.03)"
@@ -4422,10 +4422,10 @@ export default function App() {
 
                   {recurringAuto.length > 0 && recurringManual.length > 0 && (
                     <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", letterSpacing:".4px", margin:"6px 0" }}>
-                      {t("year.recurringManual", { defaultValue:"Da pagare" })}
+                      {t("year.recurringAuto", { defaultValue:"Automatiche" })}
                     </div>
                   )}
-                  {recurringManual.map(item => (
+                  {recurringAuto.map(item => (
                     <div key={item.id} style={{
                       background:"#fff", borderRadius:16, border:"1px solid #edecea",
                       padding:"12px 14px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,.03)"
