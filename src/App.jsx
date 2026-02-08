@@ -3028,10 +3028,6 @@ export default function App() {
     pendingSaveRef.current = true;
     startSync();
     const current = deadlinesRef.current || [];
-    const prev = prevDeadlinesRef.current || [];
-    const prevIds = new Set(prev.map(d => String(d.id)));
-    const nextIds = new Set(current.map(d => String(d.id)));
-    const removedIds = [...prevIds].filter(id => !nextIds.has(id));
 
     try {
       const batch = writeBatch(db);
@@ -3040,9 +3036,6 @@ export default function App() {
         const docId = String(d.id);
         const payload = stripUndefined({ ...d, id: d.id, updatedAt: now });
         batch.set(doc(db, 'users', user.uid, 'deadlines', docId), payload, { merge: true });
-      });
-      removedIds.forEach(id => {
-        batch.delete(doc(db, 'users', user.uid, 'deadlines', id));
       });
       await batch.commit();
       prevDeadlinesRef.current = current;
