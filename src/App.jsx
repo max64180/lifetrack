@@ -3498,6 +3498,69 @@ export default function App() {
   }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
+  const isYearCompact = range === "anno" && activeTab === "timeline";
+  const recurringSummary = useMemo(() => {
+    if (!isYearCompact) return [];
+    const map = new Map();
+    filtered.forEach(item => {
+      if (!item?.recurring?.enabled) return;
+      const seriesId = item.recurring.seriesId || String(item.id);
+      if (!map.has(seriesId)) map.set(seriesId, []);
+      map.get(seriesId).push(item);
+    });
+    const locale = getLocale();
+    const isIt = locale.startsWith("it");
+    const singular = { giorni:"giorno", settimane:"settimana", mesi:"mese", anni:"anno", days:"day", weeks:"week", months:"month", years:"year" };
+    const plural = { giorni:"giorni", settimane:"settimane", mesi:"mesi", anni:"anni", days:"days", weeks:"weeks", months:"months", years:"years" };
+    const unitLabel = (unit, count) => {
+      const key = count === 1 ? singular[unit] : plural[unit];
+      return key || unit;
+    };
+    const frequencyLabel = (interval, unit) => {
+      const safeInterval = Math.max(1, parseInt(interval) || 1);
+      const label = unitLabel(unit, safeInterval);
+      return isIt ? `Ogni ${safeInterval} ${label}` : `Every ${safeInterval} ${label}`;
+    };
+    return Array.from(map.values()).map(items => {
+      const ordered = items.slice().sort((a, b) => a.date - b.date);
+      const sample = ordered[0];
+      const knownTotal = ordered.filter(d => !d.estimateMissing).reduce((s, d) => s + (Number(d.budget) || 0), 0);
+      const missingCount = ordered.filter(d => d.estimateMissing).length;
+      const nextItem = ordered.find(d => d.date >= TODAY) || ordered[0];
+      return {
+        id: sample.recurring.seriesId || String(sample.id),
+        title: sample.title,
+        cat: sample.cat,
+        asset: sample.asset,
+        autoPay: sample.autoPay,
+        mandatory: sample.mandatory,
+        essential: sample.essential,
+        frequency: frequencyLabel(sample.recurring.interval, sample.recurring.unit),
+        count: ordered.length,
+        knownTotal,
+        missingCount,
+        nextDate: nextItem?.date,
+      };
+    }).sort((a, b) => (a.nextDate?.getTime?.() || 0) - (b.nextDate?.getTime?.() || 0));
+  }, [filtered, isYearCompact, i18n.language]);
+
+  const oneOffSummary = useMemo(() => {
+    if (!isYearCompact) return [];
+    const oneOff = filtered.filter(d => !d?.recurring?.enabled);
+    const map = new Map();
+    oneOff.forEach(item => {
+      const y = item.date.getFullYear();
+      const m = item.date.getMonth();
+      const key = `${y}-${m}`;
+      if (!map.has(key)) map.set(key, { year:y, month:m, count:0, total:0, missing:0 });
+      const entry = map.get(key);
+      entry.count += 1;
+      if (item.estimateMissing) entry.missing += 1;
+      else entry.total += Number(item.budget) || 0;
+    });
+    return Array.from(map.values())
+      .sort((a, b) => (a.year * 12 + a.month) - (b.year * 12 + b.month));
+  }, [filtered, isYearCompact]);
 
   const toggle   = id => setExpandedId(prev => prev === id ? null : id);
   
@@ -4197,7 +4260,101 @@ export default function App() {
 
       {/* LISTA */}
       <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
-        {groups.length === 0 ? (
+        {isYearCompact ? (
+          (recurringSummary.length === 0 && oneOffSummary.length === 0) ? (
+            <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
+              <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
+                {t("empty.timelineTitle")}
+              </div>
+              <div style={{ fontSize:13, marginTop:4 }}>
+                {t("empty.hint")} · {periodLabel}
+              </div>
+            </div>
+          ) : (
+            <div style={{ paddingTop:8 }}>
+              <div style={{ marginBottom:10, color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                {t("year.recurringTitle", { defaultValue:"Ricorrenti" })}
+              </div>
+              {recurringSummary.length === 0 ? (
+                <div style={{ color:"#b5b2a8", fontSize:13, marginBottom:16 }}>
+                  {t("year.recurringEmpty", { defaultValue:"Nessuna ricorrente nel periodo." })}
+                </div>
+              ) : (
+                recurringSummary.map(item => (
+                  <div key={item.id} style={{
+                    background:"#fff", borderRadius:16, border:"1px solid #edecea",
+                    padding:"12px 14px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,.03)"
+                  }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", gap:12 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {item.title}
+                        </div>
+                        <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                          {item.frequency} · {t("year.occurrences", { count: item.count, defaultValue: `${item.count} occ.` })}
+                        </div>
+                        {item.nextDate && (
+                          <div style={{ fontSize:11, color:"#b2afa7", marginTop:2 }}>
+                            {t("year.next", { defaultValue:"Prossima" })}: {fmtDate(item.nextDate)}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26" }}>
+                          {formatCurrency(item.knownTotal)}
+                        </div>
+                        <div style={{ fontSize:10, color:"#b2afa7", textTransform:"uppercase", letterSpacing:".4px" }}>
+                          {t("year.perYear", { defaultValue:"anno" })}
+                        </div>
+                        {item.missingCount > 0 && (
+                          <div style={{ fontSize:10, color:"#d08b6a", marginTop:2 }}>
+                            {t("year.missing", { count: item.missingCount, defaultValue: "stima mancante" })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                {t("year.oneOffTitle", { defaultValue:"Una‑tantum" })}
+              </div>
+              {oneOffSummary.length === 0 ? (
+                <div style={{ color:"#b5b2a8", fontSize:13 }}>
+                  {t("year.oneOffEmpty", { defaultValue:"Nessuna una‑tantum nel periodo." })}
+                </div>
+              ) : (
+                oneOffSummary.map(entry => {
+                  const locale = getLocale();
+                  const label = capitalize(new Date(entry.year, entry.month, 1).toLocaleDateString(locale, { month:"long", year:"numeric" }));
+                  return (
+                    <div key={`${entry.year}-${entry.month}`} style={{
+                      background:"#fff", borderRadius:14, border:"1px solid #edecea",
+                      padding:"10px 12px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center"
+                    }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:800, color:"#2d2b26" }}>{label}</div>
+                        <div style={{ fontSize:11, color:"#8a877f" }}>
+                          {t("year.occurrences", { count: entry.count, defaultValue: `${entry.count} occ.` })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>{formatCurrency(entry.total)}</div>
+                        {entry.missing > 0 && (
+                          <div style={{ fontSize:10, color:"#d08b6a", marginTop:2 }}>
+                            {t("year.missing", { count: entry.missing, defaultValue: "stima mancante" })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )
+        ) : groups.length === 0 ? (
           <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
             <div style={{ fontSize:36, marginBottom:10 }}>{activeTab === "done" ? "🎉" : "📅"}</div>
             <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
