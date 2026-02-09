@@ -3875,7 +3875,6 @@ export default function App() {
   const [presetAsset, setPresetAsset] = useState(null); // { catId, assetName }
   const [showCats, setShowCats] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [showDev, setShowDev] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
