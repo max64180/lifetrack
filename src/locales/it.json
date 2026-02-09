@@ -388,6 +388,8 @@
     "attachmentsLimit": "Max {{count}} allegati per voce",
     "imageTooLarge": "Immagine troppo grande (max {{size}}MB)",
     "fileTooLarge": "File troppo grande (max {{size}}MB)",
+    "uploadTimeout": "Upload troppo lento, riprova",
+    "uploadIncomplete": "Caricamento incompleto: riprova",
     "shareUnsupported": "Condivisione non supportata su questo dispositivo",
     "shareError": "Errore condivisione",
     "worklogUpdated": "✓ Lavoro aggiornato",

@@ -388,6 +388,8 @@
     "attachmentsLimit": "Max {{count}} attachments per item",
     "imageTooLarge": "Image too large (max {{size}}MB)",
     "fileTooLarge": "File too large (max {{size}}MB)",
+    "uploadTimeout": "Upload too slow, try again",
+    "uploadIncomplete": "Upload incomplete: try again",
     "shareUnsupported": "Sharing is not supported on this device",
     "shareError": "Share error",
     "worklogUpdated": "✓ Work log updated",

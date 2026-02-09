@@ -36,6 +36,7 @@ const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
 const MAX_ATTACHMENTS = 3;
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const FILE_MAX_BYTES = 10 * 1024 * 1024;
+const UPLOAD_TIMEOUT_MS = 20000;
 
 
 
@@ -2590,12 +2591,21 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     let uploaded = [];
     if (pendingFiles.length && onUploadAttachments) {
       setUploading(true);
-      uploaded = await onUploadAttachments(pendingFiles, {
-        scope: "worklog",
-        assetKey,
-        workLogId: saved.id
-      });
-      setUploading(false);
+      try {
+        uploaded = await onUploadAttachments(pendingFiles, {
+          scope: "worklog",
+          assetKey,
+          workLogId: saved.id
+        });
+      } catch (err) {
+        showToast(t("toast.documentUploadError"));
+      } finally {
+        setUploading(false);
+      }
+      if (uploaded.length < pendingFiles.length) {
+        showToast(t("toast.uploadIncomplete"));
+        return;
+      }
     }
     const attachments = [...(existingAttachments || []), ...uploaded];
     onSave({ ...saved, attachments });
@@ -3753,7 +3763,10 @@ export default function App() {
           : `users/${user.uid}/assets/${assetKey}`;
         const fullPath = `${basePath}/${docId}_${safeName}`;
         const fileRef = storageRef(storage, fullPath);
-        await uploadBytes(fileRef, processed.blob, { contentType: processed.contentType });
+        await Promise.race([
+          uploadBytes(fileRef, processed.blob, { contentType: processed.contentType }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("upload_timeout")), UPLOAD_TIMEOUT_MS))
+        ]);
         const url = await getDownloadURL(fileRef);
         uploaded.push({
           id: docId,
@@ -3769,6 +3782,7 @@ export default function App() {
         const code = err?.message || "unknown";
         if (code === "image_too_large") showToast(t("toast.imageTooLarge", { size: 5 }));
         else if (code === "file_too_large") showToast(t("toast.fileTooLarge", { size: 10 }));
+        else if (code === "upload_timeout") showToast(t("toast.uploadTimeout"));
         else showToast(t("toast.documentUploadError"));
       }
     }
