@@ -1930,7 +1930,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
 }
 
 /* ── ASSET SHEET ──────────────────────────────────── */
-function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, onAddWorkLog, onViewDoc }) {
+function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, onAddWorkLog, onViewDoc, onCreateDeadline }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("panoramica");
   const [showAddWork, setShowAddWork] = useState(false);
@@ -1953,6 +1953,10 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
   const completed = assetDeadlines.filter(d => d.done);
   const upcoming = assetDeadlines.filter(d => !d.done);
   const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
+
+  const nextMaintenance = assetWorkLogs
+    .filter(log => log.nextDate instanceof Date && !Number.isNaN(log.nextDate.getTime()))
+    .sort((a, b) => a.nextDate - b.nextDate)[0];
   
   const allDocuments = assetDeadlines
     .flatMap(d => d.documents || [])
@@ -2024,6 +2028,28 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Prossima manutenzione */}
+            {nextMaintenance && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+                  {t("asset.nextMaintenanceTitle")}
+                </div>
+                <div style={{ background:"#fff8ee", borderRadius:10, padding:"10px 12px", border:"1px solid #f0e2c9" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{nextMaintenance.title}</div>
+                      <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                        {nextMaintenance.nextDate.toLocaleDateString(getLocale())}
+                      </div>
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#FB8C00" }}>
+                      {t("asset.nextMaintenanceHint")}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2219,6 +2245,12 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                         {log.nextKm && ` ${t("asset.kmNext", { km: log.nextKm.toLocaleString(getLocale()) })}`}
                       </div>
                     )}
+
+                    {log.nextDate && (
+                      <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9" }}>
+                        {t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}
+                      </div>
+                    )}
                     
                     {log.description && (
                       <div style={{ fontSize:11, color:"#6b6961", marginTop:6, lineHeight:1.4 }}>{log.description}</div>
@@ -2284,7 +2316,9 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     km: workLog?.km || "",
     nextKm: workLog?.nextKm || "",
     description: workLog?.description || prefill?.description || "",
-    cost: workLog?.cost || prefill?.cost || ""
+    cost: workLog?.cost || prefill?.cost || "",
+    nextDate: workLog?.nextDate ? workLog.nextDate.toISOString().split('T')[0] : (prefill?.nextDate || ""),
+    createDeadline: workLog?.createDeadline ?? prefill?.createDeadline ?? true
   });
 
   useEffect(() => {
@@ -2296,7 +2330,9 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           km: workLog.km || "",
           nextKm: workLog.nextKm || "",
           description: workLog.description || "",
-          cost: workLog.cost || ""
+          cost: workLog.cost || "",
+          nextDate: workLog.nextDate ? workLog.nextDate.toISOString().split('T')[0] : "",
+          createDeadline: workLog.createDeadline ?? true
         });
       } else if (prefill) {
         setForm({
@@ -2305,7 +2341,9 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           km: "",
           nextKm: "",
           description: prefill.description || "",
-          cost: prefill.cost || ""
+          cost: prefill.cost || "",
+          nextDate: prefill.nextDate || "",
+          createDeadline: prefill.createDeadline ?? true
         });
       }
     }
@@ -2319,15 +2357,27 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
   const handleSave = () => {
     if (!form.title || !form.date) return;
     
-    onSave({
+    const saved = {
       id: workLog?.id || Date.now(),
       title: form.title,
       date: new Date(form.date + "T00:00:00"),
       km: form.km ? parseInt(form.km) : null,
       nextKm: form.nextKm ? parseInt(form.nextKm) : null,
       description: form.description,
-      cost: form.cost ? parseFloat(form.cost) : 0
-    });
+      cost: form.cost ? parseFloat(form.cost) : 0,
+      nextDate: form.nextDate ? new Date(form.nextDate + "T00:00:00") : null,
+      createDeadline: form.createDeadline
+    };
+    onSave(saved);
+
+    if (form.nextDate && form.createDeadline && onCreateDeadline) {
+      onCreateDeadline({
+        title: form.title,
+        date: form.nextDate,
+        cost: form.cost ? parseFloat(form.cost) : 0,
+        description: form.description
+      });
+    }
   };
 
   const inp = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #e8e6e0", fontSize:13, fontFamily:"inherit" };
@@ -2374,13 +2424,37 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
         <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.cost")}</label>
         <input type="number" value={form.cost} onChange={e => set("cost", e.target.value)} placeholder="0" style={inp}/>
 
-        {/* Create Deadline button */}
-        <button onClick={() => { onCreateDeadline(form); onClose(); }} style={{
-          width:"100%", marginTop:16, padding:"10px", borderRadius:10, border:"2px dashed #5B8DD9", background:"#EBF2FC",
-          color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6
-        }}>
-          {t("workLog.openDeadline")}
-        </button>
+        {/* Next maintenance */}
+        <div style={{ marginTop:16, padding:"12px", borderRadius:12, border:"1px solid #f0e2c9", background:"#fff8ee" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+            {t("workLog.fields.nextDate")}
+          </div>
+          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+            <button type="button" onClick={() => {
+              const base = new Date(form.date + "T00:00:00");
+              base.setMonth(base.getMonth() + 6);
+              set("nextDate", base.toISOString().split('T')[0]);
+              set("createDeadline", true);
+            }} style={{
+              flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
+              fontSize:12, fontWeight:700, cursor:"pointer"
+            }}>{t("workLog.quick6")}</button>
+            <button type="button" onClick={() => {
+              const base = new Date(form.date + "T00:00:00");
+              base.setMonth(base.getMonth() + 12);
+              set("nextDate", base.toISOString().split('T')[0]);
+              set("createDeadline", true);
+            }} style={{
+              flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
+              fontSize:12, fontWeight:700, cursor:"pointer"
+            }}>{t("workLog.quick12")}</button>
+          </div>
+          <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={inp}/>
+          <label style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, fontSize:12, color:"#6b6961" }}>
+            <input type="checkbox" checked={!!form.createDeadline} onChange={e => set("createDeadline", e.target.checked)} />
+            {t("workLog.createDeadline")}
+          </label>
+        </div>
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
           <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
@@ -4333,6 +4407,39 @@ export default function App() {
               }));
               showToast(t("toast.worklogAdded"));
             }
+          }}
+          onCreateDeadline={(payload) => {
+            if (!payload?.date) return;
+            const dateObj = new Date(payload.date + "T00:00:00");
+            if (Number.isNaN(dateObj.getTime())) return;
+
+            const alreadyExists = deadlines.some(d =>
+              d.asset === showAsset.asset &&
+              d.cat === showAsset.cat &&
+              d.title === payload.title &&
+              d.date instanceof Date &&
+              d.date.toISOString().split('T')[0] === payload.date
+            );
+            if (alreadyExists) return;
+
+            const budget = Number(payload.cost) || 0;
+            const newDeadline = {
+              id: Date.now(),
+              title: payload.title,
+              cat: showAsset.cat,
+              asset: showAsset.asset,
+              date: dateObj,
+              budget,
+              estimateMissing: budget === 0,
+              notes: payload.description || "",
+              recurring: null,
+              mandatory: false,
+              autoPay: false,
+              essential: false,
+              documents: [],
+              done: false
+            };
+            add(newDeadline);
           }}
           onViewDoc={setViewingDoc}
         />

@@ -186,6 +186,8 @@
     "totalSpent": "TOTALE SPESO",
     "summary": "{{deadlines}} scadenze • {{worklogs}} lavori registrati",
     "nextDeadlines": "📅 Prossime Scadenze",
+    "nextMaintenanceTitle": "🔧 Prossima manutenzione",
+    "nextMaintenanceHint": "Da programmare",
     "lastWork": "🔧 Ultimi Lavori",
     "documents": "📎 Documenti ({{count}})",
     "moreDocs": "+{{count}} altri",
@@ -209,6 +211,7 @@
     "fields": {
       "title": "Titolo *",
       "date": "Data *",
+      "nextDate": "Prossima manutenzione",
       "mileage": "🚗 Chilometraggio",
       "description": "Descrizione lavori",
       "cost": "Costo (€)"
@@ -219,6 +222,9 @@
       "kmNext": "Prossimo",
       "description": "Dettagli del lavoro eseguito..."
     },
+    "quick6": "+6 mesi",
+    "quick12": "+12 mesi",
+    "createDeadline": "Crea una scadenza per la prossima manutenzione",
     "openDeadline": "📅 Apri prossima scadenza lavori",
     "save": "Salva"
   },

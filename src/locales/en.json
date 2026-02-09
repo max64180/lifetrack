@@ -186,6 +186,8 @@
     "totalSpent": "TOTAL SPENT",
     "summary": "{{deadlines}} deadlines • {{worklogs}} logged works",
     "nextDeadlines": "📅 Upcoming deadlines",
+    "nextMaintenanceTitle": "🔧 Next maintenance",
+    "nextMaintenanceHint": "To plan",
     "lastWork": "🔧 Latest work",
     "documents": "📎 Documents ({{count}})",
     "moreDocs": "+{{count}} more",
@@ -209,6 +211,7 @@
     "fields": {
       "title": "Title *",
       "date": "Date *",
+      "nextDate": "Next maintenance",
       "mileage": "🚗 Mileage",
       "description": "Work description",
       "cost": "Cost (€)"
@@ -219,6 +222,9 @@
       "kmNext": "Next",
       "description": "Details of the work performed..."
     },
+    "quick6": "+6 months",
+    "quick12": "+12 months",
+    "createDeadline": "Create a deadline for the next maintenance",
     "openDeadline": "📅 Open next maintenance deadline",
     "save": "Save"
   },
