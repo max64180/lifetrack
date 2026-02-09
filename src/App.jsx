@@ -3126,96 +3126,6 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
 
         <button onClick={onClose} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:48 }}>{t("actions.close")}</button>
         
-        {/* Export/Import Data */}
-        <div style={{ marginTop:20, paddingTop:20, borderTop:"2px solid #f5f4f0" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("backup.title")}</div>
-          
-          <button onClick={() => {
-            const data = {
-              version: "1.0",
-              exportDate: new Date().toISOString(),
-              categories: cats,
-              deadlines: deadlines,
-              workLogs: workLogs
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `lifetrack-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            alert(t("backup.exported"));
-          }} style={{ 
-            width:"100%", padding:"12px", borderRadius:14, border:"2px solid #5B8DD9", background:"#EBF2FC", color:"#5B8DD9", cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:6
-          }}>
-            {t("backup.export")}
-          </button>
-          
-          <label style={{ 
-            width:"100%", padding:"12px", borderRadius:14, border:"2px solid #4CAF6E", background:"#E8F5E9", color:"#4CAF6E", cursor:"pointer", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6
-          }}>
-            <input type="file" accept=".json" style={{ display:"none" }} onChange={(e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-              
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                try {
-                  const data = JSON.parse(event.target.result);
-                  
-                  // Validate data structure
-                  if (!data.categories || !data.deadlines) {
-                    alert(t("backup.invalidFile"));
-                    return;
-                  }
-                  
-                  // Confirm import
-                  if (!window.confirm(t("backup.importConfirm", { deadlines: data.deadlines.length, categories: data.categories.length }))) {
-                    return;
-                  }
-                  
-                  // Import data
-                  localStorage.setItem('lifetrack_categories', JSON.stringify(data.categories));
-                  localStorage.setItem('lifetrack_deadlines', JSON.stringify(data.deadlines));
-                  localStorage.setItem('lifetrack_worklogs', JSON.stringify(data.workLogs || {}));
-                  
-                  alert(t("backup.imported"));
-                  window.location.reload();
-                } catch (err) {
-                  alert(t("backup.readError", { message: err.message }));
-                }
-              };
-              reader.readAsText(file);
-              e.target.value = ''; // Reset input
-            }} />
-            {t("backup.import")}
-          </label>
-          
-          <div style={{ fontSize:10, color:"#8a877f", marginTop:8, lineHeight:1.4 }}>
-            💡 <strong>{t("backup.shareTipTitle")}</strong> {t("backup.shareTip")}
-          </div>
-        </div>
-        
-        {/* Reset button for testing */}
-        <button onClick={() => {
-          if (window.confirm(t("backup.resetConfirm"))) {
-            localStorage.removeItem('lifetrack_categories');
-            localStorage.removeItem('lifetrack_deadlines');
-            localStorage.removeItem('lifetrack_worklogs');
-            localStorage.removeItem('lifetrack_asset_docs');
-            window.location.reload();
-          }
-        }} style={{ 
-          width:"100%", padding:"12px", borderRadius:14, border:"1px solid #FBE9E7", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:12, fontWeight:600, marginTop:10 
-        }}>{t("backup.reset")}</button>
-        {onResetAll && (
-          <button onClick={onResetAll} style={{ 
-            width:"100%", padding:"12px", borderRadius:14, border:"1px solid #E53935", background:"#E53935", color:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, marginTop:8 
-          }}>{t("backup.resetCloud")}</button>
-        )}
       </div>
     </div>
   );
@@ -5107,7 +5017,6 @@ export default function App() {
               v{APP_VERSION}{APP_BUILD_TIME ? ` · ${new Date(APP_BUILD_TIME).toLocaleDateString(getLocale())}` : ""}
               {user?.email ? ` · ${user.email}` : ""}
               {user?.uid ? ` · uid:${user.uid.slice(0, 6)}` : ""}
-              {remoteInfo.error ? ` · cloud:ERR:${remoteInfo.error}` : (remoteInfo.count !== null ? ` · cloud:${remoteInfo.count}` : "")}
               {remoteInfo.lastSync ? ` · sync:${new Date(remoteInfo.lastSync).toLocaleTimeString(getLocale(), { hour:'2-digit', minute:'2-digit' })}` : ""}
             </div>
           </div>
@@ -5444,6 +5353,94 @@ export default function App() {
               <div>• {t("dev.lastFullSync")}: {devStats.lastFullSync ? new Date(Number(devStats.lastFullSync)).toLocaleString(getLocale()) : "—"}</div>
               <div>• {t("dev.backoff")}: {Math.round((pollStateRef.current?.backoffMs || 0) / 1000)}s</div>
               <div>• {t("dev.cloudStatus")}: {remoteInfo.error ? `ERR:${remoteInfo.error}` : (remoteInfo.count !== null ? `OK (${remoteInfo.count})` : "—")}</div>
+            </div>
+
+            <div style={{ marginTop:16, paddingTop:14, borderTop:"2px solid #f5f4f0" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:10, textTransform:"uppercase" }}>{t("backup.title")}</div>
+
+              <button onClick={() => {
+                const data = {
+                  version: "1.1",
+                  exportDate: new Date().toISOString(),
+                  categories: cats,
+                  deadlines: deadlines,
+                  workLogs: workLogs,
+                  assetDocs: assetDocs
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lifetrack-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert(t("backup.exported"));
+              }} style={{ 
+                width:"100%", padding:"12px", borderRadius:14, border:"2px solid #5B8DD9", background:"#EBF2FC", color:"#5B8DD9", cursor:"pointer", fontSize:13, fontWeight:700, marginBottom:10, display:"flex", alignItems:"center", justifyContent:"center", gap:6
+              }}>
+                {t("backup.export")}
+              </button>
+
+              <label style={{ 
+                width:"100%", padding:"12px", borderRadius:14, border:"2px solid #4CAF6E", background:"#E8F5E9", color:"#4CAF6E", cursor:"pointer", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:6
+              }}>
+                <input type="file" accept=".json" style={{ display:"none" }} onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    try {
+                      const data = JSON.parse(event.target.result);
+
+                      if (!data.categories || !data.deadlines) {
+                        alert(t("backup.invalidFile"));
+                        return;
+                      }
+
+                      if (!window.confirm(t("backup.importConfirm", { deadlines: data.deadlines.length, categories: data.categories.length }))) {
+                        return;
+                      }
+
+                      localStorage.setItem('lifetrack_categories', JSON.stringify(data.categories));
+                      localStorage.setItem('lifetrack_deadlines', JSON.stringify(data.deadlines));
+                      localStorage.setItem('lifetrack_worklogs', JSON.stringify(data.workLogs || {}));
+                      localStorage.setItem('lifetrack_asset_docs', JSON.stringify(data.assetDocs || {}));
+
+                      alert(t("backup.imported"));
+                      window.location.reload();
+                    } catch (err) {
+                      alert(t("backup.readError", { message: err.message }));
+                    }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = '';
+                }} />
+                {t("backup.import")}
+              </label>
+
+              <div style={{ fontSize:10, color:"#8a877f", marginTop:8, lineHeight:1.4 }}>
+                💡 <strong>{t("backup.shareTipTitle")}</strong> {t("backup.shareTip")}
+              </div>
+
+              <button onClick={() => {
+                if (window.confirm(t("backup.resetConfirm"))) {
+                  localStorage.removeItem('lifetrack_categories');
+                  localStorage.removeItem('lifetrack_deadlines');
+                  localStorage.removeItem('lifetrack_worklogs');
+                  localStorage.removeItem('lifetrack_asset_docs');
+                  window.location.reload();
+                }
+              }} style={{ 
+                width:"100%", padding:"12px", borderRadius:14, border:"1px solid #FBE9E7", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:12, fontWeight:600, marginTop:12 
+              }}>{t("backup.reset")}</button>
+              {resetCloudData && (
+                <button onClick={resetCloudData} style={{ 
+                  width:"100%", padding:"12px", borderRadius:14, border:"1px solid #E53935", background:"#E53935", color:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, marginTop:8 
+                }}>{t("backup.resetCloud")}</button>
+              )}
             </div>
           </div>
         </div>
