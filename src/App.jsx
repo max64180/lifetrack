@@ -6,7 +6,7 @@ import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch } fr
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
-import { compressImage, compressImageToBlob } from "./utils/files";
+import { compressImage, compressImageToBlob, fileToBase64 } from "./utils/files";
 import { computeOccurrences, getAutoEndDate, getOccurrenceDate } from "./utils/recurrence";
 import PriorityFilter from "./components/PriorityFilter";
 import i18n from "./i18n";
@@ -37,6 +37,7 @@ const MAX_ATTACHMENTS = 3;
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 20000;
+const USE_STORAGE = false;
 
 
 
@@ -3758,29 +3759,45 @@ export default function App() {
         const processed = await processAttachmentFile(file);
         const safeName = sanitizeFilename(processed.filename);
         const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const basePath = scope === "worklog"
-          ? `users/${user.uid}/worklogs/${assetKey}/${workLogId}`
-          : `users/${user.uid}/assets/${assetKey}`;
-        const fullPath = `${basePath}/${docId}_${safeName}`;
-        const fileRef = storageRef(storage, fullPath);
-        await Promise.race([
-          uploadBytes(fileRef, processed.blob, { contentType: processed.contentType }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("upload_timeout")), UPLOAD_TIMEOUT_MS))
-        ]);
-        const url = await Promise.race([
-          getDownloadURL(fileRef),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("url_timeout")), 10000))
-        ]);
-        uploaded.push({
-          id: docId,
-          filename: processed.filename,
-          url,
-          contentType: processed.contentType,
-          size: processed.size,
-          uploadDate: new Date().toISOString(),
-          source: scope,
-          isImage: processed.isImage
-        });
+        if (!USE_STORAGE) {
+          const base64 = processed.isImage
+            ? await compressImage(file, 1600)
+            : await fileToBase64(file);
+          uploaded.push({
+            id: docId,
+            filename: processed.filename,
+            base64,
+            contentType: processed.contentType,
+            size: processed.size,
+            uploadDate: new Date().toISOString(),
+            source: scope,
+            isImage: processed.isImage
+          });
+        } else {
+          const basePath = scope === "worklog"
+            ? `users/${user.uid}/worklogs/${assetKey}/${workLogId}`
+            : `users/${user.uid}/assets/${assetKey}`;
+          const fullPath = `${basePath}/${docId}_${safeName}`;
+          const fileRef = storageRef(storage, fullPath);
+          await Promise.race([
+            uploadBytes(fileRef, processed.blob, { contentType: processed.contentType }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("upload_timeout")), UPLOAD_TIMEOUT_MS))
+          ]);
+          const url = await Promise.race([
+            getDownloadURL(fileRef),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("url_timeout")), 10000))
+          ]);
+          uploaded.push({
+            id: docId,
+            filename: processed.filename,
+            url,
+            contentType: processed.contentType,
+            size: processed.size,
+            uploadDate: new Date().toISOString(),
+            source: scope,
+            isImage: processed.isImage
+          });
+        }
       } catch (err) {
         const code = err?.message || "unknown";
         if (code === "image_too_large") showToast(t("toast.imageTooLarge", { size: 5 }));

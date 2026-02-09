@@ -66,3 +66,13 @@ export async function compressImageToBlob(file, options = {}) {
     reader.readAsDataURL(file);
   });
 }
+
+// Convert any file to base64 data URL
+export async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
