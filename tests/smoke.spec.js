@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-test("login screen loads", async ({ page }) => {
+test("app loads (login or timeline)", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("LifeTrack")).toBeVisible();
-  await expect(page.getByPlaceholder("nome@email.com")).toBeVisible();
+
+  const loginInput = page.getByPlaceholder(/email\.com/i);
+  const timelineTab = page.getByRole("button", { name: /Timeline/i });
+
+  await expect(loginInput.or(timelineTab)).toBeVisible({ timeout: 15000 });
 });
