@@ -3767,7 +3767,10 @@ export default function App() {
           uploadBytes(fileRef, processed.blob, { contentType: processed.contentType }),
           new Promise((_, reject) => setTimeout(() => reject(new Error("upload_timeout")), UPLOAD_TIMEOUT_MS))
         ]);
-        const url = await getDownloadURL(fileRef);
+        const url = await Promise.race([
+          getDownloadURL(fileRef),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("url_timeout")), 10000))
+        ]);
         uploaded.push({
           id: docId,
           filename: processed.filename,
@@ -3783,6 +3786,7 @@ export default function App() {
         if (code === "image_too_large") showToast(t("toast.imageTooLarge", { size: 5 }));
         else if (code === "file_too_large") showToast(t("toast.fileTooLarge", { size: 10 }));
         else if (code === "upload_timeout") showToast(t("toast.uploadTimeout"));
+        else if (code === "url_timeout") showToast(t("toast.uploadTimeout"));
         else showToast(t("toast.documentUploadError"));
       }
     }
