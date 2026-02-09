@@ -40,6 +40,7 @@
     "complete": "Complete",
     "reactivate": "Reactivate",
     "delete": "Delete",
+    "remove": "Remove",
     "confirm": "Confirm",
     "save": "Save"
   },
@@ -210,6 +211,7 @@
     "scheduleHint": "Choose when to create the deadline",
     "lastWork": "🔧 Latest work",
     "documents": "📎 Documents ({{count}})",
+    "assetDocs": "📎 Asset documents ({{count}})",
     "moreDocs": "+{{count}} more",
     "addDeadline": "Add deadline for {{asset}}",
     "deadlinesSummary": "{{total}} total deadlines • {{completed}} completed • {{upcoming}} upcoming",
@@ -285,7 +287,17 @@
     "defaultTitle": "Document",
     "attachDocument": "📸 Attach document",
     "attachReceipt": "🧾 Attach receipt",
-    "deleteConfirm": "Delete document?"
+    "deleteConfirm": "Delete document?",
+    "previewUnavailable": "Preview not available"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "hint": "Max {{max}} attachments. Photos 5MB, files 10MB.",
+    "capture": "Take photo",
+    "upload": "Upload file",
+    "pending": "Pending upload",
+    "alreadyUploaded": "Already uploaded",
+    "uploading": "Uploading..."
   },
   "category": {
     "title": "Category management",
@@ -372,6 +384,10 @@
     "documentAttached": "✓ Document attached",
     "documentUploadError": "✗ Document upload error",
     "documentDeleted": "✓ Document deleted",
+    "loginRequired": "Log in to upload documents",
+    "attachmentsLimit": "Max {{count}} attachments per item",
+    "imageTooLarge": "Image too large (max {{size}}MB)",
+    "fileTooLarge": "File too large (max {{size}}MB)",
     "shareUnsupported": "Sharing is not supported on this device",
     "shareError": "Share error",
     "worklogUpdated": "✓ Work log updated",

@@ -40,6 +40,7 @@
     "complete": "Completata",
     "reactivate": "Riattiva",
     "delete": "Elimina",
+    "remove": "Rimuovi",
     "confirm": "Conferma",
     "save": "Salva"
   },
@@ -210,6 +211,7 @@
     "scheduleHint": "Scegli quando creare la scadenza",
     "lastWork": "🔧 Ultimi Lavori",
     "documents": "📎 Documenti ({{count}})",
+    "assetDocs": "📎 Documenti asset ({{count}})",
     "moreDocs": "+{{count}} altri",
     "addDeadline": "Aggiungi scadenza per {{asset}}",
     "deadlinesSummary": "{{total}} scadenze totali • {{completed}} completate • {{upcoming}} future",
@@ -285,7 +287,17 @@
     "defaultTitle": "Documento",
     "attachDocument": "📸 Allega documento",
     "attachReceipt": "🧾 Allega ricevuta",
-    "deleteConfirm": "Eliminare documento?"
+    "deleteConfirm": "Eliminare documento?",
+    "previewUnavailable": "Anteprima non disponibile"
+  },
+  "attachments": {
+    "title": "Allegati",
+    "hint": "Max {{max}} allegati. Foto 5MB, file 10MB.",
+    "capture": "Scatta foto",
+    "upload": "Carica file",
+    "pending": "Da caricare",
+    "alreadyUploaded": "Già caricato",
+    "uploading": "Caricamento..."
   },
   "category": {
     "title": "Gestione categorie",
@@ -372,6 +384,10 @@
     "documentAttached": "✓ Documento allegato",
     "documentUploadError": "✗ Errore upload documento",
     "documentDeleted": "✓ Documento eliminato",
+    "loginRequired": "Accedi per caricare documenti",
+    "attachmentsLimit": "Max {{count}} allegati per voce",
+    "imageTooLarge": "Immagine troppo grande (max {{size}}MB)",
+    "fileTooLarge": "File troppo grande (max {{size}}MB)",
     "shareUnsupported": "Condivisione non supportata su questo dispositivo",
     "shareError": "Errore condivisione",
     "worklogUpdated": "✓ Lavoro aggiornato",

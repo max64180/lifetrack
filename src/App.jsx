@@ -3,9 +3,10 @@ import { useTranslation } from "react-i18next";
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch } from 'firebase/firestore/lite';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
-import { compressImage } from "./utils/files";
+import { compressImage, compressImageToBlob } from "./utils/files";
 import { computeOccurrences, getAutoEndDate, getOccurrenceDate } from "./utils/recurrence";
 import PriorityFilter from "./components/PriorityFilter";
 import i18n from "./i18n";
@@ -24,6 +25,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // Use Firestore Lite (REST) to avoid WebChannel issues in Safari
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ !== "undefined" ? __APP_BUILD_TIME__ : "";
@@ -31,6 +33,9 @@ const POLL_BASE_MS = 60000;
 const POLL_MAX_MS = 5 * 60 * 1000;
 const RANGE_IDS = new Set(RANGES.map(r => r.id));
 const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
+const MAX_ATTACHMENTS = 3;
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const FILE_MAX_BYTES = 10 * 1024 * 1024;
 
 
 
@@ -201,6 +206,19 @@ function normalizeWorkLogs(raw = {}) {
   });
   return parsed;
 }
+
+function normalizeAssetDocs(raw = {}) {
+  const parsed = {};
+  Object.keys(raw || {}).forEach(key => {
+    if (Array.isArray(raw[key])) parsed[key] = raw[key];
+  });
+  return parsed;
+}
+
+const sanitizeFilename = (name = "file") =>
+  name.replace(/[^\w.\-]+/g, "_").slice(0, 80);
+
+const isImageType = (type = "") => type.startsWith("image/");
 
 function deadlineForCompare(raw) {
   if (!raw) return raw;
@@ -1930,7 +1948,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
 }
 
 /* ── ASSET SHEET ──────────────────────────────────── */
-function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, onAddWorkLog, onViewDoc, onCreateDeadline }) {
+function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, assetDocs, onAddWorkLog, onViewDoc, onCreateDeadline, onUploadAttachments }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("registro");
   const [showAddWork, setShowAddWork] = useState(false);
@@ -1967,9 +1985,15 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
     .filter(log => log.nextDate instanceof Date && !Number.isNaN(log.nextDate.getTime()))
     .sort((a, b) => a.nextDate - b.nextDate)[0];
   
-  const allDocuments = assetDeadlines
-    .flatMap(d => d.documents || [])
-    .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+  const assetDocuments = (assetDocs && assetDocs[assetKey]) ? assetDocs[assetKey] : [];
+  const allDocuments = [
+    ...assetDocuments,
+    ...assetDeadlines.flatMap(d => d.documents || [])
+  ].sort((a, b) => {
+    const ta = a?.uploadDate ? new Date(a.uploadDate).getTime() : 0;
+    const tb = b?.uploadDate ? new Date(b.uploadDate).getTime() : 0;
+    return tb - ta;
+  });
 
   const isAuto = catId === "auto";
 
@@ -2256,6 +2280,30 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
               </button>
             </div>
 
+            {assetDocuments.length > 0 && (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+                  {t("asset.assetDocs", { count: assetDocuments.length })}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {assetDocuments.slice(0, 3).map(doc => (
+                    <div key={doc.id} onClick={() => onViewDoc(doc)} style={{ background:"#faf9f7", borderRadius:8, padding:"8px 10px", border:"1px solid #e8e6e0", cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{doc.isImage ? "🖼️" : "📄"}</span>
+                      <span style={{ flex:1, fontSize:11, fontWeight:600, color:"#2d2b26", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {doc.filename}
+                      </span>
+                      <span style={{ fontSize:10, color:"#8a877f" }}>{t("actions.view")}</span>
+                    </div>
+                  ))}
+                  {assetDocuments.length > 3 && (
+                    <div style={{ fontSize:10, color:"#8a877f", textAlign:"center" }}>
+                      {t("asset.moreDocs", { count: assetDocuments.length - 3 })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {assetWorkLogs.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
                 <div style={{ fontSize:36, marginBottom:10 }}>🔧</div>
@@ -2359,6 +2407,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
               setShowAddWork(false);
               setEditingWorkLog(null);
             }}
+            onUploadAttachments={onUploadAttachments}
             onCreateDeadline={(formData) => {
               // Create a new deadline linked to this asset
               const newDeadline = {
@@ -2463,7 +2512,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 }
 
 /* ── ADD WORK MODAL ──────────────────────────────────── */
-function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, onCreateCompleted, onDeleteWorkLog, prefill, workLog }) {
+function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, onCreateCompleted, onDeleteWorkLog, onUploadAttachments, prefill, workLog }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({
     title: workLog?.title || prefill?.title || "",
@@ -2477,6 +2526,9 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     createCompleted: workLog?.createCompleted ?? prefill?.createCompleted ?? false,
     enableNext: !!(workLog?.nextDate || prefill?.nextDate)
   });
+  const [existingAttachments, setExistingAttachments] = useState(workLog?.attachments || []);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -2493,6 +2545,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           createCompleted: workLog.createCompleted ?? false,
           enableNext: !!workLog.nextDate
         });
+        setExistingAttachments(workLog.attachments || []);
+        setPendingFiles([]);
       } else if (prefill) {
         setForm({
           title: prefill.title || "",
@@ -2506,6 +2560,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           createCompleted: prefill.createCompleted ?? false,
           enableNext: !!prefill.nextDate
         });
+        setExistingAttachments([]);
+        setPendingFiles([]);
       }
     }
   }, [open, prefill, workLog]);
@@ -2515,7 +2571,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const modeLabel = workLog ? t("workLog.edit") : t("workLog.new");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title || !form.date) return;
     
     const saved = {
@@ -2528,9 +2584,21 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       cost: form.cost ? parseFloat(form.cost) : 0,
       nextDate: form.nextDate ? new Date(form.nextDate + "T00:00:00") : null,
       createDeadline: form.createDeadline,
-      nextScheduled: form.enableNext && form.createDeadline && !!form.nextDate
+      nextScheduled: form.enableNext && form.createDeadline && !!form.nextDate,
+      createCompleted: form.createCompleted
     };
-    onSave(saved);
+    let uploaded = [];
+    if (pendingFiles.length && onUploadAttachments) {
+      setUploading(true);
+      uploaded = await onUploadAttachments(pendingFiles, {
+        scope: "worklog",
+        assetKey,
+        workLogId: saved.id
+      });
+      setUploading(false);
+    }
+    const attachments = [...(existingAttachments || []), ...uploaded];
+    onSave({ ...saved, attachments });
 
     if (form.enableNext && form.nextDate && form.createDeadline && onCreateDeadline) {
       onCreateDeadline({
@@ -2549,6 +2617,20 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
         description: form.description
       });
     }
+    onClose();
+  };
+
+  const handleAddFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const remaining = MAX_ATTACHMENTS - existingAttachments.length - pendingFiles.length;
+    if (remaining <= 0) return;
+    const slice = files.slice(0, remaining);
+    setPendingFiles(prev => [...prev, ...slice]);
+  };
+
+  const removePendingFile = (index) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const inp = { width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #e8e6e0", fontSize:13, fontFamily:"inherit" };
@@ -2653,6 +2735,58 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           )}
         </div>
 
+        {/* Attachments */}
+        <div style={{ marginTop:16, padding:"12px", borderRadius:12, border:"1px solid #e8e6e0", background:"#faf9f7" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+            {t("attachments.title")}
+          </div>
+          <div style={{ fontSize:11, color:"#8a877f", marginBottom:10 }}>
+            {t("attachments.hint", { max: MAX_ATTACHMENTS })}
+          </div>
+
+          {existingAttachments.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:10 }}>
+              {existingAttachments.map((doc) => (
+                <div key={doc.id} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
+                  <span style={{ fontSize:14 }}>{doc.isImage ? "🖼️" : "📄"}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{doc.filename}</div>
+                    <div style={{ fontSize:10, color:"#8a877f" }}>{t("attachments.alreadyUploaded")}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pendingFiles.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:10 }}>
+              {pendingFiles.map((file, idx) => (
+                <div key={`${file.name}-${idx}`} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
+                  <span style={{ fontSize:14 }}>{isImageType(file.type) ? "🖼️" : "📄"}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{file.name}</div>
+                    <div style={{ fontSize:10, color:"#8a877f" }}>{t("attachments.pending")}</div>
+                  </div>
+                  <button type="button" onClick={() => removePendingFile(idx)} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>
+                    {t("actions.remove")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:8 }}>
+            <label style={{ flex:1, display:"block", padding:"10px 12px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+              <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { handleAddFiles(e.target.files); e.target.value = ""; }} />
+              {t("attachments.capture")}
+            </label>
+            <label style={{ flex:1, display:"block", padding:"10px 12px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+              <input type="file" accept="image/*,application/pdf,*/*" multiple style={{ display:"none" }} onChange={(e) => { handleAddFiles(e.target.files); e.target.value = ""; }} />
+              {t("attachments.upload")}
+            </label>
+          </div>
+        </div>
+
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
           <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
           {workLog && onDeleteWorkLog && (
@@ -2663,29 +2797,55 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
               }
             }} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:14, fontWeight:700 }}>{t("actions.delete")}</button>
           )}
-          <button onClick={handleSave} disabled={!form.title || !form.date} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background: form.title && form.date ? "#2d2b26" : "#e8e6e0", color:"#fff", cursor: form.title && form.date ? "pointer" : "not-allowed", fontSize:14, fontWeight:700 }}>{t("actions.save")}</button>
+          <button onClick={handleSave} disabled={!form.title || !form.date || uploading} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background: form.title && form.date && !uploading ? "#2d2b26" : "#e8e6e0", color:"#fff", cursor: form.title && form.date && !uploading ? "pointer" : "not-allowed", fontSize:14, fontWeight:700 }}>
+            {uploading ? t("attachments.uploading") : t("actions.save")}
+          </button>
         </div>
       </div>
     </div>
   );
 }
-function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs, onResetAll }) {
+function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs, onResetAll, onAddAsset }) {
   const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [newAsset, setNewAsset] = useState("");
+  const [assetFiles, setAssetFiles] = useState([]);
   const [showAddCat, setShowAddCat] = useState(false);
   const [newCat, setNewCat] = useState({ label:"", icon:"", color:"#E8855D" });
 
+  useEffect(() => {
+    setNewAsset("");
+    setAssetFiles([]);
+  }, [editingId]);
+
   if (!open) return null;
 
-  const addAsset = (catId) => {
+  const addAsset = async (catId) => {
     if (!newAsset.trim()) return;
-    onUpdateCats(cats.map(c => c.id === catId ? { ...c, assets: [...c.assets, newAsset.trim()] } : c));
+    const name = newAsset.trim();
+    if (onAddAsset) {
+      await onAddAsset(catId, name, assetFiles);
+    } else {
+      onUpdateCats(cats.map(c => c.id === catId ? { ...c, assets: [...c.assets, name] } : c));
+    }
     setNewAsset("");
+    setAssetFiles([]);
   };
 
   const removeAsset = (catId, asset) => {
     onUpdateCats(cats.map(c => c.id === catId ? { ...c, assets: c.assets.filter(a => a !== asset) } : c));
+  };
+
+  const handleAddAssetFiles = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const remaining = MAX_ATTACHMENTS - assetFiles.length;
+    if (remaining <= 0) return;
+    setAssetFiles(prev => [...prev, ...files.slice(0, remaining)]);
+  };
+
+  const removeAssetFile = (index) => {
+    setAssetFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const addCategory = () => {
@@ -2772,6 +2932,38 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
                   <button onClick={() => addAsset(cat.id)} style={{
                     background:cat.color, color:"#fff", border:"none", borderRadius:8, padding:"8px 14px", fontSize:13, fontWeight:700, cursor:"pointer",
                   }}>{t("category.addAsset")}</button>
+                </div>
+
+                <div style={{ marginTop:10, padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:6 }}>
+                    {t("attachments.title")}
+                  </div>
+                  <div style={{ fontSize:10, color:"#8a877f", marginBottom:8 }}>
+                    {t("attachments.hint", { max: MAX_ATTACHMENTS })}
+                  </div>
+                  {assetFiles.length > 0 && (
+                    <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:8 }}>
+                      {assetFiles.map((file, idx) => (
+                        <div key={`${file.name}-${idx}`} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
+                          <span style={{ fontSize:12 }}>{isImageType(file.type) ? "🖼️" : "📄"}</span>
+                          <span style={{ flex:1, fontSize:11, fontWeight:600, color:"#2d2b26", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{file.name}</span>
+                          <button type="button" onClick={() => removeAssetFile(idx)} style={{ padding:"2px 6px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:10, fontWeight:600, cursor:"pointer" }}>
+                            {t("actions.remove")}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display:"flex", gap:6 }}>
+                    <label style={{ flex:1, display:"block", padding:"8px 10px", borderRadius:8, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:11, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+                      <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { handleAddAssetFiles(e.target.files); e.target.value = ""; }} />
+                      {t("attachments.capture")}
+                    </label>
+                    <label style={{ flex:1, display:"block", padding:"8px 10px", borderRadius:8, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:11, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+                      <input type="file" accept="image/*,application/pdf,*/*" multiple style={{ display:"none" }} onChange={(e) => { handleAddAssetFiles(e.target.files); e.target.value = ""; }} />
+                      {t("attachments.upload")}
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -2907,6 +3099,8 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
           if (window.confirm(t("backup.resetConfirm"))) {
             localStorage.removeItem('lifetrack_categories');
             localStorage.removeItem('lifetrack_deadlines');
+            localStorage.removeItem('lifetrack_worklogs');
+            localStorage.removeItem('lifetrack_asset_docs');
             window.location.reload();
           }
         }} style={{ 
@@ -2977,6 +3171,18 @@ export default function App() {
       }
     }
     return {}; // { "casa_colico": [...], "auto_micro": [...] }
+  });
+  const [assetDocs, setAssetDocs] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_asset_docs');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return normalizeAssetDocs(parsed);
+      } catch (err) {
+        console.warn("AssetDocs parse error:", err);
+      }
+    }
+    return {}; // { "casa_colico": [doc] }
   });
   const [range, setRange] = useState(() => {
     try {
@@ -3094,7 +3300,7 @@ export default function App() {
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
         if (!userSnap.exists()) {
-          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
+          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, assetDocs: {}, schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
         }
         await migrateLegacyDeadlines(userData);
 
@@ -3110,6 +3316,7 @@ export default function App() {
           remoteDeadlines = remoteDeadlines.filter(d => !pendingDeleteRef.current.has(String(d.id)));
         }
         const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
+        const parsedAssetDocs = normalizeAssetDocs(userData.assetDocs);
 
         if (remoteDeadlines.length === 0) {
           const legacyDeadlines = (userData.deadlines || [])
@@ -3149,6 +3356,7 @@ export default function App() {
           setDeadlines(nextDeadlines);
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
+          setAssetDocs(parsedAssetDocs);
         }
       } catch (error) {
         console.error("Firebase poll error:", error);
@@ -3259,6 +3467,7 @@ export default function App() {
         await setDoc(doc(db, 'users', user.uid), {
           categories: cats,
           workLogs,
+          assetDocs,
           schemaVersion: 2,
           lastUpdate: new Date().toISOString()
         }, { merge: true });
@@ -3269,7 +3478,7 @@ export default function App() {
       }
     }, 1000);
     return () => clearTimeout(saveTimer);
-  }, [cats, workLogs, user, loading]);
+  }, [cats, workLogs, assetDocs, user, loading]);
 
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
@@ -3295,6 +3504,14 @@ export default function App() {
       console.warn("LocalStorage worklogs error:", err);
     }
   }, [workLogs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_asset_docs', JSON.stringify(assetDocs));
+    } catch (err) {
+      console.warn("LocalStorage assetDocs error:", err);
+    }
+  }, [assetDocs]);
 
   useEffect(() => {
     try {
@@ -3485,6 +3702,102 @@ export default function App() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const processAttachmentFile = async (file) => {
+    const isImage = isImageType(file.type);
+    if (isImage) {
+      let blob = await compressImageToBlob(file, { maxWidth: 1600, quality: 0.8 });
+      if (blob.size > IMAGE_MAX_BYTES) {
+        blob = await compressImageToBlob(file, { maxWidth: 1280, quality: 0.7 });
+      }
+      if (blob.size > IMAGE_MAX_BYTES) {
+        throw new Error("image_too_large");
+      }
+      return {
+        blob,
+        contentType: "image/jpeg",
+        filename: file.name || "photo.jpg",
+        size: blob.size,
+        isImage: true
+      };
+    }
+    if (file.size > FILE_MAX_BYTES) {
+      throw new Error("file_too_large");
+    }
+    return {
+      blob: file,
+      contentType: file.type || "application/octet-stream",
+      filename: file.name || "file",
+      size: file.size,
+      isImage: false
+    };
+  };
+
+  const uploadAttachments = async (files, { scope, assetKey, workLogId }) => {
+    if (!user) {
+      showToast(t("toast.loginRequired"));
+      return [];
+    }
+    if (!files?.length) return [];
+    if (files.length > MAX_ATTACHMENTS) {
+      showToast(t("toast.attachmentsLimit", { count: MAX_ATTACHMENTS }));
+      return [];
+    }
+    const uploaded = [];
+    for (const file of files) {
+      try {
+        const processed = await processAttachmentFile(file);
+        const safeName = sanitizeFilename(processed.filename);
+        const docId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const basePath = scope === "worklog"
+          ? `users/${user.uid}/worklogs/${assetKey}/${workLogId}`
+          : `users/${user.uid}/assets/${assetKey}`;
+        const fullPath = `${basePath}/${docId}_${safeName}`;
+        const fileRef = storageRef(storage, fullPath);
+        await uploadBytes(fileRef, processed.blob, { contentType: processed.contentType });
+        const url = await getDownloadURL(fileRef);
+        uploaded.push({
+          id: docId,
+          filename: processed.filename,
+          url,
+          contentType: processed.contentType,
+          size: processed.size,
+          uploadDate: new Date().toISOString(),
+          source: scope,
+          isImage: processed.isImage
+        });
+      } catch (err) {
+        const code = err?.message || "unknown";
+        if (code === "image_too_large") showToast(t("toast.imageTooLarge", { size: 5 }));
+        else if (code === "file_too_large") showToast(t("toast.fileTooLarge", { size: 10 }));
+        else showToast(t("toast.documentUploadError"));
+      }
+    }
+    return uploaded;
+  };
+
+  const handleAddAsset = async (catId, name, files = []) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const alreadyExists = cats.find(c => c.id === catId)?.assets?.includes(trimmed);
+    setCats(prev => prev.map(c => {
+      if (c.id !== catId) return c;
+      if (c.assets.includes(trimmed)) return c;
+      return { ...c, assets: [...c.assets, trimmed] };
+    }));
+
+    if (!alreadyExists && files.length) {
+      const assetKey = `${catId}_${trimmed.toLowerCase().replace(/\s+/g, '_')}`;
+      const uploaded = await uploadAttachments(files, { scope: "asset", assetKey });
+      if (uploaded.length) {
+        setAssetDocs(prev => ({
+          ...prev,
+          [assetKey]: [...(prev[assetKey] || []), ...uploaded]
+        }));
+        showToast(t("toast.documentAttached"));
+      }
+    }
+  };
+
   const resetCloudData = async () => {
     if (!user) return;
     if (!window.confirm(t("backup.resetCloudConfirm"))) return;
@@ -3493,11 +3806,13 @@ export default function App() {
       localStorage.removeItem('lifetrack_categories');
       localStorage.removeItem('lifetrack_deadlines');
       localStorage.removeItem('lifetrack_worklogs');
+      localStorage.removeItem('lifetrack_asset_docs');
       suppressDeadlinesRef.current = true;
       suppressMetaRef.current = true;
       setDeadlines([]);
       setCats(DEFAULT_CATS);
       setWorkLogs({});
+      setAssetDocs({});
       prevDeadlinesRef.current = [];
       pendingSaveRef.current = true;
 
@@ -3514,6 +3829,7 @@ export default function App() {
       await setDoc(userRef, {
         categories: DEFAULT_CATS,
         workLogs: {},
+        assetDocs: {},
         deadlines: [],
         schemaVersion: 2,
         lastUpdate: new Date().toISOString()
@@ -4127,11 +4443,12 @@ export default function App() {
       return;
     }
     try {
-      const response = await fetch(doc.base64);
+      const source = doc.url || doc.base64;
+      const response = await fetch(source);
       const blob = await response.blob();
       const file = new File([blob], doc.filename || defaultFilename, { type: blob.type || "image/jpeg" });
       if (navigator.canShare && !navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: doc.filename || defaultTitle, url: doc.base64 });
+        await navigator.share({ title: doc.filename || defaultTitle, url: source });
         return;
       }
       await navigator.share({ files: [file], title: doc.filename || defaultTitle });
@@ -4662,7 +4979,15 @@ export default function App() {
             </button>
           </div>
           {(() => {
-            const docs = deadlines.flatMap(d => (d.documents || []).map(doc => ({ ...doc, deadline: d })));
+            const deadlineDocs = deadlines.flatMap(d => (d.documents || []).map(doc => ({ ...doc, source:"deadline", deadline: d })));
+            const assetDocsList = Object.entries(assetDocs || {}).flatMap(([assetKey, docs]) =>
+              (docs || []).map(doc => ({ ...doc, source:"asset", assetKey }))
+            );
+            const workLogDocs = Object.entries(workLogs || {}).flatMap(([assetKey, logs]) =>
+              (logs || []).flatMap(log => (log.attachments || []).map(doc => ({ ...doc, source:"worklog", assetKey, workLog: log })))
+            );
+            const getDocTime = (d) => d?.uploadDate ? new Date(d.uploadDate).getTime() : 0;
+            const docs = [...deadlineDocs, ...assetDocsList, ...workLogDocs].sort((a, b) => getDocTime(b) - getDocTime(a));
             if (docs.length === 0) {
               return (
                 <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
@@ -4675,8 +5000,13 @@ export default function App() {
               <div key={doc.id} style={{ background:"#fff", borderRadius:12, padding:"12px 14px", border:"1px solid #e8e6e0", marginBottom:8 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{doc.filename || t("docs.defaultTitle")}</div>
                 <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
-                  {doc.deadline?.title} · {doc.deadline?.date?.toLocaleDateString?.(getLocale())}
+                  {doc.source === "deadline" && doc.deadline ? `${doc.deadline.title} · ${doc.deadline.date?.toLocaleDateString?.(getLocale())}` : ""}
+                  {doc.source === "asset" && doc.assetKey ? `Asset · ${doc.assetKey.replace(/_/g, " ")}` : ""}
+                  {doc.source === "worklog" && doc.workLog ? `${doc.workLog.title} · ${doc.workLog.date?.toLocaleDateString?.(getLocale())}` : ""}
                 </div>
+                <button onClick={() => setViewingDoc(doc)} style={{ marginTop:8, padding:"6px 10px", borderRadius:8, border:"none", background:"#EBF2FC", color:"#5B8DD9", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                  {t("actions.view")}
+                </button>
               </div>
             ));
           })()}
@@ -4704,9 +5034,11 @@ export default function App() {
           onClose={() => setShowAsset(null)} 
           deadlines={deadlines} 
           cats={cats}
+          assetDocs={assetDocs}
           catId={showAsset.cat}
           assetName={showAsset.asset}
           workLogs={workLogs}
+          onUploadAttachments={uploadAttachments}
           onAddWorkLog={(assetKey, work, editId) => {
             if (!work && editId) {
               setWorkLogs(prev => ({
@@ -4771,6 +5103,7 @@ export default function App() {
         onClose={() => setShowCats(false)} 
         cats={cats} 
         onUpdateCats={setCats}
+        onAddAsset={handleAddAsset}
         deadlines={deadlines}
         workLogs={workLogs}
         onResetAll={resetCloudData}
@@ -4935,11 +5268,25 @@ export default function App() {
           position:"fixed", inset:0, background:"rgba(0,0,0,.92)", zIndex:300,
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20,
         }}>
-          <div style={{ fontSize:14, fontWeight:600, color:"#fff", marginBottom:16, maxWidth:"90%", textAlign:"center" }}>{viewingDoc.filename}</div>
-          <img src={viewingDoc.base64} style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }} alt="Document" />
+          {(() => {
+            const docSrc = viewingDoc.url || viewingDoc.base64;
+            const isImage = viewingDoc.isImage ?? (viewingDoc.contentType?.startsWith("image/") || (docSrc || "").startsWith("data:image/"));
+            return (
+              <>
+                <div style={{ fontSize:14, fontWeight:600, color:"#fff", marginBottom:16, maxWidth:"90%", textAlign:"center" }}>{viewingDoc.filename}</div>
+                {isImage ? (
+                  <img src={docSrc} style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }} alt="Document" />
+                ) : (
+                  <div style={{ padding:"30px 40px", borderRadius:14, background:"rgba(255,255,255,.08)", color:"#fff", fontSize:14, fontWeight:700 }}>
+                    {t("docs.previewUnavailable")}
+                  </div>
+                )}
+              </>
+            );
+          })()}
           <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap", justifyContent:"center" }}>
             <a
-              href={viewingDoc.base64}
+              href={viewingDoc.url || viewingDoc.base64}
               target="_blank"
               rel="noreferrer"
               style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
@@ -4948,7 +5295,7 @@ export default function App() {
               {t("actions.open")}
             </a>
             <a
-              href={viewingDoc.base64}
+              href={viewingDoc.url || viewingDoc.base64}
               download={viewingDoc.filename || "documento"}
               style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
               onClick={e => e.stopPropagation()}
