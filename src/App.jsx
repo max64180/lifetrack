@@ -2290,6 +2290,11 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             catId={catId}
             isAuto={isAuto}
             workLog={editingWorkLog}
+            onDeleteWorkLog={(id) => {
+              onAddWorkLog(assetKey, null, id);
+              setEditingWorkLog(null);
+              setShowAddWork(false);
+            }}
             onSave={(work) => {
               onAddWorkLog(assetKey, work, editingWorkLog?.id);
               setShowAddWork(false);
@@ -2399,7 +2404,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 }
 
 /* ── ADD WORK MODAL ──────────────────────────────────── */
-function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, onCreateCompleted, prefill, workLog }) {
+function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, onCreateCompleted, onDeleteWorkLog, prefill, workLog }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({
     title: workLog?.title || prefill?.title || "",
@@ -2591,6 +2596,14 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
           <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961" }}>{t("actions.cancel")}</button>
+          {workLog && onDeleteWorkLog && (
+            <button onClick={() => {
+              if (window.confirm(t("workLog.deleteConfirm"))) {
+                onDeleteWorkLog(workLog.id);
+                onClose();
+              }
+            }} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:14, fontWeight:700 }}>{t("actions.delete")}</button>
+          )}
           <button onClick={handleSave} disabled={!form.title || !form.date} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background: form.title && form.date ? "#2d2b26" : "#e8e6e0", color:"#fff", cursor: form.title && form.date ? "pointer" : "not-allowed", fontSize:14, fontWeight:700 }}>{t("actions.save")}</button>
         </div>
       </div>
@@ -4525,7 +4538,13 @@ export default function App() {
           assetName={showAsset.asset}
           workLogs={workLogs}
           onAddWorkLog={(assetKey, work, editId) => {
-            if (editId) {
+            if (!work && editId) {
+              setWorkLogs(prev => ({
+                ...prev,
+                [assetKey]: (prev[assetKey] || []).filter(w => w.id !== editId)
+              }));
+              showToast(t("toast.worklogDeleted"));
+            } else if (editId) {
               // Edit existing
               setWorkLogs(prev => ({
                 ...prev,

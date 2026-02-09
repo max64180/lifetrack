@@ -232,6 +232,7 @@
     "createCompleted": "Registra anche come scadenza completata",
     "createCompletedHint": "Crea una scadenza gia' segnata come completata nella data di questo intervento.",
     "nextOptional": "Programma prossima manutenzione (opzionale)",
+    "deleteConfirm": "Eliminare questo intervento?",
     "openDeadline": "📅 Apri prossima scadenza lavori",
     "save": "Salva"
   },
@@ -355,6 +356,7 @@
     "shareError": "Errore condivisione",
     "worklogUpdated": "✓ Lavoro aggiornato",
     "worklogAdded": "✓ Lavoro aggiunto al registro",
+    "worklogDeleted": "✓ Lavoro eliminato",
     "syncError": "✗ Errore salvataggio ({{code}})",
     "resetDone": "✓ Dati cloud eliminati",
     "resetError": "✗ Errore reset dati"

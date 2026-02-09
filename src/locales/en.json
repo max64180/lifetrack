@@ -232,6 +232,7 @@
     "createCompleted": "Also record as completed deadline",
     "createCompletedHint": "Creates a deadline already marked as completed on the work date.",
     "nextOptional": "Schedule next maintenance (optional)",
+    "deleteConfirm": "Delete this work log?",
     "openDeadline": "📅 Open next maintenance deadline",
     "save": "Save"
   },
@@ -355,6 +356,7 @@
     "shareError": "Share error",
     "worklogUpdated": "✓ Work log updated",
     "worklogAdded": "✓ Work log added",
+    "worklogDeleted": "✓ Work log deleted",
     "syncError": "✗ Save error ({{code}})",
     "resetDone": "✓ Cloud data deleted",
     "resetError": "✗ Data reset error"
