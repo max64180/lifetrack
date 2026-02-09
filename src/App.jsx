@@ -2286,7 +2286,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     key={log.id} 
                     onClick={() => { setEditingWorkLog(log); setShowAddWork(true); }}
                     style={{ 
-                      background:"#faf9f7", borderRadius:10, padding:"12px", border:"1px solid #e8e6e0",
+                      background:"#faf9f7", borderRadius:10, padding:"10px", border:"1px solid #e8e6e0",
                       cursor:"pointer", transition:"all .2s"
                     }}
                     onMouseOver={e => e.currentTarget.style.background = "#f0ede7"}
@@ -2300,18 +2300,18 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                         </div>
                       </div>
                       {log.cost > 0 && (
-                        <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>€{formatNumber(log.cost)}</div>
+                        <div style={{ fontSize:13, fontWeight:800, color:"#4CAF6E" }}>€{formatNumber(log.cost)}</div>
                       )}
                     </div>
                     
                     {isAuto && log.km && (
-                      <div style={{ background:"#fff", borderRadius:6, padding:"6px 8px", marginBottom:6, fontSize:11, color:"#6b6961" }}>
+                      <div style={{ background:"#fff", borderRadius:6, padding:"5px 8px", marginBottom:6, fontSize:11, color:"#6b6961" }}>
                         {t("asset.kmLabel", { km: log.km.toLocaleString(getLocale()) })}
                         {log.nextKm && ` ${t("asset.kmNext", { km: log.nextKm.toLocaleString(getLocale()) })}`}
                       </div>
                     )}
-
-                    <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                    
+                    <div style={{ background:"#fff8ee", borderRadius:6, padding:"5px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
                       {log.nextDate ? (
                         <>
                           <span>{t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}</span>
@@ -2328,7 +2328,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     </div>
                     
                     {log.description && (
-                      <div style={{ fontSize:11, color:"#6b6961", marginTop:6, lineHeight:1.4 }}>{log.description}</div>
+                      <div style={{ fontSize:11, color:"#6b6961", marginTop:6, lineHeight:1.3 }}>{log.description}</div>
                     )}
                   </div>
                 ))}
@@ -3441,6 +3441,8 @@ export default function App() {
   const [presetAsset, setPresetAsset] = useState(null); // { catId, assetName }
   const [showCats, setShowCats] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
   const [activeTab, setActiveTab] = useState("timeline");
@@ -4239,7 +4241,7 @@ export default function App() {
       )}
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
 
-      {/* HEADER - compact mobile-first design */}
+      {/* HEADER - primary section */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18" }}>
         <div style={{ 
           background:"#1e1c18", color:"#fff", padding:"12px 16px", position:"relative", overflow:"hidden",
@@ -4248,119 +4250,234 @@ export default function App() {
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>{t("app.name")}</h1>
+                <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>
+                  {mainSection === "deadlines" ? t("nav.deadlines") : mainSection === "assets" ? t("nav.assets") : t("nav.documents")}
+                </h1>
                 <span style={{ fontSize:10, opacity:.35 }}>{t("app.tagline")}</span>
               </div>
-              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                <LanguageToggle size={26} />
-                <button onClick={() => setShowStats(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                  <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>📈</span>
-                </button>
-                <button onClick={() => setShowAssetList(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                  <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>🏷️</span>
-                </button>
-                <button onClick={() => setShowCats(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                  <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>⚙</span>
-                </button>
-                <button onClick={handleSignOut} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                  <span style={{ fontSize:16, color:"rgba(255,255,255,.6)" }}>⎋</span>
-                </button>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Budget bar only in deadlines */}
+        {mainSection === "deadlines" && (
+          <div style={{ background:"#1e1c18" }}>
+            <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
+          </div>
+        )}
+      </div>
+
+      {mainSection === "deadlines" && (
+        <>
+          {/* TAB: Timeline / Scadute / Completate */}
+          <div style={{ display:"flex", gap:0, background:"#fff", borderBottom:"1px solid #edecea", position:"sticky", top:0, zIndex:50 }}>
+            {[
+              { id:"timeline", labelKey:"tabs.timeline" }, 
+              { id:"overdue", labelKey:"tabs.overdue" },
+              { id:"done", labelKey:"tabs.done" }
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                flex:1, padding:"12px 0", border:"none", background:"transparent", cursor:"pointer",
+                fontSize:14, fontWeight: activeTab === tab.id ? 700 : 500,
+                color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
+                borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
+                transition:"all .2s", minHeight:44,
+              }}>{t(tab.labelKey)}</button>
+            ))}
+          </div>
+
+          {/* FILTRO SMART */}
+          <PriorityFilter
+            activeTab={activeTab}
+            filterMandatory={filterMandatory}
+            setFilterMandatory={setFilterMandatory}
+            filterAutoPay={filterAutoPay}
+            setFilterAutoPay={setFilterAutoPay}
+            filterManual={filterManual}
+            setFilterManual={setFilterManual}
+            filterEstimateMissing={filterEstimateMissing}
+            setFilterEstimateMissing={setFilterEstimateMissing}
+          />
+
+          {/* Period navigator (above list) */}
+          <div style={{ padding:"10px 18px 6px", background:"#f5f4f0" }}>
+            <div style={{
+              background:"#fff", borderRadius:16, border:"1px solid #edecea",
+              padding:"12px 14px", display:"flex", flexDirection:"column", gap:8,
+              boxShadow:"0 4px 12px rgba(0,0,0,.05)"
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <button onClick={() => setPeriodOffset(o => o - 1)} style={{
+                  width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+                  background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+                }}>‹</button>
+                <div style={{ flex:1, textAlign:"center" }}>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+                </div>
+                <button onClick={() => setPeriodOffset(o => o + 1)} style={{
+                  width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+                  background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+                }}>›</button>
+              </div>
+              <div style={{ display:"flex", justifyContent:"center", gap:18, marginTop:2 }}>
+                {[
+                  { id:"mese", label: t("range.month", { defaultValue:"Mese" }) },
+                  { id:"anno", label: t("range.year", { defaultValue:"Anno" }) }
+                ].map(opt => {
+                  const activeRange = range === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => { setRange(opt.id); setPeriodOffset(0); setExpandedId(null); }}
+                      style={{
+                        background:"transparent", border:"none", cursor:"pointer",
+                        fontSize:11, fontWeight: activeRange ? 800 : 600,
+                        color: activeRange ? "#2d2b26" : "#b2afa7",
+                        padding:"2px 4px", borderBottom: activeRange ? "2px solid #2d2b26" : "2px solid transparent",
+                        letterSpacing:".2px", textTransform:"uppercase"
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Budget bar */}
-        <div style={{ background:"#1e1c18" }}>
-          <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
-        </div>
-      </div>
 
-      {/* TAB: Timeline / Scadute / Completate */}
-      <div style={{ display:"flex", gap:0, background:"#fff", borderBottom:"1px solid #edecea", position:"sticky", top:0, zIndex:50 }}>
-        {[
-          { id:"timeline", labelKey:"tabs.timeline" }, 
-          { id:"overdue", labelKey:"tabs.overdue" },
-          { id:"done", labelKey:"tabs.done" }
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            flex:1, padding:"12px 0", border:"none", background:"transparent", cursor:"pointer",
-            fontSize:14, fontWeight: activeTab === tab.id ? 700 : 500,
-            color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
-            borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
-            transition:"all .2s", minHeight:44,
-          }}>{t(tab.labelKey)}</button>
-        ))}
-      </div>
-
-      {/* FILTRO SMART */}
-      <PriorityFilter
-        activeTab={activeTab}
-        filterMandatory={filterMandatory}
-        setFilterMandatory={setFilterMandatory}
-        filterAutoPay={filterAutoPay}
-        setFilterAutoPay={setFilterAutoPay}
-        filterManual={filterManual}
-        setFilterManual={setFilterManual}
-        filterEstimateMissing={filterEstimateMissing}
-        setFilterEstimateMissing={setFilterEstimateMissing}
-      />
-
-      {/* Period navigator (above list) */}
-      <div style={{ padding:"10px 18px 6px", background:"#f5f4f0" }}>
-        <div style={{
-          background:"#fff", borderRadius:16, border:"1px solid #edecea",
-          padding:"12px 14px", display:"flex", flexDirection:"column", gap:8,
-          boxShadow:"0 4px 12px rgba(0,0,0,.05)"
-        }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <button onClick={() => setPeriodOffset(o => o - 1)} style={{
-              width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-              background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
-            }}>‹</button>
-            <div style={{ flex:1, textAlign:"center" }}>
-              <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
-            </div>
-            <button onClick={() => setPeriodOffset(o => o + 1)} style={{
-              width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-              background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
-            }}>›</button>
-          </div>
-          <div style={{ display:"flex", justifyContent:"center", gap:18, marginTop:2 }}>
-            {[
-              { id:"mese", label: t("range.month", { defaultValue:"Mese" }) },
-              { id:"anno", label: t("range.year", { defaultValue:"Anno" }) }
-            ].map(opt => {
-              const activeRange = range === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => { setRange(opt.id); setPeriodOffset(0); setExpandedId(null); }}
-                  style={{
-                    background:"transparent", border:"none", cursor:"pointer",
-                    fontSize:11, fontWeight: activeRange ? 800 : 600,
-                    color: activeRange ? "#2d2b26" : "#b2afa7",
-                    padding:"2px 4px", borderBottom: activeRange ? "2px solid #2d2b26" : "2px solid transparent",
-                    letterSpacing:".2px", textTransform:"uppercase"
-                  }}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* LISTA */}
-      <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
+          {/* LISTA */}
+          <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
         {isYearCompact ? (
           (recurringSummary.length === 0 && oneOffItems.length === 0 && mandatoryItems.length === 0) ? (
             <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
               <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
                 {t("empty.timelineTitle")}
+          </div>
+        </>
+      )}
+
+      {mainSection === "assets" && (
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px 90px", background:"#f5f4f0" }}>
+          <div style={{ marginBottom:12 }}>
+            <input
+              type="text"
+              placeholder={t("assetList.search", { defaultValue:"Cerca asset..." })}
+              style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
+            />
+          </div>
+          {(() => {
+            const assetsByCategory = cats
+              .map(cat => {
+                if (!cat.assets || cat.assets.length === 0) return null;
+                return {
+                  cat,
+                  assets: cat.assets.map(assetName => {
+                    const assetDeadlines = deadlines.filter(d => d.cat === cat.id && d.asset === assetName);
+                    const completed = assetDeadlines.filter(d => d.done);
+                    const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
+                    return {
+                      name: assetName,
+                      deadlines: assetDeadlines.length,
+                      completed: completed.length,
+                      totalSpent
+                    };
+                  })
+                };
+              })
+              .filter(Boolean);
+            const hasAssets = assetsByCategory.length > 0;
+            if (!hasAssets) {
+              return (
+                <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>🏷️</div>
+                  <div style={{ fontSize:16, fontWeight:600, color:"#8a877f", marginBottom:8 }}>{t("assetList.emptyTitle")}</div>
+                  <div style={{ fontSize:13, color:"#b5b2a8", lineHeight:1.6 }}>
+                    {t("assetList.emptyHint")}
+                  </div>
+                </div>
+              );
+            }
+            return assetsByCategory.map(({ cat, assets }) => (
+              <div key={cat.id} style={{ marginBottom:24 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ fontSize:16 }}>{cat.icon}</span>
+                  {t(cat.labelKey || "", { defaultValue: cat.label })}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {assets.map(asset => (
+                    <button
+                      key={asset.name}
+                      onClick={() => setShowAsset({ cat: cat.id, asset: asset.name })}
+                      style={{
+                        display:"flex", alignItems:"center", gap:12, background:"#fff", 
+                        borderRadius:12, padding:"12px 14px", cursor:"pointer", border:"1px solid #e8e6e0",
+                        transition:"all .2s", textAlign:"left",
+                      }}
+                    >
+                      <div style={{ 
+                        width:44, height:44, borderRadius:10, 
+                        background:cat.light, border:`2px solid ${cat.color}33`,
+                        display:"flex", alignItems:"center", justifyContent:"center", fontSize:20
+                      }}>
+                        {cat.icon}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:2 }}>{asset.name}</div>
+                        <div style={{ fontSize:11, color:"#8a877f" }}>
+                          {t("assetList.itemStats", { deadlines: asset.deadlines, completed: asset.completed })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:16, fontWeight:800, color:cat.color }}>€{formatNumber(asset.totalSpent)}</div>
+                        <div style={{ fontSize:10, color:"#8a877f" }}>{t("assetList.total")}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {mainSection === "documents" && (
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px 90px", background:"#f5f4f0" }}>
+          <div style={{ marginBottom:10, display:"flex", gap:8 }}>
+            <button style={{ padding:"8px 12px", borderRadius:14, border:"none", background:"#2d2b26", color:"#fff", fontSize:12, fontWeight:700 }}>
+              {t("docs.filterAll", { defaultValue:"Tutti" })}
+            </button>
+            <button style={{ padding:"8px 12px", borderRadius:14, border:"none", background:"#edecea", color:"#6b6961", fontSize:12, fontWeight:700 }}>
+              {t("docs.filterDocs", { defaultValue:"Documenti" })}
+            </button>
+            <button style={{ padding:"8px 12px", borderRadius:14, border:"none", background:"#edecea", color:"#6b6961", fontSize:12, fontWeight:700 }}>
+              {t("docs.filterReceipts", { defaultValue:"Ricevute" })}
+            </button>
+          </div>
+          {(() => {
+            const docs = deadlines.flatMap(d => (d.documents || []).map(doc => ({ ...doc, deadline: d })));
+            if (docs.length === 0) {
+              return (
+                <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>📎</div>
+                  <div style={{ fontSize:16, fontWeight:600, color:"#8a877f", marginBottom:8 }}>{t("docs.none")}</div>
+                </div>
+              );
+            }
+            return docs.map(doc => (
+              <div key={doc.id} style={{ background:"#fff", borderRadius:12, padding:"12px 14px", border:"1px solid #e8e6e0", marginBottom:8 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{doc.filename || t("docs.defaultTitle")}</div>
+                <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                  {doc.deadline?.title} · {doc.deadline?.date?.toLocaleDateString?.(getLocale())}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
               <div style={{ fontSize:13, marginTop:4 }}>
                 {t("empty.hint")} · {periodLabel}
               </div>
@@ -4580,13 +4697,7 @@ export default function App() {
         editingItem={editingDeadline}
       />
       <StatsSheet open={showStats} onClose={() => setShowStats(false)} deadlines={deadlines} cats={cats}/>
-      <AssetListSheet 
-        open={showAssetList} 
-        onClose={() => setShowAssetList(false)} 
-        deadlines={deadlines} 
-        cats={cats}
-        onSelectAsset={(cat, asset) => setShowAsset({ cat, asset })}
-      />
+      {/* AssetListSheet no longer used in main nav */}
       {showAsset && (
         <AssetSheet 
           open={true} 
@@ -4664,6 +4775,40 @@ export default function App() {
         workLogs={workLogs}
         onResetAll={resetCloudData}
       />
+
+      {/* Primary navigation - bottom */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#fff", borderTop:"1px solid #edecea", display:"flex", zIndex:120 }}>
+        {[
+          { id:"deadlines", label: t("nav.deadlines"), icon:"📅" },
+          { id:"assets", label: t("nav.assets"), icon:"🏷️" },
+          { id:"documents", label: t("nav.documents"), icon:"📎" }
+        ].map(item => (
+          <button key={item.id} onClick={() => setMainSection(item.id)} style={{
+            flex:1, padding:"10px 0", border:"none", background:"transparent", cursor:"pointer",
+            color: mainSection === item.id ? "#2d2b26" : "#8a877f", fontSize:12, fontWeight:700
+          }}>
+            <div style={{ fontSize:18 }}>{item.icon}</div>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Hamburger menu */}
+      {showMenu && (
+        <div onClick={e => e.target === e.currentTarget && setShowMenu(false)} style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,.35)", zIndex:200, display:"flex", justifyContent:"flex-end"
+        }}>
+          <div style={{ width:260, background:"#fff", height:"100%", padding:"20px 16px" }}>
+            <div style={{ fontSize:14, fontWeight:800, marginBottom:14 }}>{t("menu.title")}</div>
+            <div style={{ marginBottom:10 }}>
+              <LanguageToggle size={28} />
+            </div>
+            <button onClick={() => { setShowStats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>📈 {t("menu.stats")}</button>
+            <button onClick={() => { setShowCats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>⚙ {t("menu.settings")}</button>
+            <button onClick={() => { handleSignOut(); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #ffe1da", background:"#fff5f1", textAlign:"left", color:"#E53935" }}>⎋ {t("menu.logout")}</button>
+          </div>
+        </div>
+      )}
       
       {/* Payment Flow Modal */}
       <PaymentFlowModal

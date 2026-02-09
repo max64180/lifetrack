@@ -141,6 +141,17 @@
     "manualPay": "Da pagare",
     "reset": "Reset filtri"
   },
+  "nav": {
+    "deadlines": "Scadenze",
+    "assets": "Asset",
+    "documents": "Documenti"
+  },
+  "menu": {
+    "title": "Menu",
+    "stats": "Statistiche",
+    "settings": "Impostazioni",
+    "logout": "Logout"
+  },
   "stats": {
     "title": "📈 Statistiche",
     "tabs": {
@@ -172,6 +183,7 @@
   },
   "assetList": {
     "title": "🏷️ I miei Asset",
+    "search": "Cerca asset...",
     "emptyTitle": "Nessun asset configurato",
     "emptyHint": "Aggiungi asset alle categorie nelle impostazioni (⚙️) per tracciare spese specifiche per auto, case, etc.",
     "itemStats": "{{deadlines}} scadenze • {{completed}} completate",
@@ -266,6 +278,9 @@
     "none": "Nessun documento allegato",
     "document": "Documento",
     "receipt": "Ricevuta",
+    "filterAll": "Tutti",
+    "filterDocs": "Documenti",
+    "filterReceipts": "Ricevute",
     "defaultFilename": "documento.jpg",
     "defaultTitle": "Documento",
     "attachDocument": "📸 Allega documento",

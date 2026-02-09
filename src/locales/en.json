@@ -141,6 +141,17 @@
     "manualPay": "To pay",
     "reset": "Reset filters"
   },
+  "nav": {
+    "deadlines": "Deadlines",
+    "assets": "Assets",
+    "documents": "Documents"
+  },
+  "menu": {
+    "title": "Menu",
+    "stats": "Stats",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
   "stats": {
     "title": "📈 Stats",
     "tabs": {
@@ -172,6 +183,7 @@
   },
   "assetList": {
     "title": "🏷️ My Assets",
+    "search": "Search assets...",
     "emptyTitle": "No assets configured",
     "emptyHint": "Add assets to categories in settings (⚙️) to track specific expenses for cars, homes, etc.",
     "itemStats": "{{deadlines}} deadlines • {{completed}} completed",
@@ -266,6 +278,9 @@
     "none": "No documents attached",
     "document": "Document",
     "receipt": "Receipt",
+    "filterAll": "All",
+    "filterDocs": "Documents",
+    "filterReceipts": "Receipts",
     "defaultFilename": "document.jpg",
     "defaultTitle": "Document",
     "attachDocument": "📸 Attach document",
