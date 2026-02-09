@@ -2041,7 +2041,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             )}
 
             {/* Prossima manutenzione */}
-            {nextMaintenance && (
+            {nextMaintenance ? (
               <div style={{ marginBottom:16 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
                   {t("asset.nextMaintenanceTitle")}
@@ -2060,6 +2060,24 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                   </div>
                 </div>
               </div>
+            ) : (
+              assetWorkLogs.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+                    {t("asset.nextMaintenanceTitle")}
+                  </div>
+                  <div style={{ background:"#fff8ee", borderRadius:10, padding:"10px 12px", border:"1px solid #f0e2c9" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>
+                        {t("asset.nextMaintenanceMissing")}
+                      </div>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#FB8C00" }}>
+                        {t("asset.nextMaintenanceUnscheduled")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Ultimi lavori */}
@@ -2293,14 +2311,21 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                       </div>
                     )}
 
-                    {log.nextDate && (
-                      <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
-                        <span>{t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}</span>
-                        <span style={{ fontWeight:700, color: log.nextScheduled ? "#4CAF6E" : "#FB8C00" }}>
-                          {log.nextScheduled ? t("asset.nextMaintenanceScheduled") : t("asset.nextMaintenanceUnscheduled")}
-                        </span>
-                      </div>
-                    )}
+                    <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                      {log.nextDate ? (
+                        <>
+                          <span>{t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}</span>
+                          <span style={{ fontWeight:700, color: log.nextScheduled ? "#4CAF6E" : "#FB8C00" }}>
+                            {log.nextScheduled ? t("asset.nextMaintenanceScheduled") : t("asset.nextMaintenanceUnscheduled")}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{t("asset.nextMaintenanceMissing")}</span>
+                          <span style={{ fontWeight:700, color:"#FB8C00" }}>{t("asset.nextMaintenanceUnscheduled")}</span>
+                        </>
+                      )}
+                    </div>
                     
                     {log.description && (
                       <div style={{ fontSize:11, color:"#6b6961", marginTop:6, lineHeight:1.4 }}>{log.description}</div>

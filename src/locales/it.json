@@ -190,6 +190,7 @@
     "nextMaintenanceCta": "Da programmare · Crea scadenza",
     "nextMaintenanceScheduled": "Programmato",
     "nextMaintenanceUnscheduled": "Da programmare",
+    "nextMaintenanceMissing": "Nessuna manutenzione programmata",
     "oneOffTitle": "Una-tantum",
     "recurringTitle": "Ricorrenti (compattate)",
     "nextOccurrence": "Prossima",

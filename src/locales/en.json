@@ -190,6 +190,7 @@
     "nextMaintenanceCta": "To plan · Create deadline",
     "nextMaintenanceScheduled": "Scheduled",
     "nextMaintenanceUnscheduled": "To plan",
+    "nextMaintenanceMissing": "No maintenance scheduled",
     "oneOffTitle": "One-off",
     "recurringTitle": "Recurring (compact)",
     "nextOccurrence": "Next",
