@@ -1936,6 +1936,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
   const [showAddWork, setShowAddWork] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [schedulePrompt, setSchedulePrompt] = useState(null); // { log, date }
   
   if (!open) return null;
 
@@ -2051,14 +2052,10 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                       </div>
                     ) : (
                       <button onClick={() => {
-                        if (onCreateDeadline) {
-                          onCreateDeadline({
-                            title: nextMaintenance.title,
-                            date: nextMaintenance.nextDate.toISOString().split('T')[0],
-                            cost: nextMaintenance.cost ? Number(nextMaintenance.cost) : 0,
-                            description: nextMaintenance.description || ""
-                          });
-                        }
+                        setSchedulePrompt({
+                          log: nextMaintenance,
+                          date: nextMaintenance.nextDate.toISOString().split('T')[0]
+                        });
                       }} style={{
                         border:"none", background:"transparent", cursor:"pointer",
                         color:"#FB8C00", fontSize:12, fontWeight:700, textDecoration:"underline",
@@ -2331,6 +2328,71 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             }}
           />
         )}
+
+        {/* Schedule next maintenance modal */}
+        {schedulePrompt && (
+          <div onClick={e => e.target === e.currentTarget && setSchedulePrompt(null)} style={{
+            position:"fixed", inset:0, background:"rgba(18,17,13,.7)", zIndex:260,
+            display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)",
+          }}>
+            <div style={{
+              background:"#fff", borderRadius:18, padding:"20px 22px", width:"90%", maxWidth:380,
+              animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both"
+            }}>
+              <h3 style={{ margin:"0 0 12px", fontSize:16, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
+                {t("asset.scheduleTitle")}
+              </h3>
+              <div style={{ fontSize:12, color:"#8a877f", marginBottom:12 }}>
+                {t("asset.scheduleHint")}
+              </div>
+              <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                {[1,12,24].map(m => (
+                  <button key={m} type="button" onClick={() => {
+                    const base = new Date(schedulePrompt.log.date);
+                    base.setMonth(base.getMonth() + m);
+                    setSchedulePrompt(p => ({ ...p, date: base.toISOString().split('T')[0] }));
+                  }} style={{
+                    flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7",
+                    fontSize:12, fontWeight:700, cursor:"pointer"
+                  }}>
+                    +{m} {t("range.month", { defaultValue:"Mese" })}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="date"
+                value={schedulePrompt.date}
+                onChange={e => setSchedulePrompt(p => ({ ...p, date: e.target.value }))}
+                style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #e8e6e0", fontSize:13, fontFamily:"inherit" }}
+              />
+              <div style={{ display:"flex", gap:10, marginTop:16 }}>
+                <button onClick={() => setSchedulePrompt(null)} style={{
+                  flex:1, padding:"10px", borderRadius:10, border:"2px solid #e8e6e0", background:"#fff",
+                  fontSize:13, fontWeight:700, color:"#6b6961", cursor:"pointer"
+                }}>{t("actions.cancel")}</button>
+                <button onClick={() => {
+                  if (!schedulePrompt.date || !onCreateDeadline) return;
+                  const updated = {
+                    ...schedulePrompt.log,
+                    nextDate: new Date(schedulePrompt.date + "T00:00:00"),
+                    nextScheduled: true
+                  };
+                  onAddWorkLog(assetKey, updated, schedulePrompt.log.id);
+                  onCreateDeadline({
+                    title: updated.title,
+                    date: schedulePrompt.date,
+                    cost: updated.cost ? Number(updated.cost) : 0,
+                    description: updated.description || ""
+                  });
+                  setSchedulePrompt(null);
+                }} style={{
+                  flex:1, padding:"10px", borderRadius:10, border:"none", background:"#2d2b26",
+                  fontSize:13, fontWeight:700, color:"#fff", cursor:"pointer"
+                }}>{t("actions.save")}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2505,26 +2567,19 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
               <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
                 {t("workLog.fields.nextDate")}
               </div>
-              <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-                <button type="button" onClick={() => {
-                  const base = new Date(form.date + "T00:00:00");
-                  base.setMonth(base.getMonth() + 6);
-                  set("nextDate", base.toISOString().split('T')[0]);
-                  set("createDeadline", true);
-                }} style={{
-                  flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
-                  fontSize:12, fontWeight:700, cursor:"pointer"
-                }}>{t("workLog.quick6")}</button>
-                <button type="button" onClick={() => {
-                  const base = new Date(form.date + "T00:00:00");
-                  base.setMonth(base.getMonth() + 12);
-                  set("nextDate", base.toISOString().split('T')[0]);
-                  set("createDeadline", true);
-                }} style={{
-                  flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
-                  fontSize:12, fontWeight:700, cursor:"pointer"
-                }}>{t("workLog.quick12")}</button>
-              </div>
+          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+            {[1,12,24].map(m => (
+              <button key={m} type="button" onClick={() => {
+                const base = new Date(form.date + "T00:00:00");
+                base.setMonth(base.getMonth() + m);
+                set("nextDate", base.toISOString().split('T')[0]);
+                set("createDeadline", true);
+              }} style={{
+                flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
+                fontSize:12, fontWeight:700, cursor:"pointer"
+              }}>{m === 1 ? t("workLog.quick1") : (m === 12 ? t("workLog.quick12") : t("workLog.quick24"))}</button>
+            ))}
+          </div>
               <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={inp}/>
               <label style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, fontSize:12, color:"#6b6961" }}>
                 <input type="checkbox" checked={!!form.createDeadline} onChange={e => set("createDeadline", e.target.checked)} />
