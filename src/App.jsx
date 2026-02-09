@@ -3260,34 +3260,6 @@ export default function App() {
   });
   const DEV_EMAIL = "mstanglino@gmail.com";
   const isDevUser = (user?.email || "").toLowerCase() === DEV_EMAIL;
-
-  const devStats = (() => {
-    const totalDeadlines = deadlines.length;
-    const totalWorkLogs = Object.values(workLogs || {}).reduce((sum, logs) => sum + (logs?.length || 0), 0);
-    const totalAssetDocs = Object.values(assetDocs || {}).reduce((sum, docs) => sum + (docs?.length || 0), 0);
-    const workLogAttachments = Object.values(workLogs || {}).reduce(
-      (sum, logs) => sum + (logs || []).reduce((inner, log) => inner + ((log?.attachments || []).length), 0),
-      0
-    );
-    const deadlineDocs = deadlines.reduce((sum, d) => sum + ((d?.documents || []).length), 0);
-    const totalAttachments = totalAssetDocs + workLogAttachments + deadlineDocs;
-    const lastSync = (() => {
-      try { return localStorage.getItem("lifetrack_last_sync"); } catch (err) { return null; }
-    })();
-    const lastFullSync = (() => {
-      try { return localStorage.getItem("lifetrack_last_full_sync"); } catch (err) { return null; }
-    })();
-    return {
-      totalDeadlines,
-      totalWorkLogs,
-      totalAssetDocs,
-      workLogAttachments,
-      deadlineDocs,
-      totalAttachments,
-      lastSync,
-      lastFullSync
-    };
-  })();
   const [showDev, setShowDev] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
@@ -3346,6 +3318,34 @@ export default function App() {
       return 0;
     }
   });
+
+  const devStats = (() => {
+    const totalDeadlines = deadlines.length;
+    const totalWorkLogs = Object.values(workLogs || {}).reduce((sum, logs) => sum + (logs?.length || 0), 0);
+    const totalAssetDocs = Object.values(assetDocs || {}).reduce((sum, docs) => sum + (docs?.length || 0), 0);
+    const workLogAttachments = Object.values(workLogs || {}).reduce(
+      (sum, logs) => sum + (logs || []).reduce((inner, log) => inner + ((log?.attachments || []).length), 0),
+      0
+    );
+    const deadlineDocs = deadlines.reduce((sum, d) => sum + ((d?.documents || []).length), 0);
+    const totalAttachments = totalAssetDocs + workLogAttachments + deadlineDocs;
+    const lastSync = (() => {
+      try { return localStorage.getItem("lifetrack_last_sync"); } catch (err) { return null; }
+    })();
+    const lastFullSync = (() => {
+      try { return localStorage.getItem("lifetrack_last_full_sync"); } catch (err) { return null; }
+    })();
+    return {
+      totalDeadlines,
+      totalWorkLogs,
+      totalAssetDocs,
+      workLogAttachments,
+      deadlineDocs,
+      totalAttachments,
+      lastSync,
+      lastFullSync
+    };
+  })();
 
   useEffect(() => {
     deadlinesRef.current = deadlines;
