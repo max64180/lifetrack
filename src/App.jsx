@@ -2045,9 +2045,28 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                         {nextMaintenance.nextDate.toLocaleDateString(getLocale())}
                       </div>
                     </div>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#FB8C00" }}>
-                      {t("asset.nextMaintenanceHint")}
-                    </div>
+                    {nextMaintenance.nextScheduled ? (
+                      <div style={{ fontSize:12, fontWeight:700, color:"#4CAF6E" }}>
+                        {t("asset.nextMaintenanceScheduled")}
+                      </div>
+                    ) : (
+                      <button onClick={() => {
+                        if (onCreateDeadline) {
+                          onCreateDeadline({
+                            title: nextMaintenance.title,
+                            date: nextMaintenance.nextDate.toISOString().split('T')[0],
+                            cost: nextMaintenance.cost ? Number(nextMaintenance.cost) : 0,
+                            description: nextMaintenance.description || ""
+                          });
+                        }
+                      }} style={{
+                        border:"none", background:"transparent", cursor:"pointer",
+                        color:"#FB8C00", fontSize:12, fontWeight:700, textDecoration:"underline",
+                        textUnderlineOffset:3, padding:0
+                      }}>
+                        {t("asset.nextMaintenanceCta")}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2382,7 +2401,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       description: form.description,
       cost: form.cost ? parseFloat(form.cost) : 0,
       nextDate: form.nextDate ? new Date(form.nextDate + "T00:00:00") : null,
-      createDeadline: form.createDeadline
+      createDeadline: form.createDeadline,
+      nextScheduled: form.enableNext && form.createDeadline && !!form.nextDate
     };
     onSave(saved);
 
