@@ -51,6 +51,7 @@ const formatNumber = (amount) => Math.round(amount).toLocaleString(getLocale());
 
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
+function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months); return d; }
 
 /* ── DATI FAKE RIMOSSI - App vuota per uso reale ──────────────────────────────────── */
 
@@ -3212,6 +3213,54 @@ export default function App() {
     }
     return {}; // { "casa_colico": [doc] }
   });
+  const [pets, setPets] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_pets');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.warn("Pets parse error:", err);
+      }
+    }
+    return [];
+  });
+  const [petEvents, setPetEvents] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_pet_events');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.warn("Pet events parse error:", err);
+      }
+    }
+    return [];
+  });
+  const [petDeadlines, setPetDeadlines] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_pet_deadlines');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.warn("Pet deadlines parse error:", err);
+      }
+    }
+    return [];
+  });
+  const [petDocs, setPetDocs] = useState(() => {
+    const saved = localStorage.getItem('lifetrack_pet_docs');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        console.warn("Pet docs parse error:", err);
+      }
+    }
+    return [];
+  });
   const [range, setRange] = useState(() => {
     try {
       const saved = localStorage.getItem('lifetrack_range') || "mese";
@@ -3233,12 +3282,16 @@ export default function App() {
     const totalDeadlines = deadlines.length;
     const totalWorkLogs = Object.values(workLogs || {}).reduce((sum, logs) => sum + (logs?.length || 0), 0);
     const totalAssetDocs = Object.values(assetDocs || {}).reduce((sum, docs) => sum + (docs?.length || 0), 0);
+    const totalPets = pets.length;
+    const totalPetEvents = petEvents.length;
+    const totalPetDeadlines = petDeadlines.length;
+    const totalPetDocs = petDocs.length;
     const workLogAttachments = Object.values(workLogs || {}).reduce(
       (sum, logs) => sum + (logs || []).reduce((inner, log) => inner + ((log?.attachments || []).length), 0),
       0
     );
     const deadlineDocs = deadlines.reduce((sum, d) => sum + ((d?.documents || []).length), 0);
-    const totalAttachments = totalAssetDocs + workLogAttachments + deadlineDocs;
+    const totalAttachments = totalAssetDocs + workLogAttachments + deadlineDocs + totalPetDocs;
     const lastSync = (() => {
       try { return localStorage.getItem("lifetrack_last_sync"); } catch (err) { return null; }
     })();
@@ -3249,6 +3302,10 @@ export default function App() {
       totalDeadlines,
       totalWorkLogs,
       totalAssetDocs,
+      totalPets,
+      totalPetEvents,
+      totalPetDeadlines,
+      totalPetDocs,
       workLogAttachments,
       deadlineDocs,
       totalAttachments,
@@ -3389,7 +3446,7 @@ export default function App() {
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
         if (!userSnap.exists()) {
-          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, assetDocs: {}, schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
+          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, assetDocs: {}, pets: [], petEvents: [], petDeadlines: [], petDocs: [], schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
         }
         await migrateLegacyDeadlines(userData);
 
@@ -3427,6 +3484,10 @@ export default function App() {
         }
         const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
         const parsedAssetDocs = normalizeAssetDocs(userData.assetDocs);
+        const parsedPets = Array.isArray(userData.pets) ? userData.pets : [];
+        const parsedPetEvents = Array.isArray(userData.petEvents) ? userData.petEvents : [];
+        const parsedPetDeadlines = Array.isArray(userData.petDeadlines) ? userData.petDeadlines : [];
+        const parsedPetDocs = Array.isArray(userData.petDocs) ? userData.petDocs : [];
 
         if (doFullSync && remoteDeadlines.length === 0) {
           const legacyDeadlines = (userData.deadlines || [])
@@ -3473,6 +3534,10 @@ export default function App() {
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
           setAssetDocs(parsedAssetDocs);
+          setPets(parsedPets);
+          setPetEvents(parsedPetEvents);
+          setPetDeadlines(parsedPetDeadlines);
+          setPetDocs(parsedPetDocs);
         }
       } catch (error) {
         console.error("Firebase poll error:", error);
@@ -3587,6 +3652,10 @@ export default function App() {
           categories: cats,
           workLogs,
           assetDocs,
+          pets,
+          petEvents,
+          petDeadlines,
+          petDocs,
           schemaVersion: 2,
           lastUpdate: new Date().toISOString()
         }, { merge: true });
@@ -3597,7 +3666,7 @@ export default function App() {
       }
     }, 1000);
     return () => clearTimeout(saveTimer);
-  }, [cats, workLogs, assetDocs, user, loading]);
+  }, [cats, workLogs, assetDocs, pets, petEvents, petDeadlines, petDocs, user, loading]);
 
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
@@ -3631,6 +3700,38 @@ export default function App() {
       console.warn("LocalStorage assetDocs error:", err);
     }
   }, [assetDocs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_pets', JSON.stringify(pets));
+    } catch (err) {
+      console.warn("LocalStorage pets error:", err);
+    }
+  }, [pets]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_pet_events', JSON.stringify(petEvents));
+    } catch (err) {
+      console.warn("LocalStorage pet events error:", err);
+    }
+  }, [petEvents]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_pet_deadlines', JSON.stringify(petDeadlines));
+    } catch (err) {
+      console.warn("LocalStorage pet deadlines error:", err);
+    }
+  }, [petDeadlines]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lifetrack_pet_docs', JSON.stringify(petDocs));
+    } catch (err) {
+      console.warn("LocalStorage pet docs error:", err);
+    }
+  }, [petDocs]);
 
   useEffect(() => {
     try {
@@ -3789,6 +3890,18 @@ export default function App() {
   const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
+  const [showPetAdd, setShowPetAdd] = useState(false);
+  const [activePetId, setActivePetId] = useState(null);
+  const [petTab, setPetTab] = useState("overview");
+  const [petSearch, setPetSearch] = useState("");
+  const [showPetEventModal, setShowPetEventModal] = useState(false);
+  const [showPetDeadlineModal, setShowPetDeadlineModal] = useState(false);
+  const [showPetDocModal, setShowPetDocModal] = useState(false);
+  const [petForm, setPetForm] = useState({ name:"", species:"dog", birth:"", notes:"" });
+  const [petEventForm, setPetEventForm] = useState({ title:"", date:"", cost:"", notes:"", schedule:false, schedulePreset:"1m", scheduleDate:"" });
+  const [petDeadlineForm, setPetDeadlineForm] = useState({ title:"", date:"", cost:"" });
+  const [petEventFiles, setPetEventFiles] = useState([]);
+  const [petDocsFiles, setPetDocsFiles] = useState([]);
   const [activeTab, setActiveTab] = useState("timeline");
   const [toast, setToast] = useState(null);
   const [postponeId, setPostponeId] = useState(null);
@@ -3949,6 +4062,99 @@ export default function App() {
     }
   };
 
+  const makeId = () => `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+  const mergeFiles = (prev, files) => [...prev, ...Array.from(files || [])].slice(0, MAX_ATTACHMENTS);
+
+  const addPet = () => {
+    const name = petForm.name.trim();
+    if (!name) return;
+    const newPet = {
+      id: makeId(),
+      name,
+      species: petForm.species || "dog",
+      birth: petForm.birth || "",
+      notes: petForm.notes || "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setPets(prev => [newPet, ...prev]);
+    setPetForm({ name:"", species:"dog", birth:"", notes:"" });
+    setShowPetAdd(false);
+  };
+
+  const addPetEvent = async () => {
+    if (!activePetId) return;
+    const title = petEventForm.title.trim();
+    if (!title || !petEventForm.date) return;
+    let attachments = [];
+    if (petEventFiles.length) {
+      attachments = await uploadAttachments(petEventFiles, { scope:"petEvent", petId: activePetId });
+    }
+    const event = {
+      id: makeId(),
+      petId: activePetId,
+      title,
+      date: petEventForm.date,
+      cost: Number(petEventForm.cost) || 0,
+      notes: petEventForm.notes || "",
+      attachments,
+      createdAt: new Date().toISOString()
+    };
+    setPetEvents(prev => [event, ...prev]);
+
+    if (petEventForm.schedule) {
+      let nextDate = "";
+      if (petEventForm.schedulePreset === "exact") nextDate = petEventForm.scheduleDate;
+      if (petEventForm.schedulePreset === "1m") nextDate = addMonths(new Date(petEventForm.date), 1).toISOString().split("T")[0];
+      if (petEventForm.schedulePreset === "6m") nextDate = addMonths(new Date(petEventForm.date), 6).toISOString().split("T")[0];
+      if (petEventForm.schedulePreset === "12m") nextDate = addMonths(new Date(petEventForm.date), 12).toISOString().split("T")[0];
+      if (nextDate) {
+        const deadline = {
+          id: makeId(),
+          petId: activePetId,
+          title: title,
+          date: nextDate,
+          cost: Number(petEventForm.cost) || 0,
+          createdAt: new Date().toISOString()
+        };
+        setPetDeadlines(prev => [deadline, ...prev]);
+      }
+    }
+
+    setPetEventForm({ title:"", date:"", cost:"", notes:"", schedule:false, schedulePreset:"1m", scheduleDate:"" });
+    setPetEventFiles([]);
+    setShowPetEventModal(false);
+  };
+
+  const addPetDeadline = () => {
+    if (!activePetId) return;
+    const title = petDeadlineForm.title.trim();
+    if (!title || !petDeadlineForm.date) return;
+    const deadline = {
+      id: makeId(),
+      petId: activePetId,
+      title,
+      date: petDeadlineForm.date,
+      cost: Number(petDeadlineForm.cost) || 0,
+      createdAt: new Date().toISOString()
+    };
+    setPetDeadlines(prev => [deadline, ...prev]);
+    setPetDeadlineForm({ title:"", date:"", cost:"" });
+    setShowPetDeadlineModal(false);
+  };
+
+  const addPetDocs = async () => {
+    if (!activePetId || !petDocsFiles.length) return;
+    const uploaded = await uploadAttachments(petDocsFiles, { scope:"petDoc", petId: activePetId });
+    if (uploaded.length) {
+      const docs = uploaded.map(d => ({ ...d, petId: activePetId }));
+      setPetDocs(prev => [...docs, ...prev]);
+      showToast(t("toast.documentAttached"));
+    }
+    setPetDocsFiles([]);
+    setShowPetDocModal(false);
+  };
+
   const resetCloudData = async () => {
     if (!user) return;
     if (!window.confirm(t("backup.resetCloudConfirm"))) return;
@@ -3958,12 +4164,20 @@ export default function App() {
       localStorage.removeItem('lifetrack_deadlines');
       localStorage.removeItem('lifetrack_worklogs');
       localStorage.removeItem('lifetrack_asset_docs');
+      localStorage.removeItem('lifetrack_pets');
+      localStorage.removeItem('lifetrack_pet_events');
+      localStorage.removeItem('lifetrack_pet_deadlines');
+      localStorage.removeItem('lifetrack_pet_docs');
       suppressDeadlinesRef.current = true;
       suppressMetaRef.current = true;
       setDeadlines([]);
       setCats(DEFAULT_CATS);
       setWorkLogs({});
       setAssetDocs({});
+      setPets([]);
+      setPetEvents([]);
+      setPetDeadlines([]);
+      setPetDocs([]);
       prevDeadlinesRef.current = [];
       pendingSaveRef.current = true;
 
@@ -3981,6 +4195,10 @@ export default function App() {
         categories: DEFAULT_CATS,
         workLogs: {},
         assetDocs: {},
+        pets: [],
+        petEvents: [],
+        petDeadlines: [],
+        petDocs: [],
         deadlines: [],
         schemaVersion: 2,
         lastUpdate: new Date().toISOString()
@@ -5163,6 +5381,176 @@ export default function App() {
         </div>
       )}
 
+      {mainSection === "pet" && (
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px 90px", background:"#f5f4f0" }}>
+          {!activePetId ? (
+            <>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26" }}>{t("pet.title")}</div>
+                <button onClick={() => setShowPetAdd(true)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background:"#E8855D", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer" }}>+ {t("pet.add")}</button>
+              </div>
+              <input
+                type="text"
+                placeholder={t("pet.search")}
+                value={petSearch}
+                onChange={e => setPetSearch(e.target.value)}
+                style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", fontSize:13, background:"#fff", marginBottom:14 }}
+              />
+
+              {(() => {
+                const filtered = pets.filter(p => p.name.toLowerCase().includes(petSearch.toLowerCase()));
+                if (!filtered.length) {
+                  return (
+                    <div style={{ textAlign:"center", padding:"40px 20px", color:"#b5b2a8" }}>
+                      <div style={{ fontSize:48, marginBottom:16 }}>🐾</div>
+                      <div style={{ fontSize:16, fontWeight:600, color:"#8a877f", marginBottom:8 }}>{t("pet.emptyTitle")}</div>
+                      <div style={{ fontSize:13, color:"#b5b2a8", lineHeight:1.6 }}>{t("pet.emptyHint")}</div>
+                    </div>
+                  );
+                }
+                const year = new Date().getFullYear();
+                return filtered.map(p => {
+                  const pEvents = petEvents.filter(e => e.petId === p.id);
+                  const pDeadlines = petDeadlines.filter(d => d.petId === p.id);
+                  const next = pDeadlines
+                    .filter(d => d.date && new Date(d.date) >= new Date())
+                    .sort((a,b) => new Date(a.date) - new Date(b.date))[0];
+                  const yearSpend = pEvents
+                    .filter(e => e.date && new Date(e.date).getFullYear() === year)
+                    .reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
+                  return (
+                    <button key={p.id} onClick={() => { setActivePetId(p.id); setPetTab("overview"); }} style={{
+                      width:"100%", textAlign:"left", background:"#fff", border:"1px solid #e8e6e0",
+                      borderRadius:14, padding:"12px 14px", marginBottom:10, cursor:"pointer"
+                    }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <div style={{ width:46, height:46, borderRadius:12, background:"#FFE9E0", border:"2px solid #E8855D33", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
+                          🐾
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26" }}>{p.name}</div>
+                          <div style={{ fontSize:12, color:"#8a877f" }}>{t(`pet.${p.species}`)}{p.birth ? ` · ${new Date(p.birth).getFullYear()}` : ""}</div>
+                          <div style={{ fontSize:12, color:"#8a877f", marginTop:4 }}>
+                            {next ? `${t("pet.nextDeadline")}: ${next.title} · ${new Date(next.date).toLocaleDateString(getLocale())}` : t("pet.noDeadlines")}
+                          </div>
+                        </div>
+                        <div style={{ textAlign:"right" }}>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>€{formatNumber(yearSpend)}</div>
+                          <div style={{ fontSize:10, color:"#8a877f" }}>{t("pet.yearSpend", { year })}</div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+            </>
+          ) : (
+            (() => {
+              const pet = pets.find(p => p.id === activePetId);
+              if (!pet) return null;
+              const pEvents = petEvents.filter(e => e.petId === pet.id).sort((a,b) => new Date(b.date) - new Date(a.date));
+              const pDeadlines = petDeadlines.filter(d => d.petId === pet.id).sort((a,b) => new Date(a.date) - new Date(b.date));
+              const pDocs = petDocs.filter(d => d.petId === pet.id).sort((a,b) => new Date(b.uploadDate || 0) - new Date(a.uploadDate || 0));
+              const nextDeadline = pDeadlines.find(d => d.date && new Date(d.date) >= new Date());
+              const lastEvent = pEvents[0];
+              const year = new Date().getFullYear();
+              const yearSpend = pEvents.filter(e => e.date && new Date(e.date).getFullYear() === year).reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
+              return (
+                <>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                    <button onClick={() => setActivePetId(null)} style={{ border:"none", background:"#fff", borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>←</button>
+                    <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26" }}>{pet.name}</div>
+                  </div>
+
+                  <div style={{ display:"flex", gap:8, background:"#fff", padding:"8px", borderRadius:14, border:"1px solid #e8e6e0", marginBottom:12 }}>
+                    {["overview","health","deadlines","docs"].map(tab => (
+                      <button key={tab} onClick={() => setPetTab(tab)} style={{
+                        flex:1, padding:"8px 10px", borderRadius:12, border:"none",
+                        background: petTab === tab ? "#2d2b26" : "#f0efec",
+                        color: petTab === tab ? "#fff" : "#6b6961", fontSize:12, fontWeight:700, cursor:"pointer"
+                      }}>{t(`pet.${tab === "docs" ? "docs" : tab}`)}</button>
+                    ))}
+                  </div>
+
+                  {petTab === "overview" && (
+                    <>
+                      <div style={{ background:"#2d2b26", color:"#fff", borderRadius:16, padding:"14px 16px", marginBottom:10 }}>
+                        <div style={{ fontSize:12, color:"#C9C5BC" }}>{t("pet.nextDeadline")}</div>
+                        <div style={{ fontSize:16, fontWeight:800, marginTop:4 }}>
+                          {nextDeadline ? `${nextDeadline.title} · ${new Date(nextDeadline.date).toLocaleDateString(getLocale())}` : "—"}
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", gap:10, marginBottom:10 }}>
+                        <div style={{ flex:1, background:"#fff", border:"1px solid #e8e6e0", borderRadius:14, padding:"12px" }}>
+                          <div style={{ fontSize:11, color:"#8a877f" }}>{t("pet.yearSpend", { year })}</div>
+                          <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26" }}>€{formatNumber(yearSpend)}</div>
+                        </div>
+                        <div style={{ flex:1, background:"#fff", border:"1px solid #e8e6e0", borderRadius:14, padding:"12px" }}>
+                          <div style={{ fontSize:11, color:"#8a877f" }}>{t("pet.lastEvent")}</div>
+                          <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>
+                            {lastEvent ? `${lastEvent.title}` : "—"}
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => setShowPetEventModal(true)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontWeight:800, marginBottom:10 }}>{t("pet.addEvent")}</button>
+                    </>
+                  )}
+
+                  {petTab === "health" && (
+                    <>
+                      <button onClick={() => setShowPetEventModal(true)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontWeight:800, marginBottom:10 }}>{t("pet.addEvent")}</button>
+                      {pEvents.length === 0 ? (
+                        <div style={{ textAlign:"center", padding:"20px", color:"#b5b2a8" }}>{t("pet.noEvents")}</div>
+                      ) : pEvents.map(ev => (
+                        <div key={ev.id} style={{ background:"#fff", border:"1px solid #e8e6e0", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>{ev.title}</div>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>€{formatNumber(Number(ev.cost) || 0)}</div>
+                          </div>
+                          <div style={{ fontSize:12, color:"#8a877f" }}>{ev.date ? new Date(ev.date).toLocaleDateString(getLocale()) : ""}</div>
+                          {!!(ev.attachments?.length) && <div style={{ fontSize:11, color:"#8a877f", marginTop:6 }}>📎 {ev.attachments.length}</div>}
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {petTab === "deadlines" && (
+                    <>
+                      <button onClick={() => setShowPetDeadlineModal(true)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontWeight:800, marginBottom:10 }}>{t("pet.addDeadline")}</button>
+                      {pDeadlines.length === 0 ? (
+                        <div style={{ textAlign:"center", padding:"20px", color:"#b5b2a8" }}>{t("pet.noDeadlines")}</div>
+                      ) : pDeadlines.map(d => (
+                        <div key={d.id} style={{ background:"#fff", border:"1px solid #e8e6e0", borderRadius:14, padding:"12px 14px", marginBottom:8 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26" }}>{d.title}</div>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#4CAF6E" }}>€{formatNumber(Number(d.cost) || 0)}</div>
+                          </div>
+                          <div style={{ fontSize:12, color:"#8a877f" }}>{d.date ? new Date(d.date).toLocaleDateString(getLocale()) : ""}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {petTab === "docs" && (
+                    <>
+                      <button onClick={() => setShowPetDocModal(true)} style={{ width:"100%", padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontWeight:800, marginBottom:10 }}>{t("pet.addDoc")}</button>
+                      {pDocs.length === 0 ? (
+                        <div style={{ textAlign:"center", padding:"20px", color:"#b5b2a8" }}>{t("pet.noDocs")}</div>
+                      ) : pDocs.map(doc => (
+                        <div key={doc.id} onClick={() => setViewingDoc(doc)} style={{ background:"#fff", border:"1px solid #e8e6e0", borderRadius:14, padding:"12px 14px", marginBottom:8, cursor:"pointer" }}>
+                          <div style={{ fontSize:13, fontWeight:800, color:"#2d2b26" }}>{doc.filename || t("docs.defaultTitle")}</div>
+                          <div style={{ fontSize:11, color:"#8a877f" }}>{doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString(getLocale()) : ""}</div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              );
+            })()
+          )}
+        </div>
+      )}
+
       <AddSheet 
         open={showAdd || !!editingDeadline} 
         onClose={() => { 
@@ -5264,7 +5652,8 @@ export default function App() {
         {[
           { id:"deadlines", label: t("nav.deadlines"), icon:"📅" },
           { id:"assets", label: t("nav.assets"), icon:"🏷️" },
-          { id:"documents", label: t("nav.documents"), icon:"📎" }
+          { id:"documents", label: t("nav.documents"), icon:"📎" },
+          { id:"pet", label: t("nav.pet"), icon:"🐾" }
         ].map(item => (
           <button key={item.id} onClick={() => setMainSection(item.id)} style={{
             flex:1, padding:"10px 0", border:"none", background:"transparent", cursor:"pointer",
@@ -5343,6 +5732,10 @@ export default function App() {
               <div>• {t("dev.deadlines")}: {devStats.totalDeadlines}</div>
               <div>• {t("dev.workLogs")}: {devStats.totalWorkLogs}</div>
               <div>• {t("dev.assetDocs")}: {devStats.totalAssetDocs}</div>
+              <div>• {t("dev.pets")}: {devStats.totalPets}</div>
+              <div>• {t("dev.petEvents")}: {devStats.totalPetEvents}</div>
+              <div>• {t("dev.petDeadlines")}: {devStats.totalPetDeadlines}</div>
+              <div>• {t("dev.petDocs")}: {devStats.totalPetDocs}</div>
               <div>• {t("dev.deadlineDocs")}: {devStats.deadlineDocs}</div>
               <div>• {t("dev.workLogDocs")}: {devStats.workLogAttachments}</div>
               <div>• {t("dev.totalDocs")}: {devStats.totalAttachments}</div>
@@ -5365,7 +5758,11 @@ export default function App() {
                   categories: cats,
                   deadlines: deadlines,
                   workLogs: workLogs,
-                  assetDocs: assetDocs
+                  assetDocs: assetDocs,
+                  pets: pets,
+                  petEvents: petEvents,
+                  petDeadlines: petDeadlines,
+                  petDocs: petDocs
                 };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -5408,6 +5805,10 @@ export default function App() {
                       localStorage.setItem('lifetrack_deadlines', JSON.stringify(data.deadlines));
                       localStorage.setItem('lifetrack_worklogs', JSON.stringify(data.workLogs || {}));
                       localStorage.setItem('lifetrack_asset_docs', JSON.stringify(data.assetDocs || {}));
+                      localStorage.setItem('lifetrack_pets', JSON.stringify(data.pets || []));
+                      localStorage.setItem('lifetrack_pet_events', JSON.stringify(data.petEvents || []));
+                      localStorage.setItem('lifetrack_pet_deadlines', JSON.stringify(data.petDeadlines || []));
+                      localStorage.setItem('lifetrack_pet_docs', JSON.stringify(data.petDocs || []));
 
                       alert(t("backup.imported"));
                       window.location.reload();
@@ -5441,6 +5842,149 @@ export default function App() {
                   width:"100%", padding:"12px", borderRadius:14, border:"1px solid #E53935", background:"#E53935", color:"#fff", cursor:"pointer", fontSize:12, fontWeight:700, marginTop:8 
                 }}>{t("backup.resetCloud")}</button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Pet modal */}
+      {showPetAdd && (
+        <div onClick={e => e.target === e.currentTarget && setShowPetAdd(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+        }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.add")}</div>
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.name")}</label>
+            <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.species")}</label>
+            <select value={petForm.species} onChange={e => setPetForm({ ...petForm, species: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }}>
+              <option value="dog">{t("pet.dog")}</option>
+              <option value="cat">{t("pet.cat")}</option>
+              <option value="other">{t("pet.other")}</option>
+            </select>
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.birth")}</label>
+            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.notes")}</label>
+            <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12 }} />
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setShowPetAdd(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={addPet} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Pet Event modal */}
+      {showPetEventModal && (
+        <div onClick={e => e.target === e.currentTarget && setShowPetEventModal(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+        }}>
+          <div style={{ width:"92%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px" }}>
+            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addEvent")}</div>
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventTitle")}</label>
+            <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventDate")}</label>
+            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventCost")}</label>
+            <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventNotes")}</label>
+            <textarea value={petEventForm.notes} onChange={e => setPetEventForm({ ...petEventForm, notes: e.target.value })} rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+
+            <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, fontWeight:700, color:"#2d2b26", marginBottom:8 }}>
+              <input type="checkbox" checked={petEventForm.schedule} onChange={e => setPetEventForm({ ...petEventForm, schedule: e.target.checked })} />
+              {t("pet.scheduleNext")}
+            </label>
+            {petEventForm.schedule && (
+              <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
+                <select value={petEventForm.schedulePreset} onChange={e => setPetEventForm({ ...petEventForm, schedulePreset: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0" }}>
+                  <option value="1m">{t("pet.schedule1m")}</option>
+                  <option value="6m">{t("pet.schedule6m")}</option>
+                  <option value="12m">{t("pet.schedule12m")}</option>
+                  <option value="exact">{t("pet.scheduleExact")}</option>
+                </select>
+                {petEventForm.schedulePreset === "exact" && (
+                  <input type="date" value={petEventForm.scheduleDate} onChange={e => setPetEventForm({ ...petEventForm, scheduleDate: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0" }} />
+                )}
+              </div>
+            )}
+
+            <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:6 }}>{t("pet.attachments")}</div>
+            {petEventFiles.map((f, i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f7f6f2", padding:"6px 8px", borderRadius:8, marginBottom:6 }}>
+                <div style={{ fontSize:12 }}>{f.name}</div>
+                <button onClick={() => setPetEventFiles(petEventFiles.filter((_, idx) => idx !== i))} style={{ border:"none", background:"transparent", color:"#E53935", cursor:"pointer" }}>{t("actions.remove")}</button>
+              </div>
+            ))}
+            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
+                {t("attachments.photo")}
+                <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={e => setPetEventFiles(mergeFiles(petEventFiles, e.target.files))} />
+              </label>
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
+                {t("attachments.file")}
+                <input type="file" accept="*/*" style={{ display:"none" }} onChange={e => setPetEventFiles(mergeFiles(petEventFiles, e.target.files))} />
+              </label>
+            </div>
+
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setShowPetEventModal(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={addPetEvent} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Pet Deadline modal */}
+      {showPetDeadlineModal && (
+        <div onClick={e => e.target === e.currentTarget && setShowPetDeadlineModal(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+        }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDeadline")}</div>
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineTitle")}</label>
+            <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineDate")}</label>
+            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineCost")}</label>
+            <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12 }} />
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setShowPetDeadlineModal(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={addPetDeadline} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Pet Docs modal */}
+      {showPetDocModal && (
+        <div onClick={e => e.target === e.currentTarget && setShowPetDocModal(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+        }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDoc")}</div>
+            {petDocsFiles.map((f, i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f7f6f2", padding:"6px 8px", borderRadius:8, marginBottom:6 }}>
+                <div style={{ fontSize:12 }}>{f.name}</div>
+                <button onClick={() => setPetDocsFiles(petDocsFiles.filter((_, idx) => idx !== i))} style={{ border:"none", background:"transparent", color:"#E53935", cursor:"pointer" }}>{t("actions.remove")}</button>
+              </div>
+            ))}
+            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
+                {t("attachments.photo")}
+                <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={e => setPetDocsFiles(mergeFiles(petDocsFiles, e.target.files))} />
+              </label>
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
+                {t("attachments.file")}
+                <input type="file" accept="*/*" style={{ display:"none" }} onChange={e => setPetDocsFiles(mergeFiles(petDocsFiles, e.target.files))} />
+              </label>
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => setShowPetDocModal(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={addPetDocs} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
             </div>
           </div>
         </div>
