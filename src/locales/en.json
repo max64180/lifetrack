@@ -227,6 +227,7 @@
     "createDeadline": "Create a deadline for the next maintenance",
     "createCompleted": "Also record as completed deadline",
     "createCompletedHint": "Creates a deadline already marked as completed on the work date.",
+    "nextOptional": "Schedule next maintenance (optional)",
     "openDeadline": "📅 Open next maintenance deadline",
     "save": "Save"
   },

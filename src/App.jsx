@@ -2329,7 +2329,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     cost: workLog?.cost || prefill?.cost || "",
     nextDate: workLog?.nextDate ? workLog.nextDate.toISOString().split('T')[0] : (prefill?.nextDate || ""),
     createDeadline: workLog?.createDeadline ?? prefill?.createDeadline ?? true,
-    createCompleted: workLog?.createCompleted ?? prefill?.createCompleted ?? false
+    createCompleted: workLog?.createCompleted ?? prefill?.createCompleted ?? false,
+    enableNext: !!(workLog?.nextDate || prefill?.nextDate)
   });
 
   useEffect(() => {
@@ -2344,7 +2345,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           cost: workLog.cost || "",
           nextDate: workLog.nextDate ? workLog.nextDate.toISOString().split('T')[0] : "",
           createDeadline: workLog.createDeadline ?? true,
-          createCompleted: workLog.createCompleted ?? false
+          createCompleted: workLog.createCompleted ?? false,
+          enableNext: !!workLog.nextDate
         });
       } else if (prefill) {
         setForm({
@@ -2356,7 +2358,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           cost: prefill.cost || "",
           nextDate: prefill.nextDate || "",
           createDeadline: prefill.createDeadline ?? true,
-          createCompleted: prefill.createCompleted ?? false
+          createCompleted: prefill.createCompleted ?? false,
+          enableNext: !!prefill.nextDate
         });
       }
     }
@@ -2383,7 +2386,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     };
     onSave(saved);
 
-    if (form.nextDate && form.createDeadline && onCreateDeadline) {
+    if (form.enableNext && form.nextDate && form.createDeadline && onCreateDeadline) {
       onCreateDeadline({
         title: form.title,
         date: form.nextDate,
@@ -2457,36 +2460,58 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           </label>
         </div>
 
-        {/* Next maintenance */}
+        {/* Next maintenance (optional) */}
         <div style={{ marginTop:16, padding:"12px", borderRadius:12, border:"1px solid #f0e2c9", background:"#fff8ee" }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
-            {t("workLog.fields.nextDate")}
-          </div>
-          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-            <button type="button" onClick={() => {
-              const base = new Date(form.date + "T00:00:00");
-              base.setMonth(base.getMonth() + 6);
-              set("nextDate", base.toISOString().split('T')[0]);
-              set("createDeadline", true);
-            }} style={{
-              flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
-              fontSize:12, fontWeight:700, cursor:"pointer"
-            }}>{t("workLog.quick6")}</button>
-            <button type="button" onClick={() => {
-              const base = new Date(form.date + "T00:00:00");
-              base.setMonth(base.getMonth() + 12);
-              set("nextDate", base.toISOString().split('T')[0]);
-              set("createDeadline", true);
-            }} style={{
-              flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
-              fontSize:12, fontWeight:700, cursor:"pointer"
-            }}>{t("workLog.quick12")}</button>
-          </div>
-          <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={inp}/>
-          <label style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, fontSize:12, color:"#6b6961" }}>
-            <input type="checkbox" checked={!!form.createDeadline} onChange={e => set("createDeadline", e.target.checked)} />
-            {t("workLog.createDeadline")}
+          <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:12, color:"#6b6961", marginBottom:10 }}>
+            <input
+              type="checkbox"
+              checked={!!form.enableNext}
+              onChange={e => {
+                const enabled = e.target.checked;
+                set("enableNext", enabled);
+                if (!enabled) {
+                  set("nextDate", "");
+                  set("createDeadline", false);
+                } else {
+                  set("createDeadline", true);
+                }
+              }}
+            />
+            <strong style={{ color:"#2d2b26" }}>{t("workLog.nextOptional")}</strong>
           </label>
+
+          {form.enableNext && (
+            <>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", marginBottom:8, textTransform:"uppercase" }}>
+                {t("workLog.fields.nextDate")}
+              </div>
+              <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                <button type="button" onClick={() => {
+                  const base = new Date(form.date + "T00:00:00");
+                  base.setMonth(base.getMonth() + 6);
+                  set("nextDate", base.toISOString().split('T')[0]);
+                  set("createDeadline", true);
+                }} style={{
+                  flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
+                  fontSize:12, fontWeight:700, cursor:"pointer"
+                }}>{t("workLog.quick6")}</button>
+                <button type="button" onClick={() => {
+                  const base = new Date(form.date + "T00:00:00");
+                  base.setMonth(base.getMonth() + 12);
+                  set("nextDate", base.toISOString().split('T')[0]);
+                  set("createDeadline", true);
+                }} style={{
+                  flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
+                  fontSize:12, fontWeight:700, cursor:"pointer"
+                }}>{t("workLog.quick12")}</button>
+              </div>
+              <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={inp}/>
+              <label style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, fontSize:12, color:"#6b6961" }}>
+                <input type="checkbox" checked={!!form.createDeadline} onChange={e => set("createDeadline", e.target.checked)} />
+                {t("workLog.createDeadline")}
+              </label>
+            </>
+          )}
         </div>
 
         <div style={{ display:"flex", gap:10, marginTop:20 }}>
