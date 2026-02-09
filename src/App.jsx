@@ -1955,6 +1955,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
   const [tab, setTab] = useState("registro");
   const [showAddWork, setShowAddWork] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState(null);
+  const [viewingWorkLog, setViewingWorkLog] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [schedulePrompt, setSchedulePrompt] = useState(null); // { log, date }
   
@@ -2334,7 +2335,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     {filtered.map(log => (
                   <div 
                     key={log.id} 
-                    onClick={() => { setEditingWorkLog(log); setShowAddWork(true); }}
+                    onClick={() => { setViewingWorkLog(log); }}
                     style={{ 
                       background:"#faf9f7", borderRadius:10, padding:"10px", border:"1px solid #e8e6e0",
                       cursor:"pointer", transition:"all .2s"
@@ -2442,6 +2443,97 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
               });
             }}
           />
+        )}
+
+        {/* Work Log View Modal */}
+        {viewingWorkLog && (
+          <div onClick={() => setViewingWorkLog(null)} style={{
+            position:"fixed", inset:0, background:"rgba(18,17,13,.6)", zIndex:260,
+            display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)",
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background:"#fff", borderRadius:18, padding:"20px 22px", width:"90%", maxWidth:420,
+              animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"80vh", overflowY:"auto"
+            }}>
+              <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+              <h3 style={{ margin:"0 0 12px", fontSize:17, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
+                {viewingWorkLog.title}
+              </h3>
+              <div style={{ fontSize:12, color:"#8a877f", marginBottom:12 }}>
+                {viewingWorkLog.date.toLocaleDateString(getLocale())}
+              </div>
+
+              {(viewingWorkLog.cost > 0 || (isAuto && viewingWorkLog.km)) && (
+                <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+                  {viewingWorkLog.cost > 0 && (
+                    <div style={{ background:"#E8F5E9", color:"#4CAF6E", borderRadius:8, padding:"6px 10px", fontSize:12, fontWeight:700 }}>
+                      €{formatNumber(viewingWorkLog.cost)}
+                    </div>
+                  )}
+                  {isAuto && viewingWorkLog.km && (
+                    <div style={{ background:"#EBF2FC", color:"#5B8DD9", borderRadius:8, padding:"6px 10px", fontSize:12, fontWeight:700 }}>
+                      {t("asset.kmLabel", { km: viewingWorkLog.km.toLocaleString(getLocale()) })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {viewingWorkLog.nextDate && (
+                <div style={{ background:"#fff8ee", borderRadius:10, padding:"8px 10px", border:"1px solid #f0e2c9", fontSize:12, color:"#6b6961", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                  <span>{t("asset.nextMaintenanceTitle")}: {viewingWorkLog.nextDate.toLocaleDateString(getLocale())}</span>
+                  <span style={{ fontWeight:700, color: viewingWorkLog.nextScheduled ? "#4CAF6E" : "#FB8C00" }}>
+                    {viewingWorkLog.nextScheduled ? t("asset.nextMaintenanceScheduled") : t("asset.nextMaintenanceUnscheduled")}
+                  </span>
+                </div>
+              )}
+
+              {viewingWorkLog.description && (
+                <div style={{ fontSize:12, color:"#6b6961", background:"#faf9f7", borderRadius:10, padding:"8px 10px", marginBottom:12, lineHeight:1.4 }}>
+                  {viewingWorkLog.description}
+                </div>
+              )}
+
+              <div style={{ background:"#faf9f7", borderRadius:10, padding:"8px 10px", marginBottom:14 }}>
+                <div style={{ fontSize:10, color:"#8a877f", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{t("docs.title")}</div>
+                {viewingWorkLog.attachments && viewingWorkLog.attachments.length > 0 ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {viewingWorkLog.attachments.map(doc => (
+                      <div key={doc.id} style={{ display:"flex", alignItems:"center", gap:6, background:"#fff", borderRadius:8, padding:"6px 8px", border:"1px solid #e8e6e0" }}>
+                        <span style={{ fontSize:14 }}>{doc.isImage ? "🖼️" : "📄"}</span>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:11, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{doc.filename}</div>
+                        </div>
+                        <button onClick={() => onViewDoc(doc)} style={{ padding:"3px 7px", borderRadius:6, border:"none", background:"#EBF2FC", color:"#5B8DD9", fontSize:10, fontWeight:600, cursor:"pointer" }}>{t("actions.view")}</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize:11, color:"#b5b2a8", fontStyle:"italic" }}>{t("docs.none")}</div>
+                )}
+              </div>
+
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={() => {
+                  setEditingWorkLog(viewingWorkLog);
+                  setShowAddWork(true);
+                  setViewingWorkLog(null);
+                }} style={{ flex:1, padding:"12px", borderRadius:12, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:13, fontWeight:700, color:"#6b6961" }}>
+                  {t("actions.edit")}
+                </button>
+                <button onClick={() => {
+                  if (window.confirm(t("workLog.deleteConfirm"))) {
+                    onAddWorkLog(assetKey, null, viewingWorkLog.id);
+                    setViewingWorkLog(null);
+                  }
+                }} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#FFF0EC", color:"#E53935", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                  {t("actions.delete")}
+                </button>
+                <button onClick={() => setViewingWorkLog(null)} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                  {t("actions.close")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Schedule next maintenance modal */}
