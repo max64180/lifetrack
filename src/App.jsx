@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch } from 'firebase/firestore/lite';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, query, where, orderBy } from 'firebase/firestore/lite';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
@@ -29,8 +29,10 @@ const storage = getStorage(app);
 
 const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ !== "undefined" ? __APP_BUILD_TIME__ : "";
-const POLL_BASE_MS = 60000;
-const POLL_MAX_MS = 5 * 60 * 1000;
+const POLL_BASE_MS = 5 * 60 * 1000;
+const POLL_MAX_MS = 30 * 60 * 1000;
+const MIN_POLL_GAP_MS = 2 * 60 * 1000;
+const FULL_SYNC_EVERY_MS = 24 * 60 * 60 * 1000;
 const RANGE_IDS = new Set(RANGES.map(r => r.id));
 const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
 const MAX_ATTACHMENTS = 3;
@@ -3238,6 +3240,8 @@ export default function App() {
   const saveRetryRef = useRef(null);
   const deadlinesSaveTimerRef = useRef(null);
   const syncingCountRef = useRef(0);
+  const lastSyncRef = useRef(0);
+  const lastFullSyncRef = useRef(0);
   const pollStateRef = useRef({ timer: null, backoffMs: POLL_BASE_MS });
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -3246,6 +3250,14 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [showAllMandatory, setShowAllMandatory] = useState(false);
   const [showAllOneOff, setShowAllOneOff] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem("lifetrack_sync_enabled");
+      return saved === null ? true : saved === "true";
+    } catch (err) {
+      return true;
+    }
+  });
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -3307,6 +3319,18 @@ export default function App() {
   useEffect(() => {
     deadlinesRef.current = deadlines;
   }, [deadlines]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("lifetrack_last_sync");
+      const storedFull = localStorage.getItem("lifetrack_last_full_sync");
+      lastSyncRef.current = stored ? parseInt(stored, 10) || 0 : 0;
+      lastFullSyncRef.current = storedFull ? parseInt(storedFull, 10) || 0 : 0;
+    } catch (err) {
+      lastSyncRef.current = 0;
+      lastFullSyncRef.current = 0;
+    }
+  }, []);
 
   const startSync = () => {
     syncingCountRef.current += 1;
@@ -3387,6 +3411,18 @@ export default function App() {
       return merged;
     };
 
+    const applyDelta = (changes, local) => {
+      if (!changes || changes.length === 0) return local || [];
+      const map = new Map((local || []).map(d => [String(d.id), d]));
+      changes.forEach(d => {
+        if (!d) return;
+        const id = String(d.id);
+        if (pendingDeleteRef.current.has(id)) return;
+        map.set(id, d);
+      });
+      return Array.from(map.values());
+    };
+
     const scheduleNext = (delay) => {
       if (cancelled) return;
       if (pollStateRef.current.timer) clearTimeout(pollStateRef.current.timer);
@@ -3395,6 +3431,15 @@ export default function App() {
 
     const fetchOnce = async (reason = "poll") => {
       if (cancelled) return;
+      if (!syncEnabled) return;
+      if (reason === "poll" && (pendingSaveRef.current || syncing)) {
+        scheduleNext(Math.max(pollStateRef.current.backoffMs, POLL_BASE_MS));
+        return;
+      }
+      if (reason === "poll" && remoteInfo.lastSync && (Date.now() - remoteInfo.lastSync) < MIN_POLL_GAP_MS) {
+        scheduleNext(pollStateRef.current.backoffMs);
+        return;
+      }
       if (document.visibilityState === "hidden") {
         scheduleNext(Math.max(pollStateRef.current.backoffMs, POLL_BASE_MS * 2));
         return;
@@ -3407,21 +3452,42 @@ export default function App() {
         }
         await migrateLegacyDeadlines(userData);
 
-        const deadlinesSnap = await getDocs(deadlinesCol);
-        let remoteDeadlines = deadlinesSnap.docs
-          .map(snap => {
-            const data = snap.data();
-            const id = data.id ?? snap.id;
-            return normalizeDeadline({ ...data, id });
-          })
-          .filter(Boolean);
+        const nowTs = Date.now();
+        const doFullSync = !lastSyncRef.current || !lastFullSyncRef.current || (nowTs - lastFullSyncRef.current) > FULL_SYNC_EVERY_MS || reason === "init";
+        let remoteDeadlines = [];
+        let maxUpdatedAt = 0;
+
+        if (doFullSync) {
+          const deadlinesSnap = await getDocs(deadlinesCol);
+          remoteDeadlines = deadlinesSnap.docs
+            .map(snap => {
+              const data = snap.data();
+              const id = data.id ?? snap.id;
+              if (data.updatedAt && data.updatedAt > maxUpdatedAt) maxUpdatedAt = data.updatedAt;
+              return normalizeDeadline({ ...data, id });
+            })
+            .filter(Boolean);
+          lastFullSyncRef.current = nowTs;
+          try { localStorage.setItem("lifetrack_last_full_sync", String(nowTs)); } catch (err) {}
+        } else {
+          const q = query(deadlinesCol, where("updatedAt", ">", lastSyncRef.current || 0), orderBy("updatedAt"));
+          const deltaSnap = await getDocs(q);
+          remoteDeadlines = deltaSnap.docs
+            .map(snap => {
+              const data = snap.data();
+              const id = data.id ?? snap.id;
+              if (data.updatedAt && data.updatedAt > maxUpdatedAt) maxUpdatedAt = data.updatedAt;
+              return normalizeDeadline({ ...data, id });
+            })
+            .filter(Boolean);
+        }
         if (pendingDeleteRef.current.size > 0) {
           remoteDeadlines = remoteDeadlines.filter(d => !pendingDeleteRef.current.has(String(d.id)));
         }
         const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
         const parsedAssetDocs = normalizeAssetDocs(userData.assetDocs);
 
-        if (remoteDeadlines.length === 0) {
+        if (doFullSync && remoteDeadlines.length === 0) {
           const legacyDeadlines = (userData.deadlines || [])
             .map(normalizeDeadline)
             .filter(Boolean);
@@ -3449,13 +3515,19 @@ export default function App() {
           }
         }
 
+        const nextSync = maxUpdatedAt || nowTs;
+        lastSyncRef.current = nextSync;
+        try { localStorage.setItem("lifetrack_last_sync", String(nextSync)); } catch (err) {}
+
         pollStateRef.current.backoffMs = POLL_BASE_MS;
         setRemoteInfo({ count: remoteDeadlines.length, lastSync: Date.now(), error: null });
         if (!cancelled && !pendingSaveRef.current) {
           suppressDeadlinesRef.current = true;
           suppressMetaRef.current = true;
           const localCurrent = deadlinesRef.current || [];
-          const nextDeadlines = mergeDeadlines(remoteDeadlines, localCurrent);
+          const nextDeadlines = doFullSync
+            ? mergeDeadlines(remoteDeadlines, localCurrent)
+            : applyDelta(remoteDeadlines, localCurrent);
           setDeadlines(nextDeadlines);
           setCats(userData.categories || DEFAULT_CATS);
           setWorkLogs(parsedWorkLogs);
@@ -3464,8 +3536,11 @@ export default function App() {
       } catch (error) {
         console.error("Firebase poll error:", error);
         const code = error?.code || error?.message || "unknown";
-        const multiplier = code === "resource-exhausted" ? 2 : 1.5;
+        const multiplier = code === "resource-exhausted" ? 4 : 1.5;
         pollStateRef.current.backoffMs = Math.min(Math.round(pollStateRef.current.backoffMs * multiplier), POLL_MAX_MS);
+        if (code === "resource-exhausted") {
+          pollStateRef.current.backoffMs = POLL_MAX_MS;
+        }
         setRemoteInfo({ count: null, lastSync: null, error: code });
       } finally {
         scheduleNext(pollStateRef.current.backoffMs);
@@ -3484,10 +3559,10 @@ export default function App() {
       if (pollStateRef.current.timer) clearTimeout(pollStateRef.current.timer);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [user]);
+  }, [user, syncEnabled]);
 
   const saveDeadlines = async (force = false) => {
-    if (!user || loading) return;
+    if (!user || loading || !syncEnabled) return;
     if (pendingSaveRef.current && !force) return;
     pendingSaveRef.current = true;
     startSync();
@@ -3541,7 +3616,7 @@ export default function App() {
 
   // 🔥 Firebase Auto-Save (deadlines)
   useEffect(() => {
-    if (!user || loading) return;
+    if (!user || loading || !syncEnabled) return;
     if (suppressDeadlinesRef.current) {
       suppressDeadlinesRef.current = false;
       prevDeadlinesRef.current = deadlines;
@@ -3624,6 +3699,14 @@ export default function App() {
       console.warn("LocalStorage range error:", err);
     }
   }, [range, periodOffset]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("lifetrack_sync_enabled", String(syncEnabled));
+    } catch (err) {
+      console.warn("LocalStorage sync flag error:", err);
+    }
+  }, [syncEnabled]);
 
   // Listen for openAddSheetWithAsset event from AssetSheet
   useEffect(() => {
@@ -5262,6 +5345,27 @@ export default function App() {
             <div style={{ fontSize:14, fontWeight:800, marginBottom:14 }}>{t("menu.title")}</div>
             <div style={{ marginBottom:10 }}>
               <LanguageToggle size={28} />
+            </div>
+            <div style={{ marginBottom:10, padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#2d2b26" }}>
+                {t("menu.sync")}
+              </div>
+              <button
+                onClick={() => setSyncEnabled(v => !v)}
+                style={{
+                  padding:"6px 10px",
+                  borderRadius:999,
+                  border:"none",
+                  background: syncEnabled ? "#4CAF6E" : "#E53935",
+                  color:"#fff",
+                  fontSize:11,
+                  fontWeight:700,
+                  cursor:"pointer",
+                  minWidth:64
+                }}
+              >
+                {syncEnabled ? t("menu.syncOn") : t("menu.syncOff")}
+              </button>
             </div>
             <button onClick={() => { setShowStats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>📈 {t("menu.stats")}</button>
             <button onClick={() => { setShowCats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>⚙ {t("menu.settings")}</button>

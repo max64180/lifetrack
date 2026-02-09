@@ -151,7 +151,10 @@
     "title": "Menu",
     "stats": "Statistiche",
     "settings": "Impostazioni",
-    "logout": "Logout"
+    "logout": "Logout",
+    "sync": "Sync cloud",
+    "syncOn": "ON",
+    "syncOff": "OFF"
   },
   "stats": {
     "title": "📈 Statistiche",
