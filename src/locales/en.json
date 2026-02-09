@@ -179,7 +179,7 @@
   },
   "asset": {
     "tabs": {
-      "overview": "📋 Overview",
+      "overview": "📊 Stats",
       "deadlines": "📅 Deadlines",
       "log": "🔧 Log"
     },

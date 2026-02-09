@@ -179,7 +179,7 @@
   },
   "asset": {
     "tabs": {
-      "overview": "📋 Panoramica",
+      "overview": "📊 Statistiche",
       "deadlines": "📅 Scadenze",
       "log": "🔧 Registro"
     },

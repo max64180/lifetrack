@@ -1932,7 +1932,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
 /* ── ASSET SHEET ──────────────────────────────────── */
 function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs, onAddWorkLog, onViewDoc, onCreateDeadline }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState("panoramica");
+  const [tab, setTab] = useState("registro");
   const [showAddWork, setShowAddWork] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1949,7 +1949,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 
   const assetDeadlines = deadlines
     .filter(d => d.cat === catId && d.asset === assetName)
-    .sort((a, b) => b.date - a.date);
+    .sort((a, b) => a.date - b.date);
 
   const completed = assetDeadlines.filter(d => d.done);
   const upcoming = assetDeadlines.filter(d => !d.done);
@@ -1989,9 +1989,9 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
         {/* Tabs */}
         <div style={{ display:"flex", gap:6, marginBottom:20, borderBottom:"2px solid #f5f4f0" }}>
           {[
-            { id:"panoramica", label: t("asset.tabs.overview") },
+            { id:"registro", label: t("asset.tabs.log") },
             { id:"scadenze", label: t("asset.tabs.deadlines") },
-            { id:"registro", label: t("asset.tabs.log") }
+            { id:"panoramica", label: t("asset.tabs.overview") }
           ].map(tabOption => (
             <button key={tabOption.id} onClick={() => setTab(tabOption.id)} style={{
               flex:1, padding:"10px 8px", background:"none", border:"none", cursor:"pointer",
@@ -2263,8 +2263,20 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     )}
 
                     {log.nextDate && (
-                      <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9" }}>
-                        {t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}
+                      <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                        <span>{t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}</span>
+                        {log.nextScheduled ? (
+                          <span style={{ fontWeight:700, color:"#4CAF6E" }}>{t("asset.nextMaintenanceScheduled")}</span>
+                        ) : (
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            setSchedulePrompt({ log, date: log.nextDate.toISOString().split('T')[0] });
+                          }} style={{
+                            border:"none", background:"transparent", cursor:"pointer",
+                            color:"#FB8C00", fontSize:11, fontWeight:700, textDecoration:"underline",
+                            textUnderlineOffset:3, padding:0
+                          }}>{t("asset.nextMaintenanceCta")}</button>
+                        )}
                       </div>
                     )}
                     
