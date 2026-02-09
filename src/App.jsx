@@ -1951,6 +1951,14 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
     .filter(d => d.cat === catId && d.asset === assetName)
     .sort((a, b) => a.date - b.date);
 
+  const oneOffDeadlines = assetDeadlines.filter(d => !d.recurring || !d.recurring.enabled);
+  const recurringGroups = assetDeadlines.filter(d => d.recurring && d.recurring.enabled).reduce((acc, d) => {
+    const key = d.recurring.seriesId || d.title;
+    acc[key] = acc[key] || [];
+    acc[key].push(d);
+    return acc;
+  }, {});
+
   const completed = assetDeadlines.filter(d => d.done);
   const upcoming = assetDeadlines.filter(d => !d.done);
   const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
@@ -2046,24 +2054,9 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                         {nextMaintenance.nextDate.toLocaleDateString(getLocale())}
                       </div>
                     </div>
-                    {nextMaintenance.nextScheduled ? (
-                      <div style={{ fontSize:12, fontWeight:700, color:"#4CAF6E" }}>
-                        {t("asset.nextMaintenanceScheduled")}
-                      </div>
-                    ) : (
-                      <button onClick={() => {
-                        setSchedulePrompt({
-                          log: nextMaintenance,
-                          date: nextMaintenance.nextDate.toISOString().split('T')[0]
-                        });
-                      }} style={{
-                        border:"none", background:"transparent", cursor:"pointer",
-                        color:"#FB8C00", fontSize:12, fontWeight:700, textDecoration:"underline",
-                        textUnderlineOffset:3, padding:0
-                      }}>
-                        {t("asset.nextMaintenanceCta")}
-                      </button>
-                    )}
+                    <div style={{ fontSize:12, fontWeight:700, color: nextMaintenance.nextScheduled ? "#4CAF6E" : "#FB8C00" }}>
+                      {nextMaintenance.nextScheduled ? t("asset.nextMaintenanceScheduled") : t("asset.nextMaintenanceUnscheduled")}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2137,32 +2130,70 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {assetDeadlines.map(d => (
-                  <div key={d.id} style={{
-                    background: d.done ? "#faf9f7" : "#EBF2FC",
-                    borderRadius:10, padding:"10px 12px",
-                    border: `1px solid ${d.done ? "#e8e6e0" : "#5B8DD966"}`,
-                  }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{d.title}</div>
-                        <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
-                          {d.date.toLocaleDateString(getLocale())}
-                          {d.recurring && d.recurring.enabled && ` • ${d.recurring.index}/${d.recurring.total}`}
-                        </div>
-                        {d.notes && (
-                          <div style={{ fontSize:10, color:"#6b6961", marginTop:4, fontStyle:"italic" }}>{d.notes}</div>
-                        )}
-                      </div>
-                      <div style={{ textAlign:"right" }}>
-                        <div style={{ fontSize:14, fontWeight:800, color: d.done ? "#4CAF6E" : "#5B8DD9" }}>€{formatNumber(d.budget)}</div>
-                        {d.done && (
-                          <div style={{ fontSize:9, color:"#4CAF6E", fontWeight:600, marginTop:2 }}>{t("asset.completed")}</div>
-                        )}
-                      </div>
+                {/* One-off deadlines */}
+                {oneOffDeadlines.length > 0 && (
+                  <>
+                    <div style={{ marginTop:4, fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase" }}>
+                      {t("asset.oneOffTitle")}
                     </div>
-                  </div>
-                ))}
+                    {oneOffDeadlines.map(d => (
+                      <div key={d.id} style={{
+                        background: d.done ? "#faf9f7" : "#EBF2FC",
+                        borderRadius:10, padding:"10px 12px",
+                        border: `1px solid ${d.done ? "#e8e6e0" : "#5B8DD966"}`,
+                      }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{d.title}</div>
+                            <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                              {d.date.toLocaleDateString(getLocale())}
+                            </div>
+                            {d.notes && (
+                              <div style={{ fontSize:10, color:"#6b6961", marginTop:4, fontStyle:"italic" }}>{d.notes}</div>
+                            )}
+                          </div>
+                          <div style={{ textAlign:"right" }}>
+                            <div style={{ fontSize:14, fontWeight:800, color: d.done ? "#4CAF6E" : "#5B8DD9" }}>€{formatNumber(d.budget)}</div>
+                            {d.done && (
+                              <div style={{ fontSize:9, color:"#4CAF6E", fontWeight:600, marginTop:2 }}>{t("asset.completed")}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* Recurring (compacted) */}
+                {Object.keys(recurringGroups).length > 0 && (
+                  <>
+                    <div style={{ marginTop:8, fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase" }}>
+                      {t("asset.recurringTitle")}
+                    </div>
+                    {Object.entries(recurringGroups).map(([seriesId, items]) => {
+                      const sorted = items.slice().sort((a, b) => a.date - b.date);
+                      const next = sorted.find(d => !d.done) || sorted[0];
+                      if (!next) return null;
+                      return (
+                        <div key={seriesId} style={{
+                          background:"#EBF2FC", borderRadius:10, padding:"10px 12px", border:"1px solid #5B8DD966"
+                        }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{next.title}</div>
+                              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                                {t("asset.nextOccurrence")}: {next.date.toLocaleDateString(getLocale())} • {next.recurring?.index}/{next.recurring?.total}
+                              </div>
+                            </div>
+                            <div style={{ textAlign:"right" }}>
+                              <div style={{ fontSize:14, fontWeight:800, color:"#5B8DD9" }}>€{formatNumber(next.budget)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -2265,18 +2296,9 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                     {log.nextDate && (
                       <div style={{ background:"#fff8ee", borderRadius:6, padding:"6px 8px", marginTop:6, fontSize:11, color:"#6b6961", border:"1px solid #f0e2c9", display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
                         <span>{t("asset.nextMaintenanceTitle")}: {log.nextDate.toLocaleDateString(getLocale())}</span>
-                        {log.nextScheduled ? (
-                          <span style={{ fontWeight:700, color:"#4CAF6E" }}>{t("asset.nextMaintenanceScheduled")}</span>
-                        ) : (
-                          <button onClick={(e) => {
-                            e.stopPropagation();
-                            setSchedulePrompt({ log, date: log.nextDate.toISOString().split('T')[0] });
-                          }} style={{
-                            border:"none", background:"transparent", cursor:"pointer",
-                            color:"#FB8C00", fontSize:11, fontWeight:700, textDecoration:"underline",
-                            textUnderlineOffset:3, padding:0
-                          }}>{t("asset.nextMaintenanceCta")}</button>
-                        )}
+                        <span style={{ fontWeight:700, color: log.nextScheduled ? "#4CAF6E" : "#FB8C00" }}>
+                          {log.nextScheduled ? t("asset.nextMaintenanceScheduled") : t("asset.nextMaintenanceUnscheduled")}
+                        </span>
                       </div>
                     )}
                     
