@@ -6,6 +6,8 @@ import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch } fr
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
 import { compressImage } from "./utils/files";
+import { computeOccurrences, getAutoEndDate, getOccurrenceDate } from "./utils/recurrence";
+import PriorityFilter from "./components/PriorityFilter";
 import i18n from "./i18n";
 
 // 🔥 Firebase Configuration
@@ -131,63 +133,6 @@ const capitalize = (value) => value ? value.charAt(0).toUpperCase() + value.slic
 function diffDays(d) { return Math.round((d - TODAY) / 86400000); }
 function fmtDate(d) { return d.toLocaleDateString(getLocale(), { day:"2-digit", month:"short" }); }
 
-function getOccurrenceDate(startDate, i, intervalVal, unit) {
-  const d = new Date(startDate);
-  if (unit === "giorni") {
-    d.setDate(startDate.getDate() + (intervalVal * i));
-  } else if (unit === "settimane") {
-    d.setDate(startDate.getDate() + (intervalVal * 7 * i));
-  } else if (unit === "mesi") {
-    d.setMonth(startDate.getMonth() + (intervalVal * i));
-  } else if (unit === "anni") {
-    d.setFullYear(startDate.getFullYear() + (intervalVal * i));
-  }
-  return d;
-}
-
-function getAutoEndDate() {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const nextYear = now.getFullYear() + 1;
-  return new Date(nextYear, 11, 31, 23, 59, 59, 999);
-}
-
-function computeOccurrences({ startDate, interval, unit, endMode, endDate, count, max = 500 }) {
-  if (!startDate || Number.isNaN(startDate.getTime())) return [];
-  const safeInterval = Math.max(1, parseInt(interval) || 1);
-  const safeCount = Math.max(1, parseInt(count) || 1);
-  const mode = endMode || "auto";
-  let end = null;
-  if (mode === "date") {
-    if (endDate) {
-      const d = new Date(endDate + "T00:00:00");
-      if (!Number.isNaN(d.getTime())) end = d;
-    }
-  } else if (mode === "auto") {
-    end = getAutoEndDate();
-  }
-  if (end && end < startDate) end = startDate;
-
-  const dates = [];
-  if (mode === "count") {
-    const limit = Math.min(safeCount, max);
-    for (let i = 0; i < limit; i++) {
-      dates.push(getOccurrenceDate(startDate, i, safeInterval, unit));
-    }
-    return dates;
-  }
-
-  const limit = max;
-  for (let i = 0; i < limit; i++) {
-    const d = getOccurrenceDate(startDate, i, safeInterval, unit);
-    if (end && d > end) break;
-    dates.push(d);
-  }
-  if (dates.length === 0) {
-    dates.push(getOccurrenceDate(startDate, 0, safeInterval, unit));
-  }
-  return dates;
-}
 
 function inferEndMode(recurring) {
   if (!recurring) return "auto";
@@ -745,71 +690,6 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 }
 
 /* Smart Category Filter with asset sub-filters */
-function PriorityFilter({ activeTab, filterMandatory, setFilterMandatory, filterAutoPay, setFilterAutoPay, filterManual, setFilterManual, filterEstimateMissing, setFilterEstimateMissing }) {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const options = [
-    { id:"all", label: t("filters.all") },
-    { id:"mandatory", label: t("filters.mandatory") },
-    { id:"manual", label: t("filters.manualPay", { defaultValue:"Da pagare" }) },
-    { id:"estimate", label: t("filters.estimate") },
-    { id:"auto", label: t("filters.autoPay") },
-  ];
-  const current = useMemo(() => {
-    if (filterMandatory) return "mandatory";
-    if (filterManual) return "manual";
-    if (filterEstimateMissing) return "estimate";
-    if (filterAutoPay) return "auto";
-    return "all";
-  }, [filterMandatory, filterManual, filterEstimateMissing, filterAutoPay]);
-
-  const applyPriority = (id) => {
-    setFilterMandatory(false);
-    setFilterManual(false);
-    setFilterEstimateMissing(false);
-    setFilterAutoPay(false);
-    if (id === "mandatory") setFilterMandatory(true);
-    if (id === "manual") setFilterManual(true);
-    if (id === "estimate") setFilterEstimateMissing(true);
-    if (id === "auto") setFilterAutoPay(true);
-    setOpen(false);
-  };
-
-  return (
-    <div style={{ background:"#f5f4f0", paddingBottom:8 }}>
-      <div style={{ padding:"10px 18px 4px" }}>
-        <div style={{ position:"relative", display:"inline-block" }}>
-          <button onClick={() => setOpen(o => !o)} style={{
-            border:"1px solid #e8e6e0", background:"#fff", borderRadius:14, padding:"8px 12px",
-            fontSize:12, fontWeight:700, color:"#2d2b26", cursor:"pointer", minHeight:36,
-            display:"flex", alignItems:"center", gap:8
-          }}>
-            {t("filters.priority", { defaultValue:"Priorità" })}: {options.find(o => o.id === current)?.label}
-            <span style={{ fontSize:12, color:"#8a877f" }}>▾</span>
-          </button>
-          {open && (
-            <div style={{
-              position:"absolute", left:0, top:"calc(100% + 6px)", minWidth:220,
-              background:"#fff", border:"1px solid #e8e6e0", borderRadius:12,
-              boxShadow:"0 10px 24px rgba(0,0,0,.08)", zIndex:90, overflow:"hidden"
-            }}>
-              {options.map(opt => (
-                <button key={opt.id} onClick={() => applyPriority(opt.id)} style={{
-                  width:"100%", textAlign:"left", padding:"10px 12px", border:"none", cursor:"pointer",
-                  background: current === opt.id ? "#f5f4f0" : "#fff",
-                  fontSize:12, fontWeight:700, color:"#2d2b26"
-                }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* Group header */
 function GroupHeader({ group, cats }) {
   const total = group.items.filter(d => !d.done && !d.estimateMissing).reduce((s, d) => s + d.budget, 0);
