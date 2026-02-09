@@ -2300,6 +2300,16 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
               setShowAddWork(false);
               setEditingWorkLog(null);
             }}
+            onCreateCompleted={(formData) => {
+              if (!onCreateDeadline) return;
+              onCreateDeadline({
+                title: formData.title,
+                date: formData.date,
+                cost: formData.cost ? parseFloat(formData.cost) : 0,
+                description: formData.description,
+                completed: true
+              });
+            }}
           />
         )}
       </div>
@@ -2308,7 +2318,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
 }
 
 /* ── ADD WORK MODAL ──────────────────────────────────── */
-function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, prefill, workLog }) {
+function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSave, onCreateDeadline, onCreateCompleted, prefill, workLog }) {
   const { t } = useTranslation();
   const [form, setForm] = useState({
     title: workLog?.title || prefill?.title || "",
@@ -2318,7 +2328,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     description: workLog?.description || prefill?.description || "",
     cost: workLog?.cost || prefill?.cost || "",
     nextDate: workLog?.nextDate ? workLog.nextDate.toISOString().split('T')[0] : (prefill?.nextDate || ""),
-    createDeadline: workLog?.createDeadline ?? prefill?.createDeadline ?? true
+    createDeadline: workLog?.createDeadline ?? prefill?.createDeadline ?? true,
+    createCompleted: workLog?.createCompleted ?? prefill?.createCompleted ?? false
   });
 
   useEffect(() => {
@@ -2332,7 +2343,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           description: workLog.description || "",
           cost: workLog.cost || "",
           nextDate: workLog.nextDate ? workLog.nextDate.toISOString().split('T')[0] : "",
-          createDeadline: workLog.createDeadline ?? true
+          createDeadline: workLog.createDeadline ?? true,
+          createCompleted: workLog.createCompleted ?? false
         });
       } else if (prefill) {
         setForm({
@@ -2343,7 +2355,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
           description: prefill.description || "",
           cost: prefill.cost || "",
           nextDate: prefill.nextDate || "",
-          createDeadline: prefill.createDeadline ?? true
+          createDeadline: prefill.createDeadline ?? true,
+          createCompleted: prefill.createCompleted ?? false
         });
       }
     }
@@ -2374,6 +2387,15 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       onCreateDeadline({
         title: form.title,
         date: form.nextDate,
+        cost: form.cost ? parseFloat(form.cost) : 0,
+        description: form.description
+      });
+    }
+
+    if (form.createCompleted && onCreateCompleted) {
+      onCreateCompleted({
+        title: form.title,
+        date: form.date,
         cost: form.cost ? parseFloat(form.cost) : 0,
         description: form.description
       });
@@ -2423,6 +2445,17 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
 
         <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.cost")}</label>
         <input type="number" value={form.cost} onChange={e => set("cost", e.target.value)} placeholder="0" style={inp}/>
+
+        {/* Completed deadline toggle */}
+        <div style={{ marginTop:12, padding:"12px", borderRadius:12, border:"1px solid #e8e6e0", background:"#faf9f7" }}>
+          <label style={{ display:"flex", alignItems:"flex-start", gap:10, fontSize:12, color:"#6b6961" }}>
+            <input type="checkbox" checked={!!form.createCompleted} onChange={e => set("createCompleted", e.target.checked)} />
+            <span>
+              <strong style={{ color:"#2d2b26" }}>{t("workLog.createCompleted")}</strong>
+              <div style={{ fontSize:11, marginTop:4, color:"#8a877f" }}>{t("workLog.createCompletedHint")}</div>
+            </span>
+          </label>
+        </div>
 
         {/* Next maintenance */}
         <div style={{ marginTop:16, padding:"12px", borderRadius:12, border:"1px solid #f0e2c9", background:"#fff8ee" }}>
@@ -4437,7 +4470,7 @@ export default function App() {
               autoPay: false,
               essential: false,
               documents: [],
-              done: false
+              done: !!payload.completed
             };
             add(newDeadline);
           }}

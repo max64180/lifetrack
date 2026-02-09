@@ -225,6 +225,8 @@
     "quick6": "+6 mesi",
     "quick12": "+12 mesi",
     "createDeadline": "Crea una scadenza per la prossima manutenzione",
+    "createCompleted": "Registra anche come scadenza completata",
+    "createCompletedHint": "Crea una scadenza gia' segnata come completata nella data di questo intervento.",
     "openDeadline": "📅 Apri prossima scadenza lavori",
     "save": "Salva"
   },
