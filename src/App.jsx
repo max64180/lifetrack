@@ -3258,6 +3258,37 @@ export default function App() {
       return true;
     }
   });
+  const DEV_EMAIL = "mstanglino@gmail.com";
+  const isDevUser = (user?.email || "").toLowerCase() === DEV_EMAIL;
+
+  const devStats = (() => {
+    const totalDeadlines = deadlines.length;
+    const totalWorkLogs = Object.values(workLogs || {}).reduce((sum, logs) => sum + (logs?.length || 0), 0);
+    const totalAssetDocs = Object.values(assetDocs || {}).reduce((sum, docs) => sum + (docs?.length || 0), 0);
+    const workLogAttachments = Object.values(workLogs || {}).reduce(
+      (sum, logs) => sum + (logs || []).reduce((inner, log) => inner + ((log?.attachments || []).length), 0),
+      0
+    );
+    const deadlineDocs = deadlines.reduce((sum, d) => sum + ((d?.documents || []).length), 0);
+    const totalAttachments = totalAssetDocs + workLogAttachments + deadlineDocs;
+    const lastSync = (() => {
+      try { return localStorage.getItem("lifetrack_last_sync"); } catch (err) { return null; }
+    })();
+    const lastFullSync = (() => {
+      try { return localStorage.getItem("lifetrack_last_full_sync"); } catch (err) { return null; }
+    })();
+    return {
+      totalDeadlines,
+      totalWorkLogs,
+      totalAssetDocs,
+      workLogAttachments,
+      deadlineDocs,
+      totalAttachments,
+      lastSync,
+      lastFullSync
+    };
+  })();
+  const [showDev, setShowDev] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -3844,6 +3875,7 @@ export default function App() {
   const [presetAsset, setPresetAsset] = useState(null); // { catId, assetName }
   const [showCats, setShowCats] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showDev, setShowDev] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
@@ -5368,8 +5400,52 @@ export default function App() {
               </button>
             </div>
             <button onClick={() => { setShowStats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>📈 {t("menu.stats")}</button>
+            {isDevUser && (
+              <button onClick={() => { setShowDev(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>🛠 {t("menu.developer")}</button>
+            )}
             <button onClick={() => { setShowCats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>⚙ {t("menu.settings")}</button>
             <button onClick={() => { handleSignOut(); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #ffe1da", background:"#fff5f1", textAlign:"left", color:"#E53935" }}>⎋ {t("menu.logout")}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Developer panel */}
+      {showDev && isDevUser && (
+        <div onClick={e => e.target === e.currentTarget && setShowDev(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
+          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+        }}>
+          <div style={{
+            width:"90%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px 18px 16px",
+            boxShadow:"0 18px 60px rgba(0,0,0,.25)"
+          }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("dev.title")}</div>
+              <button onClick={() => setShowDev(false)} style={{ border:"none", background:"transparent", fontSize:20, cursor:"pointer", color:"#8a877f" }}>✕</button>
+            </div>
+
+            <div style={{ display:"grid", gap:8, fontSize:12, color:"#5f5c54" }}>
+              <div style={{ fontWeight:700, color:"#2d2b26" }}>{t("dev.sectionApp")}</div>
+              <div>• {t("dev.version")}: v{APP_VERSION}</div>
+              <div>• {t("dev.build")}: {APP_BUILD_TIME ? new Date(APP_BUILD_TIME).toLocaleString(getLocale()) : "—"}</div>
+              <div>• {t("dev.user")}: {user?.email || "—"}</div>
+              <div>• {t("dev.uid")}: {user?.uid ? user.uid.slice(0, 10) : "—"}</div>
+
+              <div style={{ fontWeight:700, color:"#2d2b26", marginTop:6 }}>{t("dev.sectionData")}</div>
+              <div>• {t("dev.deadlines")}: {devStats.totalDeadlines}</div>
+              <div>• {t("dev.workLogs")}: {devStats.totalWorkLogs}</div>
+              <div>• {t("dev.assetDocs")}: {devStats.totalAssetDocs}</div>
+              <div>• {t("dev.deadlineDocs")}: {devStats.deadlineDocs}</div>
+              <div>• {t("dev.workLogDocs")}: {devStats.workLogAttachments}</div>
+              <div>• {t("dev.totalDocs")}: {devStats.totalAttachments}</div>
+
+              <div style={{ fontWeight:700, color:"#2d2b26", marginTop:6 }}>{t("dev.sectionSync")}</div>
+              <div>• {t("dev.syncEnabled")}: {syncEnabled ? t("dev.yes") : t("dev.no")}</div>
+              <div>• {t("dev.lastSync")}: {devStats.lastSync ? new Date(Number(devStats.lastSync)).toLocaleString(getLocale()) : "—"}</div>
+              <div>• {t("dev.lastFullSync")}: {devStats.lastFullSync ? new Date(Number(devStats.lastFullSync)).toLocaleString(getLocale()) : "—"}</div>
+              <div>• {t("dev.backoff")}: {Math.round((pollStateRef.current?.backoffMs || 0) / 1000)}s</div>
+              <div>• {t("dev.cloudStatus")}: {remoteInfo.error ? `ERR:${remoteInfo.error}` : (remoteInfo.count !== null ? `OK (${remoteInfo.count})` : "—")}</div>
+            </div>
           </div>
         </div>
       )}
