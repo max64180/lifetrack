@@ -132,11 +132,14 @@
   },
   "filters": {
     "all": "Tutte",
+    "priority": "Priorità",
     "mandatory": "⚠ Inderogabili",
     "recurring": "🔁 Ricorrenti",
     "autoPay": "🔄 Automatici",
     "essential": "💡 Essenziali",
-    "estimate": "❔ Da stimare"
+    "estimate": "❔ Da stimare",
+    "manualPay": "Da pagare",
+    "reset": "Reset filtri"
   },
   "stats": {
     "title": "📈 Statistiche",

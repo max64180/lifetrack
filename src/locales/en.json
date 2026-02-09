@@ -132,11 +132,14 @@
   },
   "filters": {
     "all": "All",
+    "priority": "Priority",
     "mandatory": "⚠ Mandatory",
     "recurring": "🔁 Recurring",
     "autoPay": "🔄 Automatic",
     "essential": "💡 Essential",
-    "estimate": "❔ To estimate"
+    "estimate": "❔ To estimate",
+    "manualPay": "To pay",
+    "reset": "Reset filters"
   },
   "stats": {
     "title": "📈 Stats",
