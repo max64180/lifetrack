@@ -224,6 +224,8 @@
     "lastFullSync": "Last full sync",
     "backoff": "Polling backoff",
     "cloudStatus": "Cloud",
+    "repairSync": "Repair sync (full)",
+    "repairHint": "Runs a full sync and may use more reads.",
     "yes": "Yes",
     "no": "No"
   },

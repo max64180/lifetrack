@@ -3166,6 +3166,7 @@ export default function App() {
   const syncingCountRef = useRef(0);
   const lastSyncRef = useRef(0);
   const lastFullSyncRef = useRef(0);
+  const deadlinesVersionRef = useRef(0);
   const pollStateRef = useRef({ timer: null, backoffMs: POLL_BASE_MS });
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -3342,11 +3343,14 @@ export default function App() {
     try {
       const stored = localStorage.getItem("lifetrack_last_sync");
       const storedFull = localStorage.getItem("lifetrack_last_full_sync");
+      const storedVersion = localStorage.getItem("lifetrack_deadlines_version");
       lastSyncRef.current = stored ? parseInt(stored, 10) || 0 : 0;
       lastFullSyncRef.current = storedFull ? parseInt(storedFull, 10) || 0 : 0;
+      deadlinesVersionRef.current = storedVersion ? parseInt(storedVersion, 10) || 0 : 0;
     } catch (err) {
       lastSyncRef.current = 0;
       lastFullSyncRef.current = 0;
+      deadlinesVersionRef.current = 0;
     }
   }, []);
 
@@ -3416,14 +3420,14 @@ export default function App() {
       (remote || []).forEach(d => {
         if (!d) return;
         const id = String(d.id);
-        if (pendingDeleteRef.current.has(id)) return;
+        if (pendingDeleteRef.current.has(id) && !d.deleted) return;
         seen.add(id);
         merged.push(d);
       });
       (local || []).forEach(d => {
         if (!d) return;
         const id = String(d.id);
-        if (pendingDeleteRef.current.has(id)) return;
+        if (pendingDeleteRef.current.has(id) && !d.deleted) return;
         if (!seen.has(id)) merged.push(d);
       });
       return merged;
@@ -3435,7 +3439,7 @@ export default function App() {
       changes.forEach(d => {
         if (!d) return;
         const id = String(d.id);
-        if (pendingDeleteRef.current.has(id)) return;
+        if (pendingDeleteRef.current.has(id) && !d.deleted) return;
         map.set(id, d);
       });
       return Array.from(map.values());
@@ -3466,12 +3470,41 @@ export default function App() {
         const userSnap = await getDoc(userRef);
         const userData = userSnap.exists() ? userSnap.data() : {};
         if (!userSnap.exists()) {
-          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, assetDocs: {}, pets: [], petEvents: [], petDeadlines: [], petDocs: [], schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
+          await setDoc(userRef, { categories: DEFAULT_CATS, workLogs: {}, assetDocs: {}, pets: [], petEvents: [], petDeadlines: [], petDocs: [], deadlinesVersion: 0, schemaVersion: 2, createdAt: new Date().toISOString() }, { merge: true });
         }
         await migrateLegacyDeadlines(userData);
 
         const nowTs = Date.now();
-        const doFullSync = !lastSyncRef.current || !lastFullSyncRef.current || (nowTs - lastFullSyncRef.current) > FULL_SYNC_EVERY_MS || reason === "init";
+        const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
+        const parsedAssetDocs = normalizeAssetDocs(userData.assetDocs);
+        const parsedPets = Array.isArray(userData.pets) ? userData.pets : [];
+        const parsedPetEvents = Array.isArray(userData.petEvents) ? userData.petEvents : [];
+        const parsedPetDeadlines = Array.isArray(userData.petDeadlines) ? userData.petDeadlines : [];
+        const parsedPetDocs = Array.isArray(userData.petDocs) ? userData.petDocs : [];
+
+        const remoteVersion = typeof userData.deadlinesVersion === "number" ? userData.deadlinesVersion : 0;
+        const localVersion = deadlinesVersionRef.current || 0;
+        const versionMatches = remoteVersion > 0 && localVersion > 0 && remoteVersion === localVersion;
+        const doFullSync = reason === "repair" || !lastSyncRef.current || !lastFullSyncRef.current || (nowTs - lastFullSyncRef.current) > FULL_SYNC_EVERY_MS;
+
+        if (!doFullSync && versionMatches) {
+          pollStateRef.current.backoffMs = POLL_BASE_MS;
+          const visibleCount = (deadlinesRef.current || []).filter(d => !d?.deleted).length;
+          setRemoteInfo({ count: visibleCount, lastSync: Date.now(), error: null });
+          if (!cancelled && !pendingSaveRef.current) {
+            suppressMetaRef.current = true;
+            setCats(userData.categories || DEFAULT_CATS);
+            setWorkLogs(parsedWorkLogs);
+            setAssetDocs(parsedAssetDocs);
+            setPets(parsedPets);
+            setPetEvents(parsedPetEvents);
+            setPetDeadlines(parsedPetDeadlines);
+            setPetDocs(parsedPetDocs);
+          }
+          scheduleNext(pollStateRef.current.backoffMs);
+          return;
+        }
+
         let remoteDeadlines = [];
         let maxUpdatedAt = 0;
 
@@ -3500,14 +3533,8 @@ export default function App() {
             .filter(Boolean);
         }
         if (pendingDeleteRef.current.size > 0) {
-          remoteDeadlines = remoteDeadlines.filter(d => !pendingDeleteRef.current.has(String(d.id)));
+          remoteDeadlines = remoteDeadlines.filter(d => !pendingDeleteRef.current.has(String(d.id)) || d?.deleted);
         }
-        const parsedWorkLogs = normalizeWorkLogs(userData.workLogs);
-        const parsedAssetDocs = normalizeAssetDocs(userData.assetDocs);
-        const parsedPets = Array.isArray(userData.pets) ? userData.pets : [];
-        const parsedPetEvents = Array.isArray(userData.petEvents) ? userData.petEvents : [];
-        const parsedPetDeadlines = Array.isArray(userData.petDeadlines) ? userData.petDeadlines : [];
-        const parsedPetDocs = Array.isArray(userData.petDocs) ? userData.petDocs : [];
 
         if (doFullSync && remoteDeadlines.length === 0) {
           const legacyDeadlines = (userData.deadlines || [])
@@ -3535,6 +3562,20 @@ export default function App() {
               remoteDeadlines = fallback;
             }
           }
+        }
+
+        if (remoteVersion === 0) {
+          const newVersion = nowTs;
+          try {
+            await setDoc(userRef, { deadlinesVersion: newVersion }, { merge: true });
+            deadlinesVersionRef.current = newVersion;
+            localStorage.setItem("lifetrack_deadlines_version", String(newVersion));
+          } catch (err) {
+            console.warn("Deadlines version init error:", err);
+          }
+        } else {
+          deadlinesVersionRef.current = remoteVersion;
+          try { localStorage.setItem("lifetrack_deadlines_version", String(remoteVersion)); } catch (err) {}
         }
 
         const nextSync = maxUpdatedAt || nowTs;
@@ -3613,6 +3654,12 @@ export default function App() {
           });
           await batch.commit();
         }
+        await setDoc(doc(db, 'users', user.uid), {
+          deadlinesVersion: now,
+          lastUpdate: new Date().toISOString()
+        }, { merge: true });
+        deadlinesVersionRef.current = now;
+        try { localStorage.setItem("lifetrack_deadlines_version", String(now)); } catch (err) {}
       }
       prevDeadlinesRef.current = current;
       pendingSaveRef.current = false;
@@ -3789,6 +3836,7 @@ export default function App() {
       
       const newDeadlines = deadlines.map(d => {
         // Se ha autoPay attivo, non è completata, e la data è passata → auto-completa
+        if (d.deleted) return d;
         if (d.autoPay && !d.done && d.date < now) {
           updated = true;
           return { ...d, done: true, autoCompleted: true }; // flag per sapere che è stata auto-completata
@@ -3798,7 +3846,7 @@ export default function App() {
       
       if (updated) {
         setDeadlines(newDeadlines);
-        const count = newDeadlines.filter(d => d.autoCompleted && d.done).length - deadlines.filter(d => d.autoCompleted && d.done).length;
+        const count = newDeadlines.filter(d => d.autoCompleted && d.done && !d.deleted).length - deadlines.filter(d => d.autoCompleted && d.done && !d.deleted).length;
         if (count > 0) {
           showToast(t("toast.autoPayCompleted", { count }));
         }
@@ -3819,6 +3867,7 @@ export default function App() {
     const seriesMap = new Map();
 
     deadlines.forEach(d => {
+      if (d?.deleted) return;
       if (!d?.recurring?.enabled) return;
       const endMode = d.recurring.endMode || "auto";
       if (endMode !== "auto") return;
@@ -3982,6 +4031,17 @@ export default function App() {
     showToast(t("toast.syncStarted"));
     if (syncNowRef.current) {
       await syncNowRef.current("manual");
+    }
+  };
+
+  const triggerRepairSync = async () => {
+    if (!syncEnabled) {
+      showToast(t("toast.syncDisabled"));
+      return;
+    }
+    showToast(t("toast.syncStarted"));
+    if (syncNowRef.current) {
+      await syncNowRef.current("repair");
     }
   };
 
@@ -4205,6 +4265,7 @@ export default function App() {
       startSync();
       localStorage.removeItem('lifetrack_categories');
       localStorage.removeItem('lifetrack_deadlines');
+      localStorage.removeItem('lifetrack_deadlines_version');
       localStorage.removeItem('lifetrack_worklogs');
       localStorage.removeItem('lifetrack_asset_docs');
       localStorage.removeItem('lifetrack_pets');
@@ -4213,6 +4274,7 @@ export default function App() {
       localStorage.removeItem('lifetrack_pet_docs');
       suppressDeadlinesRef.current = true;
       suppressMetaRef.current = true;
+      deadlinesVersionRef.current = 0;
       setDeadlines([]);
       setCats(DEFAULT_CATS);
       setWorkLogs({});
@@ -4243,6 +4305,7 @@ export default function App() {
         petDeadlines: [],
         petDocs: [],
         deadlines: [],
+        deadlinesVersion: 0,
         schemaVersion: 2,
         lastUpdate: new Date().toISOString()
       }, { merge: true });
@@ -4267,15 +4330,29 @@ export default function App() {
     ids.forEach(id => pendingDeleteRef.current.delete(String(id)));
   };
 
-  const deleteDeadlinesRemote = async (ids) => {
+  const deleteDeadlinesRemote = async (ids, stamp) => {
     if (!user || ids.length === 0) return;
+    const now = stamp || Date.now();
     startSync();
     try {
-      const batch = writeBatch(db);
-      ids.forEach(id => {
-        batch.delete(doc(db, 'users', user.uid, 'deadlines', String(id)));
-      });
-      await batch.commit();
+      const chunkSize = 400;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const batch = writeBatch(db);
+        ids.slice(i, i + chunkSize).forEach(id => {
+          batch.set(
+            doc(db, 'users', user.uid, 'deadlines', String(id)),
+            { deleted: true, deletedAt: now, updatedAt: now },
+            { merge: true }
+          );
+        });
+        await batch.commit();
+      }
+      await setDoc(doc(db, 'users', user.uid), {
+        deadlinesVersion: now,
+        lastUpdate: new Date().toISOString()
+      }, { merge: true });
+      deadlinesVersionRef.current = now;
+      try { localStorage.setItem("lifetrack_deadlines_version", String(now)); } catch (err) {}
       clearPendingDelete(ids);
     } catch (error) {
       console.error("Firebase delete error:", error);
@@ -4337,7 +4414,8 @@ export default function App() {
       };
     }).filter(Boolean);
   }, [petDeadlines, pets, t]);
-  const allDeadlines = useMemo(() => [...deadlines, ...petDeadlineItems], [deadlines, petDeadlineItems]);
+  const activeDeadlines = useMemo(() => deadlines.filter(d => !d?.deleted), [deadlines]);
+  const allDeadlines = useMemo(() => [...activeDeadlines, ...petDeadlineItems], [activeDeadlines, petDeadlineItems]);
 
   const filtered = useMemo(() => {
     let list = allDeadlines.filter(d => {
@@ -4435,7 +4513,7 @@ export default function App() {
       setExpandedId(null);
       return;
     }
-    const item = deadlines.find(d => d.id === id);
+    const item = activeDeadlines.find(d => d.id === id);
     if (!item) return;
     
     // Se ha budget > 0 e non è già completata, apri il flow di pagamento
@@ -4460,7 +4538,7 @@ export default function App() {
       showToast(t("toast.deadlineSkipped"));
       return;
     }
-    const item = deadlines.find(d => d.id === id);
+    const item = activeDeadlines.find(d => d.id === id);
     if (!item || item.done) return;
     setDeadlines(p => p.map(d => d.id === id ? { ...d, done: true, skipped: true } : d));
     setExpandedId(null);
@@ -4468,7 +4546,7 @@ export default function App() {
   };
   
   const confirmPayment = (type) => {
-    const item = deadlines.find(d => d.id === paymentFlow.itemId);
+    const item = activeDeadlines.find(d => d.id === paymentFlow.itemId);
     if (!item) return;
     
     switch(type) {
@@ -4727,6 +4805,20 @@ export default function App() {
     setExpandedId(null);
   };
   
+  const markDeadlinesDeleted = (ids) => {
+    if (!ids.length) return;
+    const now = Date.now();
+    const idSet = new Set(ids.map(id => String(id)));
+    suppressDeadlinesRef.current = true;
+    setDeadlines(p => p.map(d => {
+      const match = idSet.has(String(d.id));
+      if (!match) return d;
+      return { ...d, deleted: true, deletedAt: now, updatedAt: now };
+    }));
+    queuePendingDelete(ids);
+    deleteDeadlinesRemote(ids, now);
+  };
+
   const del = id => {
     if (petDeadlineIds.has(String(id))) {
       setPetDeadlines(p => p.filter(d => String(d.id) !== String(id)));
@@ -4734,7 +4826,7 @@ export default function App() {
       showToast(t("toast.deadlineDeleted"));
       return;
     }
-    const item = deadlines.find(d => d.id === id);
+    const item = activeDeadlines.find(d => d.id === id);
     if (!item) return;
     
     // Se fa parte di una serie, mostra modal conferma
@@ -4743,7 +4835,7 @@ export default function App() {
       const currentIndex = item.recurring.index;
       
       // Trova tutte le occorrenze della serie
-      const seriesItems = deadlines.filter(d => d.recurring && d.recurring.seriesId === seriesId);
+      const seriesItems = activeDeadlines.filter(d => d.recurring && d.recurring.seriesId === seriesId);
       
       // Conta quante future (inclusa questa)
       const futureItems = seriesItems.filter(d => d.recurring.index >= currentIndex);
@@ -4763,18 +4855,14 @@ export default function App() {
       } else {
         // È l'ultima della serie, elimina direttamente
         const idsToDelete = [id];
-        queuePendingDelete(idsToDelete);
-        setDeadlines(p => p.filter(d => d.id !== id));
-        deleteDeadlinesRemote(idsToDelete);
+        markDeadlinesDeleted(idsToDelete);
         setExpandedId(null);
         showToast(t("toast.deadlineDeleted"));
       }
     } else {
       // Non fa parte di una serie, elimina direttamente
       const idsToDelete = [id];
-      queuePendingDelete(idsToDelete);
-      setDeadlines(p => p.filter(d => d.id !== id));
-      deleteDeadlinesRemote(idsToDelete);
+      markDeadlinesDeleted(idsToDelete);
       setExpandedId(null);
       showToast(t("toast.deadlineDeleted"));
     }
@@ -4784,16 +4872,10 @@ export default function App() {
     if (!deleteConfirm) return;
     
     // Elimina questa + tutte le future
-    const idsToDelete = deadlines
+    const idsToDelete = activeDeadlines
       .filter(d => d.recurring && d.recurring.seriesId === deleteConfirm.seriesId && d.recurring.index >= deleteConfirm.currentIndex)
       .map(d => d.id);
-    queuePendingDelete(idsToDelete);
-    setDeadlines(p => p.filter(d => 
-      !d.recurring || 
-      d.recurring.seriesId !== deleteConfirm.seriesId || 
-      d.recurring.index < deleteConfirm.currentIndex
-    ));
-    deleteDeadlinesRemote(idsToDelete);
+    markDeadlinesDeleted(idsToDelete);
     setExpandedId(null);
     showToast(t("toast.futureDeleted", { count: deleteConfirm.futureCount }));
     setDeleteConfirm(null);
@@ -5403,7 +5485,7 @@ export default function App() {
                 return {
                   cat,
                   assets: cat.assets.map(assetName => {
-                    const assetDeadlines = deadlines.filter(d => d.cat === cat.id && d.asset === assetName);
+                    const assetDeadlines = activeDeadlines.filter(d => d.cat === cat.id && d.asset === assetName);
                     const completed = assetDeadlines.filter(d => d.done);
                     const totalSpent = completed.filter(d => !d.estimateMissing).reduce((sum, d) => sum + d.budget, 0);
                     return {
@@ -5485,7 +5567,7 @@ export default function App() {
             </button>
           </div>
           {(() => {
-            const deadlineDocs = deadlines.flatMap(d => (d.documents || []).map(doc => ({ ...doc, source:"deadline", deadline: d })));
+            const deadlineDocs = activeDeadlines.flatMap(d => (d.documents || []).map(doc => ({ ...doc, source:"deadline", deadline: d })));
             const assetDocsList = Object.entries(assetDocs || {}).flatMap(([assetKey, docs]) =>
               (docs || []).map(doc => ({ ...doc, source:"asset", assetKey }))
             );
@@ -5702,13 +5784,13 @@ export default function App() {
         presetAsset={presetAsset}
         editingItem={editingDeadline}
       />
-      <StatsSheet open={showStats} onClose={() => setShowStats(false)} deadlines={deadlines} cats={cats}/>
+      <StatsSheet open={showStats} onClose={() => setShowStats(false)} deadlines={activeDeadlines} cats={cats}/>
       {/* AssetListSheet no longer used in main nav */}
       {showAsset && (
         <AssetSheet 
           open={true} 
           onClose={() => setShowAsset(null)} 
-          deadlines={deadlines} 
+          deadlines={activeDeadlines} 
           cats={cats}
           assetDocs={assetDocs}
           catId={showAsset.cat}
@@ -5743,7 +5825,7 @@ export default function App() {
             const dateObj = new Date(payload.date + "T00:00:00");
             if (Number.isNaN(dateObj.getTime())) return;
 
-            const alreadyExists = deadlines.some(d =>
+            const alreadyExists = activeDeadlines.some(d =>
               d.asset === showAsset.asset &&
               d.cat === showAsset.cat &&
               d.title === payload.title &&
@@ -5780,7 +5862,7 @@ export default function App() {
         cats={cats} 
         onUpdateCats={setCats}
         onAddAsset={handleAddAsset}
-        deadlines={deadlines}
+        deadlines={activeDeadlines}
         workLogs={workLogs}
         onResetAll={resetCloudData}
       />
@@ -5884,6 +5966,15 @@ export default function App() {
               <div>• {t("dev.lastFullSync")}: {devStats.lastFullSync ? new Date(Number(devStats.lastFullSync)).toLocaleString(getLocale()) : "—"}</div>
               <div>• {t("dev.backoff")}: {Math.round((pollStateRef.current?.backoffMs || 0) / 1000)}s</div>
               <div>• {t("dev.cloudStatus")}: {remoteInfo.error ? `ERR:${remoteInfo.error}` : (remoteInfo.count !== null ? `OK (${remoteInfo.count})` : "—")}</div>
+              <button onClick={triggerRepairSync} style={{
+                marginTop:6, width:"100%", padding:"10px", borderRadius:12, border:"1px solid #f0c9b8",
+                background:"#fff6f2", color:"#d87a54", fontSize:12, fontWeight:700, cursor:"pointer"
+              }}>
+                {t("dev.repairSync")}
+              </button>
+              <div style={{ fontSize:11, color:"#a59f92", lineHeight:1.4 }}>
+                {t("dev.repairHint")}
+              </div>
             </div>
 
             <div style={{ marginTop:16, paddingTop:14, borderTop:"2px solid #f5f4f0" }}>
@@ -5894,7 +5985,7 @@ export default function App() {
                   version: "1.1",
                   exportDate: new Date().toISOString(),
                   categories: cats,
-                  deadlines: deadlines,
+                  deadlines: activeDeadlines,
                   workLogs: workLogs,
                   assetDocs: assetDocs,
                   pets: pets,
@@ -5968,6 +6059,7 @@ export default function App() {
                 if (window.confirm(t("backup.resetConfirm"))) {
                   localStorage.removeItem('lifetrack_categories');
                   localStorage.removeItem('lifetrack_deadlines');
+                  localStorage.removeItem('lifetrack_deadlines_version');
                   localStorage.removeItem('lifetrack_worklogs');
                   localStorage.removeItem('lifetrack_asset_docs');
                   window.location.reload();
@@ -6131,7 +6223,7 @@ export default function App() {
       {/* Payment Flow Modal */}
       <PaymentFlowModal
         open={paymentFlow !== null}
-        item={paymentFlow ? deadlines.find(d => d.id === paymentFlow.itemId) : null}
+        item={paymentFlow ? activeDeadlines.find(d => d.id === paymentFlow.itemId) : null}
         onConfirm={confirmPayment}
         onClose={() => { setPaymentFlow(null); setPaymentAmount(""); setDownpaymentDate(""); }}
         step={paymentFlow?.step || 'choose'}
