@@ -488,10 +488,10 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
       })
     : t("card.never");
   const metaTags = [
-    item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9" } : null,
-    item.mandatory ? { icon:"⚠️", label:"Ind", bg:"#FFF0EC", color:"#E53935" } : null,
-    item.essential ? { icon:"💡", label:"Ess", bg:"#E8F5E9", color:"#4CAF6E" } : null,
-    item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9" } : null,
+    item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9", key:"auto" } : null,
+    item.essential ? { icon:"💡", label:"Ess", bg:"#E8F5E9", color:"#4CAF6E", key:"ess" } : null,
+    item.mandatory ? { icon:"⚠️", label:"Ind", bg:"#FFF0EC", color:"#E53935", key:"ind" } : null,
+    item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9", key:"ric" } : null,
   ].filter(Boolean);
 
   return (
@@ -522,15 +522,10 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           </div>
           {(item.asset || metaTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
-              {item.asset && (
-                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
-                  {item.asset}
-                </span>
-              )}
               {metaTags.length > 0 && (
-                <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto" }}>
+                <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto", order:2 }}>
                   {metaTags.map((tag) => (
-                    <span key={tag.label} style={{
+                    <span key={tag.key} style={{
                       fontSize:10, fontWeight:700, color:tag.color, background:tag.bg,
                       borderRadius:999, padding:"2px 6px", display:"inline-flex", alignItems:"center", gap:4,
                       border:`1px solid ${tag.color}33`
@@ -540,6 +535,11 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
                     </span>
                   ))}
                 </div>
+              )}
+              {item.asset && (
+                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto", order:1 }}>
+                  {item.asset}
+                </span>
               )}
             </div>
           )}
@@ -5450,7 +5450,7 @@ export default function App() {
 
           {/* FAB */}
           <button onClick={() => setShowAdd(true)} style={{
-            position:"fixed", bottom:24, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
+            position:"fixed", bottom:88, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
             background:"#E8855D", border:"none", color:"#fff", fontSize:28, fontWeight:300,
             cursor:"pointer", boxShadow:"0 6px 24px rgba(232,133,93,.45)",
             display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
