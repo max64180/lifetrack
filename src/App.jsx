@@ -517,11 +517,11 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</span>
-            {statusBadge === "mandatory" && <span style={{ fontSize:13 }}>⚠️</span>}
+            {statusBadge === "mandatory" && <span style={{ fontSize:13, marginRight:2 }}>⚠️</span>}
             {statusBadge === "essential" && (
-              <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
+              <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block", marginRight:4 }} />
             )}
+            <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</span>
           </div>
           {(item.asset || rightTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
@@ -655,27 +655,25 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               {/* Upload buttons - più compatti */}
               {!item.done && (
                 <label style={{ display:"block", padding:"7px", borderRadius:8, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:32 }}>
-                  <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'incoming', e.target.files[0]); e.target.value=''; }} />
+                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'incoming', e.target.files[0]); e.target.value=''; }} />
                   {t("docs.attachDocument")}
                 </label>
               )}
               {item.done && (
                 <label style={{ display:"block", padding:"7px", borderRadius:8, border:"1px dashed #4CAF6E44", background:"#E8F5E9", color:"#4CAF6E", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:32 }}>
-                  <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'receipt', e.target.files[0]); e.target.value=''; }} />
+                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={(e) => { if(e.target.files[0]) onUploadDoc(item.id, 'receipt', e.target.files[0]); e.target.value=''; }} />
                   {t("docs.attachReceipt")}
                 </label>
               )}
             </div>
           )}
 
-          {!isPet && (
-            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-              <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
-                flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
-                background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-              }}>✏️ {t("actions.edit")}</button>
-            </div>
-          )}
+          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+            <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
+              flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
+              background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+            }}>✏️ {t("actions.edit")}</button>
+          </div>
 
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {/* Se è scaduta, offri "Posticipa" */}
@@ -1083,11 +1081,15 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <div style={{ background:"#faf9f7", borderRadius:12, padding:"10px 12px", border:"1px solid #edecea" }}>
               {form.documents.length === 0 ? (
                 <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
-                  <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={async (e) => {
-                    if(e.target.files[0]) {
+                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if(file) {
                       try {
-                        const base64 = await compressImage(e.target.files[0]);
-                        const doc = { id: Date.now(), type: 'incoming', base64, filename: e.target.files[0].name, uploadDate: new Date().toISOString() };
+                        const processed = await processAttachmentFile(file);
+                        const base64 = processed.isImage
+                          ? await compressImage(file, 1600)
+                          : await fileToBase64(file);
+                        const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
                         set("documents", [doc]);
                       } catch(err) { alert(t("errors.fileUpload")); }
                       e.target.value = '';
@@ -3962,6 +3964,7 @@ export default function App() {
   const [editingPetId, setEditingPetId] = useState(null);
   const [petEventForm, setPetEventForm] = useState({ title:"", date:"", cost:"", notes:"", schedule:false, schedulePreset:"1m", scheduleDate:"" });
   const [petDeadlineForm, setPetDeadlineForm] = useState({ title:"", date:"", cost:"" });
+  const [editingPetDeadlineId, setEditingPetDeadlineId] = useState(null);
   const [petEventFiles, setPetEventFiles] = useState([]);
   const [petDocsFiles, setPetDocsFiles] = useState([]);
   const [activeTab, setActiveTab] = useState("timeline");
@@ -4261,21 +4264,50 @@ export default function App() {
     setShowPetEventModal(false);
   };
 
+  const closePetDeadlineModal = () => {
+    setShowPetDeadlineModal(false);
+    setEditingPetDeadlineId(null);
+    setPetDeadlineForm({ title:"", date:"", cost:"" });
+  };
+
+  const startEditPetDeadline = (item) => {
+    if (!item) return;
+    const dateStr = item.date instanceof Date
+      ? item.date.toISOString().split("T")[0]
+      : item.date || "";
+    setEditingPetDeadlineId(String(item.id));
+    setPetDeadlineForm({
+      title: item.title || "",
+      date: dateStr,
+      cost: Number(item.budget ?? item.cost ?? 0) || ""
+    });
+    setShowPetDeadlineModal(true);
+  };
+
   const addPetDeadline = () => {
-    if (!activePetId) return;
     const title = petDeadlineForm.title.trim();
     if (!title || !petDeadlineForm.date) return;
-    const deadline = {
-      id: makeId(),
-      petId: activePetId,
-      title,
-      date: petDeadlineForm.date,
-      cost: Number(petDeadlineForm.cost) || 0,
-      createdAt: new Date().toISOString()
-    };
-    setPetDeadlines(prev => [deadline, ...prev]);
-    setPetDeadlineForm({ title:"", date:"", cost:"" });
-    setShowPetDeadlineModal(false);
+    if (editingPetDeadlineId) {
+      setPetDeadlines(prev => prev.map(d => String(d.id) === String(editingPetDeadlineId) ? {
+        ...d,
+        title,
+        date: petDeadlineForm.date,
+        cost: Number(petDeadlineForm.cost) || 0,
+        updatedAt: new Date().toISOString()
+      } : d));
+    } else {
+      if (!activePetId) return;
+      const deadline = {
+        id: makeId(),
+        petId: activePetId,
+        title,
+        date: petDeadlineForm.date,
+        cost: Number(petDeadlineForm.cost) || 0,
+        createdAt: new Date().toISOString()
+      };
+      setPetDeadlines(prev => [deadline, ...prev]);
+    }
+    closePetDeadlineModal();
   };
 
   const addPetDocs = async () => {
@@ -4538,6 +4570,14 @@ export default function App() {
   }, [isYearCompact]);
 
   const toggle   = id => setExpandedId(prev => prev === id ? null : id);
+  const handleEditItem = (item) => {
+    if (petDeadlineIds.has(String(item.id))) {
+      startEditPetDeadline(item);
+      return;
+    }
+    setEditingDeadline(item);
+    setShowAdd(true);
+  };
   
   const complete = id => {
     if (petDeadlineIds.has(String(id))) {
@@ -4955,18 +4995,27 @@ export default function App() {
   // Upload document to deadline
   const handleDocumentUpload = async (deadlineId, type, file) => {
     try {
-      const base64 = await compressImage(file);
+      const processed = await processAttachmentFile(file);
+      const base64 = processed.isImage
+        ? await compressImage(file, 1600)
+        : await fileToBase64(file);
       const doc = {
         id: Date.now(),
         type, // 'incoming' or 'receipt'
         base64,
-        filename: file.name,
+        filename: processed.filename,
+        contentType: processed.contentType,
+        size: processed.size,
+        isImage: processed.isImage,
         uploadDate: new Date().toISOString()
       };
       setDeadlines(p => p.map(d => d.id === deadlineId ? { ...d, documents: [...(d.documents || []), doc] } : d));
       showToast(t("toast.documentAttached"));
     } catch(err) {
-      showToast(t("toast.documentUploadError"));
+      const code = err?.message || "unknown";
+      if (code === "image_too_large") showToast(t("toast.imageTooLarge", { size: 5 }));
+      else if (code === "file_too_large") showToast(t("toast.fileTooLarge", { size: 10 }));
+      else showToast(t("toast.documentUploadError"));
     }
   };
   
@@ -5323,7 +5372,7 @@ export default function App() {
                           onSkip={() => skip(item.id)}
                           onDelete={() => del(item.id)}
                           onPostpone={() => postpone(item.id)}
-                          onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                          onEdit={handleEditItem}
                           onUploadDoc={handleDocumentUpload}
                           onDeleteDoc={deleteDocument}
                           onViewDoc={setViewingDoc}
@@ -5361,7 +5410,7 @@ export default function App() {
                           onSkip={() => skip(item.id)}
                           onDelete={() => del(item.id)}
                           onPostpone={() => postpone(item.id)}
-                          onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                          onEdit={handleEditItem}
                           onUploadDoc={handleDocumentUpload}
                           onDeleteDoc={deleteDocument}
                           onViewDoc={setViewingDoc}
@@ -5507,7 +5556,7 @@ export default function App() {
                         onSkip={() => skip(item.id)}
                         onDelete={() => del(item.id)}
                         onPostpone={() => postpone(item.id)}
-                        onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                        onEdit={handleEditItem}
                         onUploadDoc={handleDocumentUpload}
                         onDeleteDoc={deleteDocument}
                         onViewDoc={setViewingDoc}
@@ -6168,9 +6217,10 @@ export default function App() {
       {showPetAdd && (
         <div onClick={e => e.target === e.currentTarget && closePetModal()} style={{
           position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
-          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+          display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
+          padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{editingPetId ? t("pet.edit") : t("pet.add")}</div>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <div style={{
@@ -6197,17 +6247,17 @@ export default function App() {
               </label>
             </div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.name")}</label>
-            <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.species")}</label>
-            <select value={petForm.species} onChange={e => setPetForm({ ...petForm, species: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }}>
+            <select value={petForm.species} onChange={e => setPetForm({ ...petForm, species: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }}>
               <option value="dog">{t("pet.dog")}</option>
               <option value="cat">{t("pet.cat")}</option>
               <option value="other">{t("pet.other")}</option>
             </select>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.birth")}</label>
-            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.notes")}</label>
-            <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12 }} />
+            <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={closePetModal} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
               <button onClick={addPet} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
@@ -6276,20 +6326,21 @@ export default function App() {
 
       {/* Add Pet Deadline modal */}
       {showPetDeadlineModal && (
-        <div onClick={e => e.target === e.currentTarget && setShowPetDeadlineModal(false)} style={{
+        <div onClick={e => e.target === e.currentTarget && closePetDeadlineModal()} style={{
           position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
-          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+          display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
+          padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDeadline")}</div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineTitle")}</label>
-            <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineDate")}</label>
-            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineCost")}</label>
-            <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12 }} />
+            <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setShowPetDeadlineModal(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={closePetDeadlineModal} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
               <button onClick={addPetDeadline} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
             </div>
           </div>

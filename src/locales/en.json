@@ -108,7 +108,7 @@
   "options": {
     "mandatoryTitle": "⚠ Mandatory deadline",
     "mandatoryHint": "e.g. taxes, fines, legal documents",
-    "essentialTitle": "💡 Essential expense",
+    "essentialTitle": "● Essential expense",
     "essentialHint": "Needed for daily life (bills, groceries, rent)",
     "autoPayTitle": "🔄 Automatic payment",
     "autoPayHint": "Bank direct debit or automatic charge"

@@ -108,7 +108,7 @@
   "options": {
     "mandatoryTitle": "⚠ Scadenza inderogabile",
     "mandatoryHint": "Es. tasse, multe, documenti legali",
-    "essentialTitle": "💡 Spesa essenziale",
+    "essentialTitle": "● Spesa essenziale",
     "essentialHint": "Necessaria per vita quotidiana (bollette, spesa, affitto)",
     "autoPayTitle": "🔄 Pagamento automatico",
     "autoPayHint": "Domiciliazione bancaria o addebito automatico"
