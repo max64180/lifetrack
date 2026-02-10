@@ -2888,10 +2888,6 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
 
           <div style={{ display:"flex", gap:8 }}>
             <label style={{ flex:1, display:"block", padding:"10px 12px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
-              <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => { handleAddFiles(e.target.files); e.target.value = ""; }} />
-              {t("attachments.capture")}
-            </label>
-            <label style={{ flex:1, display:"block", padding:"10px 12px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#6b6961", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
               <input type="file" accept="image/*,application/pdf,*/*" multiple style={{ display:"none" }} onChange={(e) => { handleAddFiles(e.target.files); e.target.value = ""; }} />
               {t("attachments.upload")}
             </label>
@@ -3274,22 +3270,8 @@ export default function App() {
     }
     return [];
   });
-  const [range, setRange] = useState(() => {
-    try {
-      const saved = localStorage.getItem('lifetrack_range') || "mese";
-      return getSafeRange(saved);
-    } catch (err) {
-      return "mese";
-    }
-  });
-  const [periodOffset, setPeriodOffset] = useState(() => {
-    try {
-      const raw = localStorage.getItem('lifetrack_period_offset');
-      return raw ? parseInt(raw, 10) || 0 : 0;
-    } catch (err) {
-      return 0;
-    }
-  });
+  const [range, setRange] = useState("mese");
+  const [periodOffset, setPeriodOffset] = useState(0);
 
   const devStats = (() => {
     const totalDeadlines = deadlines.length;
@@ -3792,15 +3774,6 @@ export default function App() {
       console.warn("LocalStorage pet docs error:", err);
     }
   }, [petDocs]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('lifetrack_range', range);
-      localStorage.setItem('lifetrack_period_offset', String(periodOffset));
-    } catch (err) {
-      console.warn("LocalStorage range error:", err);
-    }
-  }, [range, periodOffset]);
 
   useEffect(() => {
     try {
@@ -5258,34 +5231,35 @@ export default function App() {
                   width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
                   background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
                 }}>‹</button>
-                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
-                  <button
-                    onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
-                    style={{
-                      background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "mese" ? 800 : 600,
-                      color: range === "mese" ? "#2d2b26" : "#b2afa7",
-                      padding:"2px 4px", borderBottom: range === "mese" ? "2px solid #2d2b26" : "2px solid transparent",
-                      letterSpacing:".2px", textTransform:"uppercase"
-                    }}
-                  >
-                    {t("range.month", { defaultValue:"Mese" })}
-                  </button>
-                  <div style={{ flex:1, textAlign:"center" }}>
-                    <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+                  <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+                  <div style={{
+                    display:"flex", alignItems:"center", gap:2, padding:"2px", borderRadius:999,
+                    background:"#f2f1ed", border:"1px solid #e8e6e0"
+                  }}>
+                    <button
+                      onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
+                      style={{
+                        border:"none", cursor:"pointer", borderRadius:999, padding:"4px 8px",
+                        background: range === "mese" ? "#2d2b26" : "transparent",
+                        color: range === "mese" ? "#fff" : "#8a877f",
+                        fontSize:10, fontWeight:800, letterSpacing:".2px", textTransform:"uppercase"
+                      }}
+                    >
+                      {t("range.month", { defaultValue:"Mese" })}
+                    </button>
+                    <button
+                      onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
+                      style={{
+                        border:"none", cursor:"pointer", borderRadius:999, padding:"4px 8px",
+                        background: range === "anno" ? "#2d2b26" : "transparent",
+                        color: range === "anno" ? "#fff" : "#8a877f",
+                        fontSize:10, fontWeight:800, letterSpacing:".2px", textTransform:"uppercase"
+                      }}
+                    >
+                      {t("range.year", { defaultValue:"Anno" })}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
-                    style={{
-                      background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "anno" ? 800 : 600,
-                      color: range === "anno" ? "#2d2b26" : "#b2afa7",
-                      padding:"2px 4px", borderBottom: range === "anno" ? "2px solid #2d2b26" : "2px solid transparent",
-                      letterSpacing:".2px", textTransform:"uppercase"
-                    }}
-                  >
-                    {t("range.year", { defaultValue:"Anno" })}
-                  </button>
                 </div>
                 <button onClick={() => setPeriodOffset(o => o + 1)} style={{
                   width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
@@ -6220,7 +6194,7 @@ export default function App() {
           display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
           padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{editingPetId ? t("pet.edit") : t("pet.add")}</div>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <div style={{
@@ -6247,17 +6221,17 @@ export default function App() {
               </label>
             </div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.name")}</label>
-            <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
+            <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.species")}</label>
-            <select value={petForm.species} onChange={e => setPetForm({ ...petForm, species: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }}>
+            <select value={petForm.species} onChange={e => setPetForm({ ...petForm, species: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }}>
               <option value="dog">{t("pet.dog")}</option>
               <option value="cat">{t("pet.cat")}</option>
               <option value="other">{t("pet.other")}</option>
             </select>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.birth")}</label>
-            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.notes")}</label>
-            <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
+            <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={closePetModal} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
               <button onClick={addPet} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
@@ -6273,16 +6247,16 @@ export default function App() {
           display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
           padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"92%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={{ width:"92%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addEvent")}</div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventTitle")}</label>
-            <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventDate")}</label>
-            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventCost")}</label>
-            <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
+            <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventNotes")}</label>
-            <textarea value={petEventForm.notes} onChange={e => setPetEventForm({ ...petEventForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
+            <textarea value={petEventForm.notes} onChange={e => setPetEventForm({ ...petEventForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
 
             <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, fontWeight:700, color:"#2d2b26", marginBottom:8 }}>
               <input type="checkbox" checked={petEventForm.schedule} onChange={e => setPetEventForm({ ...petEventForm, schedule: e.target.checked })} />
@@ -6290,14 +6264,14 @@ export default function App() {
             </label>
             {petEventForm.schedule && (
               <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
-                <select value={petEventForm.schedulePreset} onChange={e => setPetEventForm({ ...petEventForm, schedulePreset: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0" }}>
+                <select value={petEventForm.schedulePreset} onChange={e => setPetEventForm({ ...petEventForm, schedulePreset: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", boxSizing:"border-box" }}>
                   <option value="1m">{t("pet.schedule1m")}</option>
                   <option value="6m">{t("pet.schedule6m")}</option>
                   <option value="12m">{t("pet.schedule12m")}</option>
                   <option value="exact">{t("pet.scheduleExact")}</option>
                 </select>
                 {petEventForm.schedulePreset === "exact" && (
-                  <input type="date" value={petEventForm.scheduleDate} onChange={e => setPetEventForm({ ...petEventForm, scheduleDate: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0" }} />
+                  <input type="date" value={petEventForm.scheduleDate} onChange={e => setPetEventForm({ ...petEventForm, scheduleDate: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", boxSizing:"border-box" }} />
                 )}
               </div>
             )}
@@ -6331,14 +6305,14 @@ export default function App() {
           display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
           padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDeadline")}</div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineTitle")}</label>
-            <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
+            <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineDate")}</label>
-            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineCost")}</label>
-            <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
+            <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
               <button onClick={closePetDeadlineModal} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
               <button onClick={addPetDeadline} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
@@ -6354,7 +6328,7 @@ export default function App() {
           display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
           padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDoc")}</div>
             {petDocsFiles.map((f, i) => (
               <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f7f6f2", padding:"6px 8px", borderRadius:8, marginBottom:6 }}>
