@@ -520,17 +520,21 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <div style={{ fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {item.title}
           </div>
-          {item.asset && (
-            <div style={{ fontSize:11, color:"#8a877f", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-              {item.asset}
+          {(item.asset || metaIcons) && (
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+              {item.asset && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.asset}</span>}
+              {!!metaIcons && (
+                <span style={{ fontSize:13, color:"#6b6961", letterSpacing:".5px" }}>{metaIcons}</span>
+              )}
             </div>
           )}
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0, minWidth:52 }}>
-          {item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>}
-          {!!metaIcons && (
-            <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", letterSpacing:".5px" }}>{metaIcons}</span>
+          {item.estimateMissing ? (
+            <span style={{ fontSize:11, fontWeight:700, color:"#8a6d1f" }}>{t("card.estimateMissing")}</span>
+          ) : (
+            item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>
           )}
           <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
