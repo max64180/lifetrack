@@ -4479,7 +4479,7 @@ export default function App() {
   }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
-  const isYearCompact = range === "anno" && activeTab === "timeline";
+  const isYearCompact = range === "anno";
   const yearDetailLimit = 6;
   const mandatoryItems = useMemo(() => {
     if (!isYearCompact) return [];
@@ -5322,7 +5322,7 @@ export default function App() {
                 <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
                   <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
                   <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
-                    {t("empty.timelineTitle")}
+                    {activeTab === "done" ? t("empty.doneTitle") : t("empty.timelineTitle")}
                   </div>
                   <div style={{ fontSize:13, marginTop:4 }}>
                     {t("empty.hint")} · {periodLabel}
