@@ -11,6 +11,8 @@ export default function PriorityFilter({
   setFilterManual,
   filterEstimateMissing,
   setFilterEstimateMissing,
+  filterPet,
+  setFilterPet,
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -35,6 +37,7 @@ export default function PriorityFilter({
     setFilterManual(false);
     setFilterEstimateMissing(false);
     setFilterAutoPay(false);
+    setFilterPet(false);
     if (id === "mandatory") setFilterMandatory(true);
     if (id === "manual") setFilterManual(true);
     if (id === "estimate") setFilterEstimateMissing(true);
@@ -42,7 +45,7 @@ export default function PriorityFilter({
     setOpen(false);
   };
 
-  const isActive = current !== "all";
+  const isActive = current !== "all" || filterPet;
 
   return (
     <div style={{ background:"#f5f4f0", paddingBottom:8 }}>
@@ -85,15 +88,27 @@ export default function PriorityFilter({
             </div>
           )}
         </div>
-          {isActive && (
-            <button onClick={() => applyPriority("all")} style={{
-              border:"none", background:"transparent", cursor:"pointer",
-              color:"#E53935", fontSize:12, fontWeight:700, padding:"6px 4px",
-              textDecoration:"underline", textUnderlineOffset:3
-            }}>
-              {t("filters.reset", { defaultValue:"Reset filtri" })}
-            </button>
-          )}
+        <button onClick={() => { setFilterPet(!filterPet); }} style={{
+          border:`1px solid ${filterPet ? "#2d2b26" : "#e8e6e0"}`,
+          background: filterPet ? "#2d2b26" : "#fff",
+          borderRadius:14, padding:"8px 12px",
+          fontSize:12, fontWeight:800,
+          color: filterPet ? "#fff" : "#2d2b26",
+          cursor:"pointer", minHeight:36,
+          display:"flex", alignItems:"center", gap:6,
+          boxShadow: filterPet ? "0 6px 16px rgba(0,0,0,.12)" : "none"
+        }}>
+          🐾 {t("filters.pet", { defaultValue:"Pet" })}
+        </button>
+        {isActive && (
+          <button onClick={() => applyPriority("all")} style={{
+            border:"none", background:"transparent", cursor:"pointer",
+            color:"#E53935", fontSize:12, fontWeight:700, padding:"6px 4px",
+            textDecoration:"underline", textUnderlineOffset:3
+          }}>
+            {t("filters.reset", { defaultValue:"Reset filtri" })}
+          </button>
+        )}
         </div>
       </div>
     </div>

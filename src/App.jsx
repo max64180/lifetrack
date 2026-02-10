@@ -52,6 +52,7 @@ const formatNumber = (amount) => Math.round(amount).toLocaleString(getLocale());
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
 function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months); return d; }
+const PET_CAT = { id:"pet", label:"Pet", icon:"🐾", color:"#7B8BE8", light:"#EEF0FF" };
 
 /* ── DATI FAKE RIMOSSI - App vuota per uso reale ──────────────────────────────────── */
 
@@ -414,7 +415,7 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
 
 function YearDetailRow({ item, cats }) {
   const { t } = useTranslation();
-  const cat = getCat(cats, item.cat) || {};
+  const cat = item.petId ? PET_CAT : (getCat(cats, item.cat) || {});
   const amountText = item.estimateMissing ? "—" : formatCurrency(item.budget || 0);
   const amountColor = item.estimateMissing ? "#8a6d1f" : "#E8855D";
   const subParts = [cat.label, item.asset, fmtDate(item.date)].filter(Boolean);
@@ -461,9 +462,10 @@ function YearDetailRow({ item, cats }) {
 /* Carta scadenza – ICONE PIÙ GRANDI E VISIVE */
 function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
   const { t } = useTranslation();
-  const cat = getCat(cats, item.cat);
+  const cat = item.petId ? PET_CAT : getCat(cats, item.cat);
   const urg = getUrgency(item.date, item.done);
   const days = diffDays(item.date);
+  const isPet = !!item.petId;
   const catLabel = t(cat.labelKey || "", { defaultValue: cat.label });
   const unitMap = {
     giorni: "day",
@@ -518,7 +520,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             <span style={{ fontSize:11, background:cat.light, color:cat.color, borderRadius:8, padding:"2px 8px", fontWeight:700, border:`1px solid ${cat.color}33` }}>
               {catLabel}
             </span>
-            {item.asset && (
+            {item.asset && !isPet && (
               <span 
                 onClick={(e) => { e.stopPropagation(); onAssetClick(item.cat, item.asset); }}
                 style={{ 
@@ -529,6 +531,14 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
                 onMouseOver={e => e.target.style.background = "#e8e6e0"}
                 onMouseOut={e => e.target.style.background = "#f5f4f0"}
               >
+                {item.asset}
+              </span>
+            )}
+            {item.asset && isPet && (
+              <span style={{ 
+                fontSize:10, background:"#f5f4f0", color:"#6b6961", borderRadius:8, 
+                padding:"2px 7px", fontWeight:600, border:"1px solid #e8e6e0"
+              }}>
                 {item.asset}
               </span>
             )}
@@ -623,7 +633,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
           )}
 
-          {item.estimateMissing && !item.done && (
+          {!isPet && item.estimateMissing && !item.done && (
             <div style={{ fontSize:11, color:"#8a6d1f", background:"#FFF8ED", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
               <span>{t("card.estimateMissingTitle")}</span>
               <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{ padding:"6px 10px", borderRadius:8, border:"none", background:"#2d2b26", color:"#fff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
@@ -633,7 +643,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           )}
 
           {/* Documents section */}
-          {((item.documents && item.documents.length > 0) || !item.done) && (
+          {!isPet && ((item.documents && item.documents.length > 0) || !item.done) && (
             <div style={{ background:"#faf9f7", borderRadius:10, padding:"8px 10px", marginBottom:12 }}>
               <div style={{ fontSize:10, color:"#8a877f", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>{t("docs.title")}</div>
               
@@ -671,12 +681,14 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
           )}
 
-          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-            <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
-              flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
-              background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
-            }}>✏️ {t("actions.edit")}</button>
-          </div>
+          {!isPet && (
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
+                flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
+                background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+              }}>✏️ {t("actions.edit")}</button>
+            </div>
+          )}
 
           <div style={{ display:"flex", gap:8 }}>
             {/* Se è scaduta, offri "Posticipa" */}
@@ -736,7 +748,7 @@ function GroupHeader({ group, cats }) {
         {catEntries.length > 0 && (
           <div style={{ display:"flex", gap:2, marginTop:4, justifyContent:"flex-end" }}>
             {catEntries.map(([catId, amt]) => {
-              const c = getCat(cats, catId);
+              const c = catId === "pet" ? PET_CAT : getCat(cats, catId);
               const w = Math.max(Math.round((amt / total) * 48), 6);
               return <div key={catId} style={{ width:w, height:4, borderRadius:2, background:c.color }}/>;
             })}
@@ -3878,6 +3890,7 @@ export default function App() {
   const [filterManual, setFilterManual] = useState(false);
   const [filterEssential, setFilterEssential] = useState(false);
   const [filterEstimateMissing, setFilterEstimateMissing] = useState(false);
+  const [filterPet, setFilterPet] = useState(false);
   const [expandedFilterCat, setExpandedFilterCat] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -4268,8 +4281,36 @@ export default function App() {
     return String(period.year);
   }, [range, periodStart, periodEnd, period.year, period.quarter, period.half, t, i18n.language]);
 
+  const petDeadlineIds = useMemo(() => new Set(petDeadlines.map(d => String(d.id))), [petDeadlines]);
+  const petDeadlineItems = useMemo(() => {
+    const petMap = new Map(pets.map(p => [p.id, p.name]));
+    return petDeadlines.map(d => {
+      const rawDate = d.date instanceof Date ? d.date : new Date(`${d.date}T00:00:00`);
+      if (!rawDate || Number.isNaN(rawDate.getTime())) return null;
+      return {
+        id: String(d.id),
+        title: d.title || t("pet.deadlines"),
+        cat: "pet",
+        asset: petMap.get(d.petId) || t("pet.title"),
+        petId: d.petId,
+        date: rawDate,
+        budget: Number(d.cost) || 0,
+        estimateMissing: !(Number(d.cost) > 0),
+        notes: d.notes || "",
+        recurring: d.recurring || null,
+        mandatory: false,
+        autoPay: false,
+        essential: false,
+        documents: d.documents || [],
+        done: !!d.done,
+        skipped: !!d.skipped
+      };
+    }).filter(Boolean);
+  }, [petDeadlines, pets, t]);
+  const allDeadlines = useMemo(() => [...deadlines, ...petDeadlineItems], [deadlines, petDeadlineItems]);
+
   const filtered = useMemo(() => {
-    let list = deadlines.filter(d => {
+    let list = allDeadlines.filter(d => {
       if (activeTab === "done") return d.done;
       if (activeTab === "overdue") return d.date < TODAY && !d.done; // scadute non completate
       if (activeTab === "timeline") return d.date >= periodStart && d.date <= periodEnd && !d.done;
@@ -4283,9 +4324,10 @@ export default function App() {
     if (filterManual) list = list.filter(d => !d.autoPay);
     if (filterEssential) list = list.filter(d => d.essential);
     if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
+    if (filterPet) list = list.filter(d => d.petId);
     list.sort((a, b) => a.date - b.date);
     return list;
-  }, [deadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, activeTab, periodStart, periodEnd]);
+  }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
   const isYearCompact = range === "anno" && activeTab === "timeline";
@@ -4358,6 +4400,11 @@ export default function App() {
   const toggle   = id => setExpandedId(prev => prev === id ? null : id);
   
   const complete = id => {
+    if (petDeadlineIds.has(String(id))) {
+      setPetDeadlines(p => p.map(d => String(d.id) === String(id) ? { ...d, done: !d.done, skipped: d.done ? false : d.skipped } : d));
+      setExpandedId(null);
+      return;
+    }
     const item = deadlines.find(d => d.id === id);
     if (!item) return;
     
@@ -4377,6 +4424,12 @@ export default function App() {
   };
 
   const skip = id => {
+    if (petDeadlineIds.has(String(id))) {
+      setPetDeadlines(p => p.map(d => String(d.id) === String(id) ? { ...d, done: true, skipped: true } : d));
+      setExpandedId(null);
+      showToast(t("toast.deadlineSkipped"));
+      return;
+    }
     const item = deadlines.find(d => d.id === id);
     if (!item || item.done) return;
     setDeadlines(p => p.map(d => d.id === id ? { ...d, done: true, skipped: true } : d));
@@ -4645,6 +4698,12 @@ export default function App() {
   };
   
   const del = id => {
+    if (petDeadlineIds.has(String(id))) {
+      setPetDeadlines(p => p.filter(d => String(d.id) !== String(id)));
+      setExpandedId(null);
+      showToast(t("toast.deadlineDeleted"));
+      return;
+    }
     const item = deadlines.find(d => d.id === id);
     if (!item) return;
     
@@ -4737,7 +4796,11 @@ export default function App() {
   
   const confirmPostpone = () => {
     if (postponeDate) {
-      setDeadlines(p => p.map(d => d.id === postponeId ? { ...d, date: new Date(postponeDate + "T00:00:00") } : d));
+      if (petDeadlineIds.has(String(postponeId))) {
+        setPetDeadlines(p => p.map(d => String(d.id) === String(postponeId) ? { ...d, date: postponeDate } : d));
+      } else {
+        setDeadlines(p => p.map(d => d.id === postponeId ? { ...d, date: new Date(postponeDate + "T00:00:00") } : d));
+      }
       showToast(t("toast.deadlinePostponed"));
     }
     setPostponeId(null);
@@ -4951,7 +5014,7 @@ export default function App() {
         {/* Budget bar only in deadlines */}
         {mainSection === "deadlines" && (
           <div style={{ background:"#1e1c18" }}>
-            <BudgetBar deadlines={deadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
+            <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
           </div>
         )}
       </div>
@@ -4986,6 +5049,8 @@ export default function App() {
             setFilterManual={setFilterManual}
             filterEstimateMissing={filterEstimateMissing}
             setFilterEstimateMissing={setFilterEstimateMissing}
+            filterPet={filterPet}
+            setFilterPet={setFilterPet}
           />
 
           {/* Period navigator (above list) */}
