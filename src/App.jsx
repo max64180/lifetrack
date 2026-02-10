@@ -491,7 +491,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
     item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9", key:"auto" } : null,
     item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9", key:"ric" } : null,
   ].filter(Boolean);
-  const statusIcon = item.mandatory ? "⚠️" : (item.essential ? "💡" : "");
+  const statusBadge = item.mandatory ? "mandatory" : (item.essential ? "essential" : "");
 
   return (
     <div style={{ marginBottom:8 }}>
@@ -518,7 +518,10 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</span>
-            {statusIcon && <span style={{ fontSize:13 }}>{statusIcon}</span>}
+            {statusBadge === "mandatory" && <span style={{ fontSize:13 }}>⚠️</span>}
+            {statusBadge === "essential" && (
+              <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
+            )}
           </div>
           {(item.asset || rightTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
