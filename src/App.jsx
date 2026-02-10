@@ -522,25 +522,29 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           </div>
           {(item.asset || metaTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
-              {metaTags.length > 0 && (
-                <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto", order:2 }}>
-                  {metaTags.map((tag) => (
-                    <span key={tag.key} style={{
-                      fontSize:10, fontWeight:700, color:tag.color, background:tag.bg,
-                      borderRadius:999, padding:"2px 6px", display:"inline-flex", alignItems:"center", gap:4,
-                      border:`1px solid ${tag.color}33`
-                    }}>
-                      <span style={{ fontSize:11 }}>{tag.icon}</span>
-                      {tag.label}
-                    </span>
-                  ))}
-                </div>
-              )}
               {item.asset && (
-                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto", order:1 }}>
+                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
                   {item.asset}
                 </span>
               )}
+              <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto", marginLeft:"auto", justifyContent:"flex-end", minWidth:168 }}>
+                {["auto","ess","ind","ric"].map((key) => {
+                  const tag = metaTags.find(t => t.key === key);
+                  return (
+                    <span key={key} style={{
+                      fontSize:10, fontWeight:700,
+                      color: tag ? tag.color : "transparent",
+                      background: tag ? tag.bg : "transparent",
+                      borderRadius:999, padding:"2px 6px", display:"inline-flex", alignItems:"center", gap:4,
+                      border: tag ? `1px solid ${tag.color}33` : "1px solid transparent",
+                      visibility: tag ? "visible" : "hidden"
+                    }}>
+                      <span style={{ fontSize:11 }}>{tag ? tag.icon : "•"}</span>
+                      {tag ? tag.label : "—"}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
