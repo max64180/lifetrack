@@ -3958,7 +3958,8 @@ export default function App() {
   const [showPetEventModal, setShowPetEventModal] = useState(false);
   const [showPetDeadlineModal, setShowPetDeadlineModal] = useState(false);
   const [showPetDocModal, setShowPetDocModal] = useState(false);
-  const [petForm, setPetForm] = useState({ name:"", species:"dog", birth:"", notes:"", photo:"" });
+  const [petForm, setPetForm] = useState({ name:"", species:"dog", birth:"", notes:"", photo:"", id:null });
+  const [editingPetId, setEditingPetId] = useState(null);
   const [petEventForm, setPetEventForm] = useState({ title:"", date:"", cost:"", notes:"", schedule:false, schedulePreset:"1m", scheduleDate:"" });
   const [petDeadlineForm, setPetDeadlineForm] = useState({ title:"", date:"", cost:"" });
   const [petEventFiles, setPetEventFiles] = useState([]);
@@ -4158,22 +4159,62 @@ export default function App() {
   const makeId = () => `${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
   const mergeFiles = (prev, files) => [...prev, ...Array.from(files || [])].slice(0, MAX_ATTACHMENTS);
 
+  const closePetModal = () => {
+    setShowPetAdd(false);
+    setEditingPetId(null);
+    setPetForm({ name:"", species:"dog", birth:"", notes:"", photo:"", id:null });
+  };
+
+  const startEditPet = (pet) => {
+    if (!pet) return;
+    setEditingPetId(pet.id);
+    setPetForm({
+      name: pet.name || "",
+      species: pet.species || "dog",
+      birth: pet.birth || "",
+      notes: pet.notes || "",
+      photo: pet.photo || "",
+      id: pet.id
+    });
+    setShowPetAdd(true);
+  };
+
   const addPet = () => {
     const name = petForm.name.trim();
     if (!name) return;
-    const newPet = {
-      id: makeId(),
-      name,
-      species: petForm.species || "dog",
-      birth: petForm.birth || "",
-      notes: petForm.notes || "",
-      photo: petForm.photo || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setPets(prev => [newPet, ...prev]);
-    setPetForm({ name:"", species:"dog", birth:"", notes:"", photo:"" });
-    setShowPetAdd(false);
+    if (editingPetId) {
+      setPets(prev => prev.map(p => p.id === editingPetId ? {
+        ...p,
+        name,
+        species: petForm.species || "dog",
+        birth: petForm.birth || "",
+        notes: petForm.notes || "",
+        photo: petForm.photo || "",
+        updatedAt: new Date().toISOString()
+      } : p));
+    } else {
+      const newPet = {
+        id: makeId(),
+        name,
+        species: petForm.species || "dog",
+        birth: petForm.birth || "",
+        notes: petForm.notes || "",
+        photo: petForm.photo || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setPets(prev => [newPet, ...prev]);
+    }
+    closePetModal();
+  };
+
+  const deletePet = (petId) => {
+    if (!window.confirm(t("pet.deleteConfirm"))) return;
+    setPets(prev => prev.filter(p => p.id !== petId));
+    setPetEvents(prev => prev.filter(e => e.petId !== petId));
+    setPetDeadlines(prev => prev.filter(d => d.petId !== petId));
+    setPetDocs(prev => prev.filter(d => d.petId !== petId));
+    if (activePetId === petId) setActivePetId(null);
   };
 
   const addPetEvent = async () => {
@@ -5718,6 +5759,14 @@ export default function App() {
                       )}
                     </div>
                     <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26" }}>{pet.name}</div>
+                    <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+                      <button onClick={() => startEditPet(pet)} style={{ border:"none", background:"#f0efec", borderRadius:10, padding:"6px 10px", cursor:"pointer", fontSize:12, fontWeight:700, color:"#2d2b26" }}>
+                        {t("actions.edit")}
+                      </button>
+                      <button onClick={() => deletePet(pet.id)} style={{ border:"none", background:"#FFEDEE", borderRadius:10, padding:"6px 10px", cursor:"pointer", fontSize:12, fontWeight:700, color:"#E53935" }}>
+                        {t("actions.delete")}
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ display:"flex", gap:8, background:"#fff", padding:"8px", borderRadius:14, border:"1px solid #e8e6e0", marginBottom:12 }}>
@@ -6117,12 +6166,12 @@ export default function App() {
 
       {/* Add Pet modal */}
       {showPetAdd && (
-        <div onClick={e => e.target === e.currentTarget && setShowPetAdd(false)} style={{
+        <div onClick={e => e.target === e.currentTarget && closePetModal()} style={{
           position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
           display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
         }}>
           <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
-            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.add")}</div>
+            <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{editingPetId ? t("pet.edit") : t("pet.add")}</div>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <div style={{
                 width:56, height:56, borderRadius:16, background:"#f7f6f2", border:"1px solid #e8e6e0",
@@ -6160,7 +6209,7 @@ export default function App() {
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.notes")}</label>
             <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12 }} />
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => setShowPetAdd(false)} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
+              <button onClick={closePetModal} style={{ flex:1, padding:"10px", borderRadius:12, border:"1px solid #e8e6e0", background:"#fff" }}>{t("actions.cancel")}</button>
               <button onClick={addPet} style={{ flex:1, padding:"10px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontWeight:700 }}>{t("actions.confirm")}</button>
             </div>
           </div>
