@@ -843,7 +843,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
               type="date"
               value={downpaymentDate}
               onChange={e => setDownpaymentDate(e.target.value)}
-              style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #edecea", fontSize:14, outline:"none", marginBottom:20 }}
+              style={{ ...dateInpModal, marginBottom:20 }}
             />
 
             <div style={{ display:"flex", gap:10 }}>
@@ -1114,22 +1114,22 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         {step === 1 && (
           <>
             <label style={lbl}>{t("wizard.title")}</label>
-            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp} autoFocus/>
+            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp}/>
 
             <label style={lbl}>{t("wizard.category")}</label>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(100px, 1fr))", gap:8, width:"100%" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
                   background: form.cat === c.id ? c.light : "#f5f4f0",
                   border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
-                  borderRadius:12, padding:"6px 8px", cursor:"pointer", fontSize:12,
+                  borderRadius:10, padding:"5px 6px", cursor:"pointer", fontSize:11,
                   fontWeight: form.cat === c.id ? 700 : 500,
                   color: form.cat === c.id ? c.color : "#6b6961",
-                  minHeight:40, width:"100%", display:"flex", flexDirection:"column",
-                  alignItems:"center", justifyContent:"center", gap:4, textAlign:"center",
+                  minHeight:34, width:"100%", display:"flex", flexDirection:"column",
+                  alignItems:"center", justifyContent:"center", gap:3, textAlign:"center",
                   lineHeight:1.1, overflow:"hidden"
                 }}>
-                  <span>{c.icon}</span>
+                  <span style={{ fontSize:13 }}>{c.icon}</span>
                   <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"100%" }}>{t(c.labelKey || "", { defaultValue: c.label })}</span>
                 </button>
               ))}
@@ -1542,6 +1542,10 @@ const dateInp = {
   appearance:"none",
   backgroundClip:"padding-box",
   paddingRight:36
+};
+const dateInpModal = {
+  ...dateInp,
+  fontSize:16
 };
 
 /* ── CATEGORY MANAGEMENT SHEET ─────────────────────────── */
@@ -2578,7 +2582,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 type="date"
                 value={schedulePrompt.date}
                 onChange={e => setSchedulePrompt(p => ({ ...p, date: e.target.value }))}
-                style={{ width:"100%", padding:"10px 12px", borderRadius:10, border:"1px solid #e8e6e0", fontSize:13, fontFamily:"inherit" }}
+                style={dateInpModal}
               />
               <div style={{ display:"flex", gap:10, marginTop:16 }}>
                 <button onClick={() => setSchedulePrompt(null)} style={{
@@ -2754,7 +2758,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     }}>
       <div style={{
         background:"#fff", borderRadius:18, padding:"20px 22px", width:"90%", maxWidth:400,
-        animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"80vh", overflowY:"auto"
+        animation:"popIn .22s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"80vh", overflowY:"auto", overflowX:"hidden"
       }}>
         <style>{`@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
         
@@ -2766,7 +2770,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
         <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("workLog.placeholders.title")} style={inp}/>
 
         <label style={{ ...lbl, marginTop:12 }}>{t("workLog.fields.date")}</label>
-        <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp}/>
+        <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={dateInpModal}/>
 
         {isAuto && (
           <>
@@ -2837,7 +2841,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
               }}>{m === 1 ? t("workLog.quick1") : (m === 12 ? t("workLog.quick12") : t("workLog.quick24"))}</button>
             ))}
           </div>
-              <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={inp}/>
+              <input type="date" value={form.nextDate} onChange={e => set("nextDate", e.target.value)} style={dateInpModal}/>
               <label style={{ display:"flex", alignItems:"center", gap:8, marginTop:10, fontSize:12, color:"#6b6961" }}>
                 <input type="checkbox" checked={!!form.createDeadline} onChange={e => set("createDeadline", e.target.checked)} />
                 {t("workLog.createDeadline")}
@@ -6228,7 +6232,7 @@ export default function App() {
               <option value="other">{t("pet.other")}</option>
             </select>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.birth")}</label>
-            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petForm.birth} onChange={e => setPetForm({ ...petForm, birth: e.target.value })} style={{ ...dateInpModal, marginBottom:10 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.notes")}</label>
             <textarea value={petForm.notes} onChange={e => setPetForm({ ...petForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
@@ -6251,7 +6255,7 @@ export default function App() {
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventTitle")}</label>
             <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventDate")}</label>
-            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ ...dateInpModal, marginBottom:10 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventCost")}</label>
             <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventNotes")}</label>
@@ -6270,7 +6274,7 @@ export default function App() {
                   <option value="exact">{t("pet.scheduleExact")}</option>
                 </select>
                 {petEventForm.schedulePreset === "exact" && (
-                  <input type="date" value={petEventForm.scheduleDate} onChange={e => setPetEventForm({ ...petEventForm, scheduleDate: e.target.value })} style={{ flex:1, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", boxSizing:"border-box" }} />
+                  <input type="date" value={petEventForm.scheduleDate} onChange={e => setPetEventForm({ ...petEventForm, scheduleDate: e.target.value })} style={{ ...dateInpModal, flex:1 }} />
                 )}
               </div>
             )}
@@ -6309,7 +6313,7 @@ export default function App() {
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineTitle")}</label>
             <input value={petDeadlineForm.title} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineDate")}</label>
-            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
+            <input type="date" value={petDeadlineForm.date} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, date: e.target.value })} style={{ ...dateInpModal, marginBottom:10 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.deadlineCost")}</label>
             <input type="number" value={petDeadlineForm.cost} onChange={e => setPetDeadlineForm({ ...petDeadlineForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, boxSizing:"border-box", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:12, fontSize:16 }} />
             <div style={{ display:"flex", gap:8 }}>
@@ -6380,7 +6384,7 @@ export default function App() {
               type="date"
               value={postponeDate}
               onChange={e => setPostponeDate(e.target.value)}
-              style={{ width:"100%", padding:"12px 14px", borderRadius:12, border:"2px solid #edecea", fontSize:14, outline:"none", marginBottom:16 }}
+              style={{ ...dateInpModal, marginBottom:16 }}
               autoFocus
             />
             <div style={{ display:"flex", gap:10 }}>
