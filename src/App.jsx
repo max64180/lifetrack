@@ -5231,35 +5231,34 @@ export default function App() {
                   width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
                   background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
                 }}>‹</button>
-                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-                  <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
-                  <div style={{
-                    display:"flex", alignItems:"center", gap:2, padding:"2px", borderRadius:999,
-                    background:"#f2f1ed", border:"1px solid #e8e6e0"
-                  }}>
-                    <button
-                      onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
-                      style={{
-                        border:"none", cursor:"pointer", borderRadius:999, padding:"4px 8px",
-                        background: range === "mese" ? "#2d2b26" : "transparent",
-                        color: range === "mese" ? "#fff" : "#8a877f",
-                        fontSize:10, fontWeight:800, letterSpacing:".2px", textTransform:"uppercase"
-                      }}
-                    >
-                      {t("range.month", { defaultValue:"Mese" })}
-                    </button>
-                    <button
-                      onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
-                      style={{
-                        border:"none", cursor:"pointer", borderRadius:999, padding:"4px 8px",
-                        background: range === "anno" ? "#2d2b26" : "transparent",
-                        color: range === "anno" ? "#fff" : "#8a877f",
-                        fontSize:10, fontWeight:800, letterSpacing:".2px", textTransform:"uppercase"
-                      }}
-                    >
-                      {t("range.year", { defaultValue:"Anno" })}
-                    </button>
+                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
+                  <button
+                    onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
+                    style={{
+                      background:"transparent", border:"none", cursor:"pointer",
+                      fontSize:10, fontWeight: range === "mese" ? 800 : 600,
+                      color: range === "mese" ? "#2d2b26" : "#b2afa7",
+                      padding:"2px 4px", borderBottom: range === "mese" ? "2px solid #2d2b26" : "2px solid transparent",
+                      letterSpacing:".2px", textTransform:"uppercase"
+                    }}
+                  >
+                    {t("range.month", { defaultValue:"Mese" })}
+                  </button>
+                  <div style={{ flex:1, textAlign:"center" }}>
+                    <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
                   </div>
+                  <button
+                    onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
+                    style={{
+                      background:"transparent", border:"none", cursor:"pointer",
+                      fontSize:10, fontWeight: range === "anno" ? 800 : 600,
+                      color: range === "anno" ? "#2d2b26" : "#b2afa7",
+                      padding:"2px 4px", borderBottom: range === "anno" ? "2px solid #2d2b26" : "2px solid transparent",
+                      letterSpacing:".2px", textTransform:"uppercase"
+                    }}
+                  >
+                    {t("range.year", { defaultValue:"Anno" })}
+                  </button>
                 </div>
                 <button onClick={() => setPeriodOffset(o => o + 1)} style={{
                   width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
