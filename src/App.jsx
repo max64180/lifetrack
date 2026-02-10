@@ -487,12 +487,12 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         unit: intervalLabel
       })
     : t("card.never");
-  const metaIcons = [
-    item.recurring?.enabled ? "🔁" : null,
-    item.mandatory ? "⚠️" : null,
-    item.essential ? "💡" : null,
-    item.autoPay ? "↺" : null,
-  ].filter(Boolean).join(" ");
+  const metaTags = [
+    item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9" } : null,
+    item.mandatory ? { icon:"⚠️", label:"Ind", bg:"#FFF0EC", color:"#E53935" } : null,
+    item.essential ? { icon:"💡", label:"Ess", bg:"#E8F5E9", color:"#4CAF6E" } : null,
+    item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9" } : null,
+  ].filter(Boolean);
 
   return (
     <div style={{ marginBottom:8 }}>
@@ -520,11 +520,26 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <div style={{ fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {item.title}
           </div>
-          {(item.asset || metaIcons) && (
-            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-              {item.asset && <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.asset}</span>}
-              {!!metaIcons && (
-                <span style={{ fontSize:13, color:"#6b6961", letterSpacing:".5px" }}>{metaIcons}</span>
+          {(item.asset || metaTags.length > 0) && (
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
+              {item.asset && (
+                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
+                  {item.asset}
+                </span>
+              )}
+              {metaTags.length > 0 && (
+                <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto" }}>
+                  {metaTags.map((tag) => (
+                    <span key={tag.label} style={{
+                      fontSize:10, fontWeight:700, color:tag.color, background:tag.bg,
+                      borderRadius:999, padding:"2px 6px", display:"inline-flex", alignItems:"center", gap:4,
+                      border:`1px solid ${tag.color}33`
+                    }}>
+                      <span style={{ fontSize:11 }}>{tag.icon}</span>
+                      {tag.label}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
