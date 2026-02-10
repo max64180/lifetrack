@@ -470,6 +470,10 @@
     "worklogAdded": "✓ Work log added",
     "worklogDeleted": "✓ Work log deleted",
     "syncError": "✗ Save error ({{code}})",
+    "syncStarted": "⟳ Sync started",
+    "syncUpToDate": "✓ Already up to date",
+    "syncDisabled": "Sync disabled",
+    "syncBusy": "Sync in progress…",
     "resetDone": "✓ Cloud data deleted",
     "resetError": "✗ Data reset error"
   },
@@ -484,7 +488,9 @@
     "deadlines": "deadlines"
   },
   "sync": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "pullToSync": "Pull to sync",
+    "releaseToSync": "Release to sync"
   },
   "cat": {
     "casa": "Home",

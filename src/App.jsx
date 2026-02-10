@@ -29,9 +29,10 @@ const storage = getStorage(app);
 
 const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 const APP_BUILD_TIME = typeof __APP_BUILD_TIME__ !== "undefined" ? __APP_BUILD_TIME__ : "";
-const POLL_BASE_MS = 5 * 60 * 1000;
-const POLL_MAX_MS = 30 * 60 * 1000;
-const MIN_POLL_GAP_MS = 2 * 60 * 1000;
+const POLL_BASE_MS = 20 * 60 * 1000;
+const POLL_MAX_MS = 90 * 60 * 1000;
+const MIN_POLL_GAP_MS = 10 * 60 * 1000;
+const MANUAL_SYNC_COOLDOWN_MS = 60 * 1000;
 const FULL_SYNC_EVERY_MS = 24 * 60 * 60 * 1000;
 const RANGE_IDS = new Set(RANGES.map(r => r.id));
 const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
@@ -3184,6 +3185,13 @@ export default function App() {
   const DEV_EMAIL = "mstanglino@gmail.com";
   const isDevUser = (user?.email || "").toLowerCase() === DEV_EMAIL;
   const [showDev, setShowDev] = useState(false);
+  const syncNowRef = useRef(null);
+  const lastManualSyncRef = useRef(0);
+  const listRef = useRef(null);
+  const pullStartRef = useRef(0);
+  const pullActiveRef = useRef(false);
+  const [pullOffset, setPullOffset] = useState(0);
+  const [pulling, setPulling] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -3564,6 +3572,7 @@ export default function App() {
         scheduleNext(pollStateRef.current.backoffMs);
       }
     };
+    syncNowRef.current = fetchOnce;
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -3953,6 +3962,27 @@ export default function App() {
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const triggerManualSync = async () => {
+    if (!syncEnabled) {
+      showToast(t("toast.syncDisabled"));
+      return;
+    }
+    if (syncing || pendingSaveRef.current) {
+      showToast(t("toast.syncBusy"));
+      return;
+    }
+    const now = Date.now();
+    if (now - lastManualSyncRef.current < MANUAL_SYNC_COOLDOWN_MS) {
+      showToast(t("toast.syncUpToDate"));
+      return;
+    }
+    lastManualSyncRef.current = now;
+    showToast(t("toast.syncStarted"));
+    if (syncNowRef.current) {
+      await syncNowRef.current("manual");
+    }
   };
 
   const processAttachmentFile = async (file) => {
@@ -5100,7 +5130,50 @@ export default function App() {
           </div>
 
           {/* LISTA */}
-          <div style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}>
+          <div
+            ref={listRef}
+            onTouchStart={(e) => {
+              if (!listRef.current) return;
+              if (listRef.current.scrollTop > 0) return;
+              pullActiveRef.current = true;
+              pullStartRef.current = e.touches[0].clientY;
+              setPulling(true);
+            }}
+            onTouchMove={(e) => {
+              if (!pullActiveRef.current || !listRef.current) return;
+              if (listRef.current.scrollTop > 0) return;
+              const delta = e.touches[0].clientY - pullStartRef.current;
+              if (delta <= 0) return;
+              e.preventDefault();
+              setPullOffset(Math.min(delta, 80));
+            }}
+            onTouchEnd={() => {
+              if (!pullActiveRef.current) return;
+              pullActiveRef.current = false;
+              setPulling(false);
+              if (pullOffset > 52) {
+                triggerManualSync();
+              }
+              setPullOffset(0);
+            }}
+            style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}
+          >
+            <div
+              style={{
+                height: pullOffset,
+                transition: pulling ? "none" : "height 180ms ease",
+                display:"flex",
+                alignItems:"flex-end",
+                justifyContent:"center",
+                color:"#8a877f",
+                fontSize:11,
+                fontWeight:700,
+                letterSpacing:".3px",
+                textTransform:"uppercase"
+              }}
+            >
+              {pullOffset > 20 ? (pullOffset > 52 ? t("sync.releaseToSync") : t("sync.pullToSync")) : ""}
+            </div>
             {isYearCompact ? (
               (recurringSummary.length === 0 && oneOffItems.length === 0 && mandatoryItems.length === 0) ? (
                 <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>

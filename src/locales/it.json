@@ -470,6 +470,10 @@
     "worklogAdded": "✓ Lavoro aggiunto al registro",
     "worklogDeleted": "✓ Lavoro eliminato",
     "syncError": "✗ Errore salvataggio ({{code}})",
+    "syncStarted": "⟳ Sync avviato",
+    "syncUpToDate": "✓ Dati già aggiornati",
+    "syncDisabled": "Sync disattivato",
+    "syncBusy": "Sync in corso…",
     "resetDone": "✓ Dati cloud eliminati",
     "resetError": "✗ Errore reset dati"
   },
@@ -484,7 +488,9 @@
     "deadlines": "scadenze"
   },
   "sync": {
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "pullToSync": "Tira per sincronizzare",
+    "releaseToSync": "Rilascia per sincronizzare"
   },
   "cat": {
     "casa": "Casa",
