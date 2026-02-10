@@ -17,6 +17,7 @@ describe("PriorityFilter", () => {
     const setFilterAutoPay = vi.fn();
     const setFilterManual = vi.fn();
     const setFilterEstimateMissing = vi.fn();
+    const setFilterPet = vi.fn();
 
     render(
       <PriorityFilter
@@ -29,6 +30,8 @@ describe("PriorityFilter", () => {
         setFilterManual={setFilterManual}
         filterEstimateMissing={false}
         setFilterEstimateMissing={setFilterEstimateMissing}
+        filterPet={false}
+        setFilterPet={setFilterPet}
       />
     );
 
@@ -39,5 +42,6 @@ describe("PriorityFilter", () => {
     expect(setFilterAutoPay).toHaveBeenCalledWith(false);
     expect(setFilterMandatory).toHaveBeenCalledWith(false);
     expect(setFilterEstimateMissing).toHaveBeenCalledWith(false);
+    expect(setFilterPet).toHaveBeenCalledWith(false);
   });
 });
