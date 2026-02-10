@@ -369,41 +369,41 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
     .reduce((s, d) => s + d.budget, 0);
 
   return (
-    <div style={{ padding:"12px 18px 0" }}>
-      <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"14px 16px" }}>
-        <div style={{ fontSize:10, color:"rgba(255,255,255,.45)", fontWeight:600 }}>
+    <div style={{ padding:"8px 14px 0" }}>
+      <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"10px 12px" }}>
+        <div style={{ fontSize:9, color:"rgba(255,255,255,.45)", fontWeight:600 }}>
           {t("budgetBar.yearTotal", { defaultValue: "Spesa anno in corso" })}: <strong style={{ color:"#fff" }}>{formatCurrency(yearTotal)}</strong>
         </div>
-        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"8px 0 10px" }} />
+        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"6px 0 8px" }} />
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
           <div>
-            <div style={{ fontSize:10, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>{t("budgetBar.title")}</div>
-            <div style={{ fontSize:28, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("budgetBar.title")}</div>
+            <div style={{ fontSize:24, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
           </div>
           <div style={{ display:"flex", gap:10 }}>
             <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
-              <div style={{ fontSize:16, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
+              <div style={{ fontSize:8, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
+              <div style={{ fontSize:14, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
             </div>
           </div>
         </div>
 
-        <div style={{ display:"flex", height:6, borderRadius:3, overflow:"hidden", background:"rgba(255,255,255,.08)" }}>
+        <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"rgba(255,255,255,.08)" }}>
           <div style={{ width:"100%", background:"#E8855D" }}/>
         </div>
-        <div style={{ display:"flex", gap:6, marginTop:8, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap" }}>
           {urgent > 0 && (
-            <div style={{ background:"rgba(232,133,93,.25)", borderRadius:999, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
-              <span style={{ fontSize:11 }}>⚡</span>
-              <span style={{ fontSize:11, fontWeight:800, color:"#E8855D" }}>
+            <div style={{ background:"rgba(232,133,93,.25)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:10 }}>⚡</span>
+              <span style={{ fontSize:10, fontWeight:800, color:"#E8855D" }}>
                 {t("budgetBar.urgent", { count: urgent, defaultValue: `Urgenti ${urgent}` })}
               </span>
             </div>
           )}
           {missingCount > 0 && (
-            <div style={{ background:"rgba(255,248,237,.2)", borderRadius:999, padding:"4px 8px", display:"flex", alignItems:"center", gap:4 }}>
-              <span style={{ fontSize:11 }}>❔</span>
-              <span style={{ fontSize:11, fontWeight:800, color:"#E6C97A" }}>
+            <div style={{ background:"rgba(255,248,237,.2)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:10 }}>❔</span>
+              <span style={{ fontSize:10, fontWeight:800, color:"#E6C97A" }}>
                 {t("budgetBar.missing", { count: missingCount, defaultValue: `Da stimare ${missingCount}` })}
               </span>
             </div>
@@ -691,31 +691,31 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
           )}
 
-          <div style={{ display:"flex", gap:8 }}>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {/* Se è scaduta, offri "Posticipa" */}
             {days < 0 && !item.done && (
               <button onClick={(e) => { e.stopPropagation(); onPostpone(item.id); }} style={{
-                flex:1, padding:"11px", borderRadius:10, border:"none",
+                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
                 background:"#FB8C00", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
               }}>↻ {t("actions.postpone")}</button>
             )}
 
             {item.recurring && item.recurring.enabled && !item.done && (
               <button onClick={(e) => { e.stopPropagation(); onSkip(item.id); }} style={{
-                flex:1, padding:"11px", borderRadius:10, border:"none",
+                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
                 background:"#edecea", color:"#6b6961", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
               }}>⏭ {t("actions.skip")}</button>
             )}
             
             <button onClick={(e) => { e.stopPropagation(); onComplete(item.id); }} style={{
-              flex: days < 0 && !item.done ? 1 : 2, padding:"11px", borderRadius:10, border:"none",
+              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
               background: item.done ? "#edecea" : cat.color,
               color: item.done ? "#6b6961" : "#fff",
               fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>{item.done ? `↩ ${t("actions.reactivate")}` : `✓ ${t("actions.complete")}`}</button>
             
             <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} style={{
-              flex:1, padding:"11px", borderRadius:10, border:"none",
+              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
               background:"#FFF0EC", color:"#E53935", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>{t("actions.delete")}</button>
           </div>
@@ -5105,16 +5105,16 @@ export default function App() {
       {/* HEADER - primary section */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18" }}>
         <div style={{ 
-          background:"#1e1c18", color:"#fff", padding:"12px 16px", position:"relative", overflow:"hidden",
+          background:"#1e1c18", color:"#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
         }}>
-          <div style={{ position:"absolute", top:-30, right:-20, width:80, height:80, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:18, fontWeight:800, letterSpacing:"-.6px" }}>
+                <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
                   {mainSection === "deadlines" ? t("nav.deadlines") : mainSection === "assets" ? t("nav.assets") : t("nav.documents")}
                 </h1>
-                <span style={{ fontSize:10, opacity:.35 }}>{t("app.tagline")}</span>
+                <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
               </div>
               <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
                 <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
@@ -5141,11 +5141,11 @@ export default function App() {
               { id:"done", labelKey:"tabs.done" }
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                flex:1, padding:"12px 0", border:"none", background:"transparent", cursor:"pointer",
-                fontSize:14, fontWeight: activeTab === tab.id ? 700 : 500,
+                flex:1, padding:"8px 0", border:"none", background:"transparent", cursor:"pointer",
+                fontSize:13, fontWeight: activeTab === tab.id ? 700 : 500,
                 color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
                 borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
-                transition:"all .2s", minHeight:44,
+                transition:"all .2s", minHeight:40,
               }}>{t(tab.labelKey)}</button>
             ))}
           </div>
@@ -5166,26 +5166,26 @@ export default function App() {
           />
 
           {/* Period navigator (above list) */}
-          <div style={{ padding:"10px 18px 6px", background:"#f5f4f0" }}>
+          <div style={{ padding:"6px 14px 4px", background:"#f5f4f0" }}>
             <div style={{
               background:"#fff", borderRadius:16, border:"1px solid #edecea",
-              padding:"12px 14px", display:"flex", flexDirection:"column", gap:8,
-              boxShadow:"0 4px 12px rgba(0,0,0,.05)"
+              padding:"8px 10px", display:"flex", flexDirection:"column", gap:6,
+              boxShadow:"0 3px 10px rgba(0,0,0,.05)"
             }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button onClick={() => setPeriodOffset(o => o - 1)} style={{
-                  width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-                  background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+                  width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+                  background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
                 }}>‹</button>
                 <div style={{ flex:1, textAlign:"center" }}>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+                  <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
                 </div>
                 <button onClick={() => setPeriodOffset(o => o + 1)} style={{
-                  width:38, height:38, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-                  background:"#faf9f7", color:"#2d2b26", fontSize:18, fontWeight:800
+                  width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
+                  background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
                 }}>›</button>
               </div>
-              <div style={{ display:"flex", justifyContent:"center", gap:18, marginTop:2 }}>
+              <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:2 }}>
                 {[
                   { id:"mese", label: t("range.month", { defaultValue:"Mese" }) },
                   { id:"anno", label: t("range.year", { defaultValue:"Anno" }) }
@@ -5197,7 +5197,7 @@ export default function App() {
                       onClick={() => { setRange(opt.id); setPeriodOffset(0); setExpandedId(null); }}
                       style={{
                         background:"transparent", border:"none", cursor:"pointer",
-                        fontSize:11, fontWeight: activeRange ? 800 : 600,
+                        fontSize:10, fontWeight: activeRange ? 800 : 600,
                         color: activeRange ? "#2d2b26" : "#b2afa7",
                         padding:"2px 4px", borderBottom: activeRange ? "2px solid #2d2b26" : "2px solid transparent",
                         letterSpacing:".2px", textTransform:"uppercase"

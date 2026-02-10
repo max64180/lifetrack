@@ -48,31 +48,31 @@ export default function PriorityFilter({
   const isActive = current !== "all" || filterPet;
 
   return (
-    <div style={{ background:"#f5f4f0", paddingBottom:8 }}>
-      <div style={{ padding:"10px 18px 4px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+    <div style={{ background:"#f5f4f0", paddingBottom:4 }}>
+      <div style={{ padding:"6px 14px 2px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
           <div style={{ position:"relative", display:"inline-block" }}>
           <button onClick={() => setOpen(o => !o)} style={{
             border:`1px solid ${isActive ? "#2d2b26" : "#e8e6e0"}`,
             background: isActive ? "#2d2b26" : "#fff",
-            borderRadius:14, padding:"8px 12px",
-            fontSize:12, fontWeight:800,
+            borderRadius:14, padding:"6px 10px",
+            fontSize:11, fontWeight:800,
             color: isActive ? "#fff" : "#2d2b26",
-            cursor:"pointer", minHeight:36,
+            cursor:"pointer", minHeight:32,
             display:"flex", alignItems:"center", gap:8,
             boxShadow: isActive ? "0 6px 16px rgba(0,0,0,.12)" : "none"
           }}>
-            <span style={{ fontSize:10, letterSpacing:".4px", opacity:.75, textTransform:"uppercase" }}>
+            <span style={{ fontSize:9, letterSpacing:".3px", opacity:.75, textTransform:"uppercase" }}>
               {t("filters.priority", { defaultValue:"Priorità" })}
             </span>
-            <strong style={{ fontSize:12 }}>
+            <strong style={{ fontSize:11 }}>
               {options.find(o => o.id === current)?.label}
             </strong>
-            <span style={{ fontSize:12, color: isActive ? "rgba(255,255,255,.8)" : "#8a877f" }}>▾</span>
+            <span style={{ fontSize:11, color: isActive ? "rgba(255,255,255,.8)" : "#8a877f" }}>▾</span>
           </button>
           {open && (
             <div style={{
-              position:"absolute", left:0, top:"calc(100% + 6px)", minWidth:220,
+              position:"absolute", left:0, top:"calc(100% + 4px)", minWidth:200,
               background:"#fff", border:"1px solid #e8e6e0", borderRadius:12,
               boxShadow:"0 10px 24px rgba(0,0,0,.08)", zIndex:90, overflow:"hidden"
             }}>
@@ -91,10 +91,10 @@ export default function PriorityFilter({
         <button onClick={() => { setFilterPet(!filterPet); }} style={{
           border:`1px solid ${filterPet ? "#2d2b26" : "#e8e6e0"}`,
           background: filterPet ? "#2d2b26" : "#fff",
-          borderRadius:14, padding:"8px 12px",
-          fontSize:12, fontWeight:800,
+          borderRadius:14, padding:"6px 10px",
+          fontSize:11, fontWeight:800,
           color: filterPet ? "#fff" : "#2d2b26",
-          cursor:"pointer", minHeight:36,
+          cursor:"pointer", minHeight:32,
           display:"flex", alignItems:"center", gap:6,
           boxShadow: filterPet ? "0 6px 16px rgba(0,0,0,.12)" : "none"
         }}>
@@ -103,7 +103,7 @@ export default function PriorityFilter({
         {isActive && (
           <button onClick={() => applyPriority("all")} style={{
             border:"none", background:"transparent", cursor:"pointer",
-            color:"#E53935", fontSize:12, fontWeight:700, padding:"6px 4px",
+            color:"#E53935", fontSize:11, fontWeight:700, padding:"4px 2px",
             textDecoration:"underline", textUnderlineOffset:3
           }}>
             {t("filters.reset", { defaultValue:"Reset filtri" })}
