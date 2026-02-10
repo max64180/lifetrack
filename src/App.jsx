@@ -487,12 +487,11 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         unit: intervalLabel
       })
     : t("card.never");
-  const metaTags = [
+  const rightTags = [
     item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9", key:"auto" } : null,
-    item.essential ? { icon:"💡", label:"Ess", bg:"#E8F5E9", color:"#4CAF6E", key:"ess" } : null,
-    item.mandatory ? { icon:"⚠️", label:"Ind", bg:"#FFF0EC", color:"#E53935", key:"ind" } : null,
     item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9", key:"ric" } : null,
   ].filter(Boolean);
+  const statusIcon = item.mandatory ? "⚠️" : (item.essential ? "💡" : "");
 
   return (
     <div style={{ marginBottom:8 }}>
@@ -517,19 +516,20 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         </div>
 
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {item.title}
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</span>
+            {statusIcon && <span style={{ fontSize:13 }}>{statusIcon}</span>}
           </div>
-          {(item.asset || metaTags.length > 0) && (
+          {(item.asset || rightTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
               {item.asset && (
                 <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
                   {item.asset}
                 </span>
               )}
-              <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto", marginLeft:"auto", justifyContent:"flex-end", minWidth:168 }}>
-                {["auto","ess","ind","ric"].map((key) => {
-                  const tag = metaTags.find(t => t.key === key);
+              <div style={{ display:"flex", gap:4, flexWrap:"nowrap", flex:"0 0 auto", marginLeft:"auto", justifyContent:"flex-end", minWidth:120 }}>
+                {["auto","ric"].map((key) => {
+                  const tag = rightTags.find(t => t.key === key);
                   return (
                     <span key={key} style={{
                       fontSize:10, fontWeight:700,
