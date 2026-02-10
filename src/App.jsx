@@ -5272,7 +5272,22 @@ export default function App() {
                   ) : (
                     <>
                       {(showAllMandatory ? mandatoryItems : mandatoryItems.slice(0, yearDetailLimit)).map(item => (
-                        <YearDetailRow key={item.id} item={item} cats={cats} />
+                        <DeadlineCard
+                          key={item.id}
+                          item={item}
+                          expanded={expandedId === item.id}
+                          onToggle={() => toggle(item.id)}
+                          onComplete={() => complete(item.id)}
+                          onSkip={() => skip(item.id)}
+                          onDelete={() => del(item.id)}
+                          onPostpone={() => postpone(item.id)}
+                          onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                          onUploadDoc={handleDocumentUpload}
+                          onDeleteDoc={deleteDocument}
+                          onViewDoc={setViewingDoc}
+                          onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                          cats={cats}
+                        />
                       ))}
                       {mandatoryItems.length > yearDetailLimit && !showAllMandatory && (
                         <button onClick={() => setShowAllMandatory(true)} style={{
@@ -5295,7 +5310,22 @@ export default function App() {
                   ) : (
                     <>
                       {(showAllOneOff ? oneOffItems : oneOffItems.slice(0, yearDetailLimit)).map(item => (
-                        <YearDetailRow key={item.id} item={item} cats={cats} />
+                        <DeadlineCard
+                          key={item.id}
+                          item={item}
+                          expanded={expandedId === item.id}
+                          onToggle={() => toggle(item.id)}
+                          onComplete={() => complete(item.id)}
+                          onSkip={() => skip(item.id)}
+                          onDelete={() => del(item.id)}
+                          onPostpone={() => postpone(item.id)}
+                          onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                          onUploadDoc={handleDocumentUpload}
+                          onDeleteDoc={deleteDocument}
+                          onViewDoc={setViewingDoc}
+                          onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                          cats={cats}
+                        />
                       ))}
                       {oneOffItems.length > yearDetailLimit && !showAllOneOff && (
                         <button onClick={() => setShowAllOneOff(true)} style={{
