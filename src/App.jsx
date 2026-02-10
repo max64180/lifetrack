@@ -494,21 +494,19 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
       <div
         onClick={() => onToggle(item.id)}
         style={{
-          display:"flex", alignItems:"center", gap:12, padding:"12px 14px",
+          display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
           background:"#fff", borderRadius: expanded ? "14px 14px 0 0" : 14,
-          border:`2px solid ${expanded ? cat.color : "#edecea"}`,
+          border:`1px solid ${expanded ? cat.color : "#edecea"}`,
           borderBottom: expanded ? "none" : undefined,
-          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:64,
+          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:58,
         }}
       >
-        {/* ICONA GRANDE CON BACKGROUND COLORATO */}
         <div style={{
-          width:48, height:48, borderRadius:12, flexShrink:0,
+          width:36, height:36, borderRadius:10, flexShrink:0,
           background: item.done ? "#f0efe8" : cat.light,
           display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:24, // emoji grande
-          border: `2px solid ${item.done ? "#e0ddd6" : cat.color + "44"}`,
-          transition:"all .2s",
+          fontSize:18,
+          border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "44"}`,
         }}>
           {item.done ? "✓" : cat.icon}
         </div>
@@ -517,61 +515,16 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <div style={{ fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {item.title}
           </div>
-          <div style={{ display:"flex", gap:5, marginTop:4, alignItems:"center", flexWrap:"wrap" }}>
-            <span style={{ fontSize:11, background:cat.light, color:cat.color, borderRadius:8, padding:"2px 8px", fontWeight:700, border:`1px solid ${cat.color}33` }}>
-              {catLabel}
-            </span>
-            {item.asset && !isPet && (
-              <span 
-                onClick={(e) => { e.stopPropagation(); onAssetClick(item.cat, item.asset); }}
-                style={{ 
-                  fontSize:10, background:"#f5f4f0", color:"#6b6961", borderRadius:8, 
-                  padding:"2px 7px", fontWeight:600, border:"1px solid #e8e6e0",
-                  cursor:"pointer", transition:"all .2s",
-                }}
-                onMouseOver={e => e.target.style.background = "#e8e6e0"}
-                onMouseOut={e => e.target.style.background = "#f5f4f0"}
-              >
-                {item.asset}
-              </span>
-            )}
-            {item.asset && isPet && (
-              <span style={{ 
-                fontSize:10, background:"#f5f4f0", color:"#6b6961", borderRadius:8, 
-                padding:"2px 7px", fontWeight:600, border:"1px solid #e8e6e0"
-              }}>
-                {item.asset}
-              </span>
-            )}
-            {item.recurring && item.recurring.enabled && (
-              <span style={{ fontSize:10, background:"#EBF2FC", color:"#5B8DD9", borderRadius:8, padding:"2px 7px", fontWeight:700, border:"1px solid #5B8DD966" }}>
-                🔁 {item.recurring.index}/{item.recurring.total}
-              </span>
-            )}
-            <span style={{ fontSize:11, color:"#b5b2a8", marginLeft:2 }}>{fmtDate(item.date)}</span>
+          <div style={{ fontSize:11, color:"#8a877f", marginTop:3, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {catLabel}{item.asset ? ` · ${item.asset}` : ""} · {fmtDate(item.date)}
           </div>
         </div>
 
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0, minWidth:56 }}>
           {item.budget > 0 && <span style={{ fontSize:14, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>}
-          <div style={{ display:"flex", gap:4, flexWrap:"wrap", justifyContent:"flex-end" }}>
-            {item.mandatory && !item.done && (
-              <span style={{ fontSize:10, fontWeight:800, color:"#fff", background:"#E53935", borderRadius:8, padding:"3px 7px", display:"flex", alignItems:"center", gap:2 }}>
-                ⚠ INDEROG.
-              </span>
-            )}
-            {item.autoPay && !item.done && (
-              <span style={{ fontSize:10, fontWeight:800, color:"#fff", background:"#5B8DD9", borderRadius:8, padding:"3px 7px", display:"flex", alignItems:"center", gap:2 }}>
-                🔄 AUTO
-              </span>
-            )}
-            {item.estimateMissing && !item.done && (
-              <span style={{ fontSize:10, fontWeight:800, color:"#8a6d1f", background:"#FFF8ED", borderRadius:8, padding:"3px 7px", display:"flex", alignItems:"center", gap:2 }}>
-                ❔ STIMA
-              </span>
-            )}
+          {!item.done && (
             <span style={{ fontSize:10, fontWeight:700, color:urg.color, background:urg.bg, borderRadius:8, padding:"3px 8px" }}>{urg.label}</span>
-          </div>
+          )}
           <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
       </div>
@@ -737,7 +690,11 @@ function GroupHeader({ group, cats }) {
   const catEntries = Object.entries(catMap).sort((a,b) => b[1] - a[1]);
 
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"18px 0 8px" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0 6px", position:"relative" }}>
+      <div style={{
+        position:"absolute", left:-20, top:18, width:10, height:10, borderRadius:"50%",
+        background:"#E8855D", boxShadow:"0 0 0 3px #f5f4f0"
+      }}/>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{group.label}</div>
         <div style={{ fontSize:11, color:"#8a877f", marginTop:1 }}>
@@ -5430,29 +5387,32 @@ export default function App() {
                 )}
               </div>
             ) : (
-              groups.map(g => (
-                <div key={g.key}>
-                  <GroupHeader group={g} cats={cats}/>
-                  {g.items.map(item => (
-                    <DeadlineCard
-                      key={item.id}
-                      item={item}
-                      expanded={expandedId === item.id}
-                      onToggle={() => toggle(item.id)}
-                      onComplete={() => complete(item.id)}
-                      onSkip={() => skip(item.id)}
-                      onDelete={() => del(item.id)}
-                      onPostpone={() => postpone(item.id)}
-                      onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
-                      onUploadDoc={handleDocumentUpload}
-                      onDeleteDoc={deleteDocument}
-                      onViewDoc={setViewingDoc}
-                      onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
-                      cats={cats}
-                    />
-                  ))}
-                </div>
-              ))
+              <div style={{ position:"relative", paddingLeft:26, marginTop:4 }}>
+                <div style={{ position:"absolute", left:10, top:0, bottom:0, width:2, background:"#e2e0da" }}/>
+                {groups.map(g => (
+                  <div key={g.key}>
+                    <GroupHeader group={g} cats={cats}/>
+                    {g.items.map(item => (
+                      <DeadlineCard
+                        key={item.id}
+                        item={item}
+                        expanded={expandedId === item.id}
+                        onToggle={() => toggle(item.id)}
+                        onComplete={() => complete(item.id)}
+                        onSkip={() => skip(item.id)}
+                        onDelete={() => del(item.id)}
+                        onPostpone={() => postpone(item.id)}
+                        onEdit={(item) => { setEditingDeadline(item); setShowAdd(true); }}
+                        onUploadDoc={handleDocumentUpload}
+                        onDeleteDoc={deleteDocument}
+                        onViewDoc={setViewingDoc}
+                        onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                        cats={cats}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
             )}
             <div style={{ textAlign:"center", color:"#b5b2a8", fontSize:10, padding:"14px 0 6px", lineHeight:1.4 }}>
               v{APP_VERSION}{APP_BUILD_TIME ? ` · ${new Date(APP_BUILD_TIME).toLocaleDateString(getLocale())}` : ""}
