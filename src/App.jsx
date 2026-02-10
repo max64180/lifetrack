@@ -464,7 +464,6 @@ function YearDetailRow({ item, cats }) {
 function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
   const { t } = useTranslation();
   const cat = item.petId ? PET_CAT : getCat(cats, item.cat);
-  const urg = getUrgency(item.date, item.done);
   const days = diffDays(item.date);
   const isPet = !!item.petId;
   const catLabel = t(cat.labelKey || "", { defaultValue: cat.label });
@@ -494,19 +493,19 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
       <div
         onClick={() => onToggle(item.id)}
         style={{
-          display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
+          display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
           background:"#fff", borderRadius: expanded ? "14px 14px 0 0" : 14,
           border:`1px solid ${expanded ? cat.color : "#edecea"}`,
           borderBottom: expanded ? "none" : undefined,
-          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:58,
+          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:52,
         }}
       >
         <div style={{
-          width:36, height:36, borderRadius:10, flexShrink:0,
+          width:26, height:26, borderRadius:8, flexShrink:0,
           background: item.done ? "#f0efe8" : cat.light,
           display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:18,
-          border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "44"}`,
+          fontSize:14,
+          border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "33"}`,
         }}>
           {item.done ? "✓" : cat.icon}
         </div>
@@ -515,16 +514,13 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <div style={{ fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {item.title}
           </div>
-          <div style={{ fontSize:11, color:"#8a877f", marginTop:3, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-            {catLabel}{item.asset ? ` · ${item.asset}` : ""} · {fmtDate(item.date)}
+          <div style={{ fontSize:11, color:"#8a877f", marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+            {[catLabel, item.asset].filter(Boolean).join(" · ")}
           </div>
         </div>
 
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0, minWidth:56 }}>
-          {item.budget > 0 && <span style={{ fontSize:14, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>}
-          {!item.done && (
-            <span style={{ fontSize:10, fontWeight:700, color:urg.color, background:urg.bg, borderRadius:8, padding:"3px 8px" }}>{urg.label}</span>
-          )}
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0, minWidth:52 }}>
+          {item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>}
           <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
       </div>
