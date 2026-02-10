@@ -3958,7 +3958,7 @@ export default function App() {
   const [showPetEventModal, setShowPetEventModal] = useState(false);
   const [showPetDeadlineModal, setShowPetDeadlineModal] = useState(false);
   const [showPetDocModal, setShowPetDocModal] = useState(false);
-  const [petForm, setPetForm] = useState({ name:"", species:"dog", birth:"", notes:"" });
+  const [petForm, setPetForm] = useState({ name:"", species:"dog", birth:"", notes:"", photo:"" });
   const [petEventForm, setPetEventForm] = useState({ title:"", date:"", cost:"", notes:"", schedule:false, schedulePreset:"1m", scheduleDate:"" });
   const [petDeadlineForm, setPetDeadlineForm] = useState({ title:"", date:"", cost:"" });
   const [petEventFiles, setPetEventFiles] = useState([]);
@@ -4167,11 +4167,12 @@ export default function App() {
       species: petForm.species || "dog",
       birth: petForm.birth || "",
       notes: petForm.notes || "",
+      photo: petForm.photo || "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     setPets(prev => [newPet, ...prev]);
-    setPetForm({ name:"", species:"dog", birth:"", notes:"" });
+    setPetForm({ name:"", species:"dog", birth:"", notes:"", photo:"" });
     setShowPetAdd(false);
   };
 
@@ -5670,8 +5671,12 @@ export default function App() {
                       borderRadius:14, padding:"12px 14px", marginBottom:10, cursor:"pointer"
                     }}>
                       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <div style={{ width:46, height:46, borderRadius:12, background:"#FFE9E0", border:"2px solid #E8855D33", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
-                          🐾
+                        <div style={{ width:46, height:46, borderRadius:12, background:"#FFE9E0", border:"2px solid #E8855D33", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, overflow:"hidden" }}>
+                          {p.photo ? (
+                            <img src={p.photo} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                          ) : (
+                            "🐾"
+                          )}
                         </div>
                         <div style={{ flex:1 }}>
                           <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26" }}>{p.name}</div>
@@ -5705,6 +5710,13 @@ export default function App() {
                 <>
                   <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
                     <button onClick={() => setActivePetId(null)} style={{ border:"none", background:"#fff", borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>←</button>
+                    <div style={{ width:36, height:36, borderRadius:10, background:"#FFE9E0", border:"1px solid #E8855D33", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, overflow:"hidden" }}>
+                      {pet.photo ? (
+                        <img src={pet.photo} alt={pet.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      ) : (
+                        "🐾"
+                      )}
+                    </div>
                     <div style={{ fontSize:18, fontWeight:800, color:"#2d2b26" }}>{pet.name}</div>
                   </div>
 
@@ -6111,6 +6123,30 @@ export default function App() {
         }}>
           <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.add")}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <div style={{
+                width:56, height:56, borderRadius:16, background:"#f7f6f2", border:"1px solid #e8e6e0",
+                display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden"
+              }}>
+                {petForm.photo ? (
+                  <img src={petForm.photo} alt="pet" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                ) : (
+                  <span style={{ fontSize:22 }}>🐾</span>
+                )}
+              </div>
+              <label style={{ flex:1, padding:"8px 10px", borderRadius:10, border:"1px dashed #e8e6e0", textAlign:"center", cursor:"pointer", fontSize:11, fontWeight:700, color:"#6b6961" }}>
+                {t("pet.photoUpload")}
+                <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = () => setPetForm(prev => ({ ...prev, photo: reader.result }));
+                    reader.readAsDataURL(file);
+                  }
+                  e.target.value = "";
+                }} />
+              </label>
+            </div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.name")}</label>
             <input value={petForm.name} onChange={e => setPetForm({ ...petForm, name: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.species")}</label>
@@ -6135,18 +6171,19 @@ export default function App() {
       {showPetEventModal && (
         <div onClick={e => e.target === e.currentTarget && setShowPetEventModal(false)} style={{
           position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
-          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+          display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
+          padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"92%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px" }}>
+          <div style={{ width:"92%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addEvent")}</div>
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventTitle")}</label>
-            <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input value={petEventForm.title} onChange={e => setPetEventForm({ ...petEventForm, title: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventDate")}</label>
-            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input type="date" value={petEventForm.date} onChange={e => setPetEventForm({ ...petEventForm, date: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16, WebkitAppearance:"none" }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventCost")}</label>
-            <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <input type="number" value={petEventForm.cost} onChange={e => setPetEventForm({ ...petEventForm, cost: e.target.value })} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
             <label style={{ fontSize:11, fontWeight:700, color:"#8a877f" }}>{t("pet.eventNotes")}</label>
-            <textarea value={petEventForm.notes} onChange={e => setPetEventForm({ ...petEventForm, notes: e.target.value })} rows={3} style={{ width:"100%", padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10 }} />
+            <textarea value={petEventForm.notes} onChange={e => setPetEventForm({ ...petEventForm, notes: e.target.value })} rows={3} style={{ width:"100%", maxWidth:"100%", minWidth:0, padding:"10px 12px", borderRadius:12, border:"1px solid #e8e6e0", marginBottom:10, fontSize:16 }} />
 
             <label style={{ display:"flex", gap:8, alignItems:"center", fontSize:12, fontWeight:700, color:"#2d2b26", marginBottom:8 }}>
               <input type="checkbox" checked={petEventForm.schedule} onChange={e => setPetEventForm({ ...petEventForm, schedule: e.target.checked })} />
@@ -6174,13 +6211,9 @@ export default function App() {
               </div>
             ))}
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
-                {t("attachments.photo")}
-                <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={e => setPetEventFiles(mergeFiles(petEventFiles, e.target.files))} />
-              </label>
-              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
-                {t("attachments.file")}
-                <input type="file" accept="*/*" style={{ display:"none" }} onChange={e => setPetEventFiles(mergeFiles(petEventFiles, e.target.files))} />
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer", fontWeight:700, fontSize:12, color:"#6b6961" }}>
+                {t("attachments.upload")}
+                <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={e => setPetEventFiles(mergeFiles(petEventFiles, e.target.files))} />
               </label>
             </div>
 
@@ -6218,9 +6251,10 @@ export default function App() {
       {showPetDocModal && (
         <div onClick={e => e.target === e.currentTarget && setShowPetDocModal(false)} style={{
           position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:210,
-          display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"
+          display:"flex", alignItems:"flex-start", justifyContent:"center", backdropFilter:"blur(4px)",
+          padding:"6vh 0 20px"
         }}>
-          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px" }}>
+          <div style={{ width:"90%", maxWidth:380, background:"#fff", borderRadius:18, padding:"18px", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch" }}>
             <div style={{ fontSize:16, fontWeight:800, marginBottom:12 }}>{t("pet.addDoc")}</div>
             {petDocsFiles.map((f, i) => (
               <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f7f6f2", padding:"6px 8px", borderRadius:8, marginBottom:6 }}>
@@ -6229,13 +6263,9 @@ export default function App() {
               </div>
             ))}
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
-                {t("attachments.photo")}
-                <input type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={e => setPetDocsFiles(mergeFiles(petDocsFiles, e.target.files))} />
-              </label>
-              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer" }}>
-                {t("attachments.file")}
-                <input type="file" accept="*/*" style={{ display:"none" }} onChange={e => setPetDocsFiles(mergeFiles(petDocsFiles, e.target.files))} />
+              <label style={{ flex:1, padding:"10px", borderRadius:12, border:"2px dashed #e8e6e0", textAlign:"center", cursor:"pointer", fontWeight:700, fontSize:12, color:"#6b6961" }}>
+                {t("attachments.upload")}
+                <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={e => setPetDocsFiles(mergeFiles(petDocsFiles, e.target.files))} />
               </label>
             </div>
             <div style={{ display:"flex", gap:8 }}>

@@ -162,6 +162,7 @@
     "name": "Name",
     "birth": "Birth date",
     "notes": "Notes",
+    "photoUpload": "Upload photo",
     "overview": "Overview",
     "health": "Health",
     "deadlines": "Deadlines",
