@@ -437,8 +437,6 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
   );
 }
 
-function YearDetailRow}
-
 function YearDetailRow({ item, cats }) {
   const { t } = useTranslation();
   const cat = item.petId ? PET_CAT : (getCat(cats, item.cat) || {});
