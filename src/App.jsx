@@ -1252,11 +1252,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               {t("actions.back")}
             </button>
           )}
-          {step === lastStep && (
-            <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
-              {t("actions.abandon", { defaultValue: "Abbandona" })}
-            </button>
-          )}
+          <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
+            {t("actions.abandon", { defaultValue: "Abbandona" })}
+          </button>
           {step < lastStep ? (
             <button onClick={() => setStep(s => s + 1)} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontSize:14, fontWeight:800 }}>
               {t("actions.next")}
