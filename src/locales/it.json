@@ -49,9 +49,10 @@
     "editTitle": "Modifica scadenza",
     "step": {
       "document": "Documento",
-      "details": "Dettagli",
+      "details": "Dati",
       "recurring": "Ricorrenza",
-      "options": "Opzioni"
+      "options": "Opzioni",
+      "type": "Tipo"
     },
     "docLabel": "Documento (opzionale)",
     "docUpload": "📸 Carica il documento (puoi saltare)",
@@ -66,7 +67,14 @@
     "budget": "Budget (€)",
     "budgetHint": "Se non sai l'importo puoi lasciarlo vuoto: non entrerà nei totali.",
     "notes": "Note",
-    "notesPlaceholder": "Appunti…"
+    "notesPlaceholder": "Appunti…",
+    "quickHint": "Configura in 30 secondi",
+    "oneTime": "Una tantum",
+    "oneTimeHint": "Titolo + data, veloce",
+    "recurring": "Ricorrente (bollette)",
+    "recurringHint": "Ogni mese senza dimenticare",
+    "dayOfMonth": "Giorno del mese",
+    "budgetPlaceholder": "Opzionale"
   },
   "recurring": {
     "title": "🔁 Scadenza ricorrente",

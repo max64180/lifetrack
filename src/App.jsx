@@ -903,7 +903,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
 
 function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem, onToast }) {
   const { t, i18n } = useTranslation();
-  const [step, setStep] = useState(0); // 0 doc, 1 base, 2 options
+  const [step, setStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({ 
     title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
@@ -916,10 +916,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     recurringEndMode: "auto", // auto | count | date
     recurringEndDate: ""
   });
+  const [mode, setMode] = useState("one"); // one | recurring
+
   useEffect(() => { 
     if (!open) {
       setStep(0);
       setShowAdvanced(false);
+      setMode("one");
       setForm({ 
         title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
         mandatory:false, essential:true, autoPay:false, documents:[],
@@ -943,6 +946,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       setShowAdvanced(
         preset === "custom" || endMode !== "auto"
       );
+      setMode(editingItem.recurring?.enabled ? "recurring" : "one");
       setForm({
         title: editingItem.title,
         cat: editingItem.cat,
@@ -978,10 +982,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const selectedCat = getCat(cats, form.cat);
   const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
   const steps = [
-    t("wizard.step.document"),
-    t("wizard.step.details"),
-    t("wizard.step.recurring"),
-    t("wizard.step.options")
+    t("wizard.step.type", { defaultValue: "Tipo" }),
+    t("wizard.step.details", { defaultValue: "Dati" }),
+    t("wizard.step.document", { defaultValue: "Documento" })
   ];
   const lastStep = steps.length - 1;
   const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
@@ -1008,563 +1011,248 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     mesi: { it:["mese","mesi"], en:["month","months"] },
     anni: { it:["anno","anni"], en:["year","years"] },
   };
-  const unitLabels = unitMap[form.recurringUnit] || { it:[form.recurringUnit, form.recurringUnit], en:[form.recurringUnit, form.recurringUnit] };
-  const unitLabel = interval === 1 ? unitLabels[lang][0] : unitLabels[lang][1];
-  const frequencyLabel = form.recurringPreset === "mensile"
-    ? t("recurring.everySingle", { unit: lang === "it" ? "mese" : "month" })
-    : form.recurringPreset === "trimestrale"
-      ? t("recurring.everyMultiple", { count: 3, unit: lang === "it" ? "mesi" : "months" })
-      : form.recurringPreset === "annuale"
-        ? t("recurring.everySingle", { unit: lang === "it" ? "anno" : "year" })
-        : (interval === 1
-          ? t("recurring.everySingle", { unit: unitLabel })
-          : t("recurring.everyMultiple", { count: interval, unit: unitLabel }));
-  const endDateLabel = form.recurringEndDate
-    ? new Date(form.recurringEndDate + "T00:00:00").toLocaleDateString(getLocale(), { day:'2-digit', month:'short', year:'numeric' })
-    : "";
-  const endSummary = form.recurringEndMode === "auto"
-    ? t("recurring.summary.auto", { date: autoEndLabel })
-    : form.recurringEndMode === "date"
-      ? (endDateLabel ? t("recurring.summary.date", { date: endDateLabel }) : t("recurring.summary.datePlaceholder"))
-      : t("recurring.summary.count", { count });
-  const presetOptions = [
-    { id:"mensile", label: t("recurring.preset.monthly"), interval:1, unit:"mesi" },
-    { id:"trimestrale", label: t("recurring.preset.quarterly"), interval:3, unit:"mesi" },
-    { id:"annuale", label: t("recurring.preset.yearly"), interval:1, unit:"anni" },
-    { id:"custom", label: t("recurring.preset.custom") },
-  ];
-
-  const preview = (() => {
-    if (!form.recurringEnabled || occurrences.length === 0) return null;
-    const currentYear = today.getFullYear();
-    const thisYearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-    const thisYearOccurrences = occurrences.filter(d => d >= today && d <= thisYearEnd);
-    const thisYearTotal = thisYearOccurrences.length * baseAmount;
-    const next = occurrences.find(d => d >= today) || occurrences[0] || null;
-
-    const nextYear = currentYear + 1;
-    const nextYearStart = new Date(nextYear, 0, 1);
-    const nextYearEnd = new Date(nextYear, 11, 31, 23, 59, 59, 999);
-    const nextYearOccurrences = occurrences.filter(d => d >= nextYearStart && d <= nextYearEnd);
-    const nextYearTotal = nextYearOccurrences.length * baseAmount;
-
-    return {
-      thisYearCount: thisYearOccurrences.length,
-      thisYearTotal,
-      next,
-      nextYear,
-      nextYearCount: nextYearOccurrences.length,
-      nextYearTotal
-    };
+  const unitLabel = (unit, count) => {
+    const map = unitMap[unit] || unitMap.mesi;
+    return count === 1 ? map[lang][0] : map[lang][1];
+  };
+  const recurringLabel = (() => {
+    if (!form.recurringEnabled) return t("recurring.none", { defaultValue: "Nessuna" });
+    const countSafe = Math.max(1, parseInt(form.recurringInterval) || 1);
+    return lang === "it"
+      ? `Ogni ${countSafe} ${unitLabel(form.recurringUnit, countSafe)}`
+      : `Every ${countSafe} ${unitLabel(form.recurringUnit, countSafe)}`;
   })();
+
   const canProceedDetails = form.title.trim() && form.date;
+
+  const toggleMode = (next) => {
+    setMode(next);
+    if (next === "recurring") {
+      set("recurringEnabled", true);
+    } else {
+      set("recurringEnabled", false);
+    }
+  };
+
+  const finalize = () => {
+    if (!form.title || !form.date) return;
+    if (editingItem) {
+      onUpdate(form);
+      return;
+    }
+    if (form.recurringEnabled) {
+      const seriesId = `series_${Date.now()}`;
+      const startDate = new Date(form.date + "T00:00:00");
+      const schedule = resolveRecurringSchedule(form, startDate);
+      const baseAmount = Number(form.budget) || 0;
+      const newSeries = [];
+      schedule.dates.forEach((occurrenceDate, i) => {
+        newSeries.push({
+          id: Date.now() + i,
+          title: form.title,
+          cat: form.cat,
+          asset: form.asset,
+          budget: baseAmount,
+          estimateMissing: budgetMissing,
+          notes: form.notes,
+          mandatory: form.mandatory,
+          essential: form.essential,
+          autoPay: form.autoPay,
+          date: occurrenceDate,
+          documents: i === 0 ? form.documents : [],
+          done: false,
+          recurring: {
+            enabled: true,
+            interval: schedule.interval,
+            unit: schedule.unit,
+            seriesId,
+            index: i + 1,
+            total: schedule.total,
+            baseAmount,
+            endMode: schedule.endMode,
+            endDate: schedule.endDate,
+            preset: form.recurringPreset,
+          }
+        });
+      });
+      onSave(newSeries);
+    } else {
+      const newDate = new Date(form.date + "T00:00:00");
+      onSave({
+        id: Date.now(),
+        title: form.title,
+        cat: form.cat,
+        asset: form.asset,
+        budget: baseAmount,
+        estimateMissing: budgetMissing,
+        notes: form.notes,
+        mandatory: form.mandatory,
+        essential: form.essential,
+        autoPay: form.autoPay,
+        date: newDate,
+        documents: form.documents,
+        recurring: null,
+        done: false
+      });
+    }
+    onClose();
+  };
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
-      position:"fixed", inset:0, background:"rgba(18,17,13,.55)", zIndex:200,
-      display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)",
+      position:"fixed", inset:0, background:"#1f1d19", zIndex:200,
+      display:"flex", alignItems:"stretch", justifyContent:"center"
     }}>
-      <div className="wizard-sheet" style={{
-        background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 20px 34px", width:"100%", maxWidth:480, boxSizing:"border-box",
-        animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"85vh", overflowY:"auto", overflowX:"hidden",
+      <div style={{
+        width:"100%", maxWidth:480, color:"#fff", padding:"20px 18px 28px",
+        display:"flex", flexDirection:"column", gap:16, overflowY:"auto"
       }}>
-        <style>{`
-          @keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-          .wizard-sheet, .wizard-sheet * { box-sizing: border-box; }
-          @media (hover:none) and (pointer:coarse) {
-            .wizard-sheet input,
-            .wizard-sheet select,
-            .wizard-sheet textarea {
-              font-size: 16px !important;
-            }
-          }
-          .wizard-sheet input[type="date"]{
-            -webkit-appearance: none;
-            appearance: none;
-          }
-          .wizard-sheet input[type="date"]::-webkit-date-and-time-value{
-            text-align:left;
-          }
-        `}</style>
-        <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 16px" }}/>
-        <h3 style={{ margin:"0 0 6px", fontSize:18, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>
-          {editingItem ? t("wizard.editTitle") : t("wizard.newTitle")}
-        </h3>
-        <div style={{ display:"flex", gap:6, marginBottom:12 }}>
-          {steps.map((s, i) => (
-            <div key={s} style={{
-              flex:1, height:4, borderRadius:4,
-              background: i <= step ? "#E8855D" : "#f0ede7"
-            }}/>
-          ))}
-        </div>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, gap:8, flexWrap:"wrap" }}>
-          <div style={{ fontSize:12, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px", flex:"1 1 160px", minWidth:0 }}>
-            Step {step + 1} · {steps[step]}
-          </div>
-          <div style={{ fontSize:11, color:"#b5b2a8", textAlign:"right", flex:"0 1 55%", minWidth:0 }}>
-            {form.title ? form.title : t("wizard.untitled")}
-            {form.date ? ` · ${form.date}` : ""}
-            {form.budget ? ` · €${form.budget}` : ""}
-          </div>
+        <div style={{ marginTop:6 }}>
+          <div style={{ fontSize:22, fontWeight:800, letterSpacing:"-.3px" }}>{editingItem ? t("wizard.editTitle") : t("wizard.newTitle")}</div>
+          <div style={{ fontSize:13, color:"#b8b4ad", marginTop:4 }}>{t("wizard.quickHint", { defaultValue: "Configura in 30 secondi" })}</div>
         </div>
 
-        {step === 0 && (
-          <>
-            <label style={lbl}>{t("wizard.docLabel")}</label>
-            <div style={{ background:"#faf9f7", borderRadius:12, padding:"10px 12px", border:"1px solid #edecea" }}>
-              {form.documents.length === 0 ? (
-                <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
-                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (file.size === 0) {
-                      onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload"));
-                      e.target.value = '';
-                      return;
-                    }
-                    try {
-                      if (file.size > FILE_MAX_BYTES) {
-                        throw new Error("file_too_large");
-                      }
-                      const base64 = await fileToBase64(file);
-                      const doc = {
-                        id: Date.now(),
-                        type: 'incoming',
-                        base64,
-                        filename: file.name || "file",
-                        contentType: file.type || "application/octet-stream",
-                        size: file.size,
-                        isImage: isImageType(file.type),
-                        uploadDate: new Date().toISOString()
-                      };
-                      set("documents", [doc]);
-                    } catch(err) {
-                      if (err?.message === "file_too_large") {
-                        onToast ? onToast(t("toast.fileTooLarge", { size: 10 })) : alert(t("toast.fileTooLarge", { size: 10 }));
-                      } else {
-                        onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload"));
-                      }
-                    }
-                    e.target.value = '';
-                  }} />
-                  {t("wizard.docUpload")}
-                </label>
-              ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:8, padding:"6px 10px", border:"1px solid #e8e6e0" }}>
-                  <span style={{ fontSize:16 }}>📄</span>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
-                    <div style={{ fontSize:10, color:"#8a877f" }}>{t("wizard.docAttached")}</div>
-                  </div>
-                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>{t("wizard.docRemove")}</button>
-                </div>
-              )}
+        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+          <div style={{ flex:1, height:6, borderRadius:6, background:"#3a362f" }}>
+            <div style={{ width:`${((step+1)/steps.length)*100}%`, height:"100%", borderRadius:6, background:"#E8855D" }}/>
+          </div>
+          <div style={{ fontSize:12, color:"#b8b4ad", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
+        </div>
+
+        {step == 0 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <div onClick={() => toggleMode("one")} style={{
+              background: mode === "one" ? "#fff" : "#2d2b26",
+              color: mode === "one" ? "#2d2b26" : "#fff",
+              borderRadius:20, padding:"18px", cursor:"pointer",
+              border: mode === "one" ? "2px solid #E8855D" : "2px solid transparent"
+            }}>
+              <div style={{ fontSize:18, fontWeight:800 }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
+              <div style={{ fontSize:13, opacity:.7 }}>{t("wizard.oneTimeHint", { defaultValue: "Titolo + data, veloce" })}</div>
             </div>
-          </>
+            <div onClick={() => toggleMode("recurring")} style={{
+              background: mode === "recurring" ? "#2d2b26" : "#1f1d19",
+              color: "#fff",
+              borderRadius:20, padding:"18px", cursor:"pointer",
+              border: mode === "recurring" ? "2px solid #E8855D" : "2px solid #3a362f"
+            }}>
+              <div style={{ fontSize:18, fontWeight:800 }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
+              <div style={{ fontSize:13, color:"#cfc9c2" }}>{t("wizard.recurringHint", { defaultValue: "Ogni mese senza dimenticare" })}</div>
+            </div>
+          </div>
         )}
 
-        {step === 1 && (
-          <>
-            <label style={lbl}>{t("wizard.title")}</label>
-            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={inp}/>
+        {step == 1 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{t("wizard.title")}</label>
+            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
 
-            <label style={lbl}>{t("wizard.category")}</label>
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ flex:1 }}>
+                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.date")}</label>
+                <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
+                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
+              </div>
+            </div>
+
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <button type="button" onClick={() => set("mandatory", !form.mandatory)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.mandatory ? "#FFF0EC" : "#2d2b26", color: form.mandatory ? "#E53935" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>⚠️ {t("card.mandatory")}</button>
+              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.autoPay ? "#EBF2FC" : "#2d2b26", color: form.autoPay ? "#5B8DD9" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>↺ {t("filters.autoPay", { defaultValue: "Automatico" })}</button>
+              <button type="button" onClick={() => set("essential", !form.essential)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.essential ? "#E8F5E9" : "#2d2b26", color: form.essential ? "#4CAF6E" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>● {t("filters.essential", { defaultValue: "Essenziale" })}</button>
+            </div>
+
+            <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
-                  background: form.cat === c.id ? c.light : "#f5f4f0",
+                  background: form.cat === c.id ? c.light : "#2d2b26",
                   border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
-                  borderRadius:10, padding:"5px 6px", cursor:"pointer", fontSize:11,
-                  fontWeight: form.cat === c.id ? 700 : 500,
-                  color: form.cat === c.id ? c.color : "#6b6961",
-                  minHeight:34, width:"100%", display:"flex", flexDirection:"column",
-                  alignItems:"center", justifyContent:"center", gap:3, textAlign:"center",
-                  lineHeight:1.1, overflow:"hidden"
+                  borderRadius:10, padding:"6px", cursor:"pointer", fontSize:11,
+                  fontWeight: form.cat === c.id ? 700 : 600,
+                  color: form.cat === c.id ? c.color : "#cfc9c2",
+                  minHeight:36
                 }}>
-                  <span style={{ fontSize:13 }}>{c.icon}</span>
-                  <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"100%" }}>{t(c.labelKey || "", { defaultValue: c.label })}</span>
+                  <span style={{ fontSize:13 }}>{c.icon}</span> {t(c.labelKey || "", { defaultValue: c.label })}
                 </button>
               ))}
             </div>
 
             {hasAssets && (
               <>
-                <label style={lbl}>{t("wizard.asset")}</label>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8, width:"100%" }}>
+                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase", marginTop:6 }}>{t("wizard.asset")}</label>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   {selectedCat.assets.map(a => (
                     <button key={a} onClick={() => set("asset", a)} style={{
-                      background: form.asset === a ? selectedCat.light : "#f5f4f0",
-                      border: `2px solid ${form.asset === a ? selectedCat.color : "#e8e6e0"}`,
-                      borderRadius:12, padding:"6px 8px", cursor:"pointer", fontSize:12,
-                      fontWeight: form.asset === a ? 700 : 500,
-                      color: form.asset === a ? selectedCat.color : "#6b6961",
-                      minHeight:40, width:"100%", display:"flex", alignItems:"center", justifyContent:"center",
-                      whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"
-                    }}>
-                      <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{a}</span>
-                    </button>
+                      padding:"8px 12px", borderRadius:999, border:"none", background: form.asset === a ? "#E8855D" : "#2d2b26", color: form.asset === a ? "#fff" : "#cfc9c2",
+                      fontSize:12, fontWeight:700, cursor:"pointer"
+                    }}>{a}</button>
                   ))}
                 </div>
               </>
             )}
 
-            <label style={lbl}>{t("wizard.dueDate")}</label>
-            <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={dateInp}/>
-
-            <div style={{ display:"flex", gap:10 }}>
-              <div style={{ flex:1 }}>
-                <label style={lbl}>{t("wizard.budget")}</label>
-                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder="0" style={inp}/>
-                <div style={{ fontSize:11, color:"#8a877f", marginTop:6 }}>
-                  {t("wizard.budgetHint")}
-                </div>
+            {mode === "recurring" && (
+              <div style={{ marginTop:8, padding:"12px", borderRadius:14, background:"#2d2b26", color:"#cfc9c2" }}>
+                <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
               </div>
-            </div>
-          </>
+            )}
+          </div>
         )}
 
-        {step === 2 && (
-          <>
-            <div style={{ marginTop:2, background:"#faf9f7", border:"1px solid #edecea", borderRadius:10, padding:"10px 12px" }}>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", marginBottom:form.recurringEnabled ? 12 : 0 }}>
-                <input
-                  type="checkbox"
-                  checked={form.recurringEnabled}
-                  onChange={e => set("recurringEnabled", e.target.checked)}
-                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
-                />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#2d2b26" }}>{t("recurring.title")}</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("recurring.subtitle")}</div>
-                </div>
-              </label>
-
-              {form.recurringEnabled && (
-                <div style={{ paddingLeft:4 }}>
-                  <div style={{ fontSize:11, color:"#8a877f", fontWeight:700, marginBottom:6 }}>{t("recurring.frequency")}</div>
-                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
-                    {presetOptions.map(p => {
-                      const active = form.recurringPreset === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => {
-                            set("recurringPreset", p.id);
-                            if (p.interval) {
-                              set("recurringInterval", p.interval);
-                              set("recurringUnit", p.unit);
-                            }
-                            if (p.id === "custom") setShowAdvanced(true);
-                          }}
-                          style={{
-                            padding:"7px 12px", borderRadius:999, border: active ? "2px solid #2d2b26" : "2px solid transparent",
-                            background: active ? "#2d2b26" : "#fff", color: active ? "#fff" : "#6b6961",
-                            fontSize:12, fontWeight:700, cursor:"pointer",
-                            boxShadow: active ? "0 4px 10px rgba(0,0,0,.15)" : "none",
-                          }}
-                        >
-                          {p.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"8px 10px", fontSize:11, color:"#6b6961" }}>
-                    <div style={{ fontWeight:700, color:"#2d2b26" }}>{t("recurring.summary.repeat", { label: frequencyLabel })}</div>
-                    <div style={{ marginTop:4, color:"#8a877f" }}>{endSummary}</div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowAdvanced(v => !v)}
-                    style={{ marginTop:10, background:"transparent", border:"none", color:"#5B8DD9", fontSize:12, fontWeight:700, cursor:"pointer" }}
-                  >
-                    {showAdvanced ? t("recurring.advancedHide") : t("recurring.advanced")}
-                  </button>
-
-                  {showAdvanced && (
-                    <div style={{ marginTop:8, background:"#fff", border:"1px solid #edecea", borderRadius:10, padding:"10px" }}>
-                      {form.recurringPreset === "custom" && (
-                        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.every")}</label>
-                          <input 
-                            type="number" 
-                            value={form.recurringInterval} 
-                            onChange={e => set("recurringInterval", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                            onBlur={e => { if(e.target.value === "") set("recurringInterval", 1); }}
-                            min="1"
-                            style={{ width:70, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
-                          />
-                          <select 
-                            value={form.recurringUnit} 
-                            onChange={e => set("recurringUnit", e.target.value)}
-                            style={{ flex:1, padding:"6px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, background:"#fff" }}
-                          >
-                            <option value="giorni">giorni</option>
-                            <option value="settimane">settimane</option>
-                            <option value="mesi">mesi</option>
-                            <option value="anni">anni</option>
-                          </select>
-                        </div>
-                      )}
-
-                      <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, display:"block", marginBottom:6 }}>{t("recurring.endTitle")}</label>
-                      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:8 }}>
-                        {[
-                          { id:"auto", label:t("recurring.endAuto") },
-                          { id:"count", label:t("recurring.endCount") },
-                          { id:"date", label:t("recurring.endDate") },
-                        ].map(opt => {
-                          const active = form.recurringEndMode === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              onClick={() => set("recurringEndMode", opt.id)}
-                              style={{
-                                padding:"6px 10px", borderRadius:999, border: active ? "2px solid #5B8DD9" : "2px solid transparent",
-                                background: active ? "#EBF2FC" : "#f5f4f0", color: active ? "#2d2b26" : "#6b6961",
-                                fontSize:11, fontWeight:700, cursor:"pointer",
-                              }}
-                            >
-                              {opt.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {form.recurringEndMode === "count" && (
-                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.endCount")}</label>
-                          <input 
-                            type="number" 
-                            value={form.recurringCount} 
-                            onChange={e => set("recurringCount", e.target.value === "" ? "" : Math.max(1, parseInt(e.target.value) || 1))}
-                            onBlur={e => { if(e.target.value === "") set("recurringCount", 1); }}
-                            min="1"
-                            max="999"
-                            style={{ width:80, padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, textAlign:"center" }}
-                          />
-                        </div>
-                      )}
-
-                      {form.recurringEndMode === "date" && (
-                        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                          <label style={{ fontSize:11, color:"#8a877f", fontWeight:700, minWidth:70 }}>{t("recurring.endDate")}</label>
-                          <input 
-                            type="date" 
-                            value={form.recurringEndDate}
-                            onChange={e => set("recurringEndDate", e.target.value)}
-                            style={{ flex:1, minWidth:0, maxWidth:"100%", padding:"6px 8px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:13, boxSizing:"border-box" }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div style={{ marginTop:10, padding:"8px", background:"#EBF2FC", borderRadius:8, fontSize:11, color:"#5B8DD9", fontWeight:600 }}>
-                    {budgetMissing
-                      ? t("recurring.occurrencesNoAmount", { count: totalOccurrences || count })
-                      : t("recurring.occurrences", { count: totalOccurrences || count, amount: form.budget })
+        {step == 2 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <div style={{ fontSize:12, color:"#b8b4ad", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
+            <div style={{ background:"#2d2b26", borderRadius:16, padding:"14px" }}>
+              {form.documents.length === 0 ? (
+                <label style={{ display:"block", padding:"12px", borderRadius:12, border:"1px dashed #3a362f", background:"#1f1d19", color:"#cfc9c2", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > FILE_MAX_BYTES) {
+                      onToast ? onToast(t("toast.fileTooLarge", { size: 10 })) : alert(t("toast.fileTooLarge", { size: 10 }));
+                      e.target.value = '';
+                      return;
                     }
+                    try {
+                      const base64 = await fileToBase64(file);
+                      const doc = { id: Date.now(), type: 'incoming', base64, filename: file.name || "file", contentType: file.type || "application/octet-stream", size: file.size, isImage: isImageType(file.type), uploadDate: new Date().toISOString() };
+                      set("documents", [doc]);
+                    } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+                    e.target.value = '';
+                  }} />
+                  {t("wizard.docUpload")}
+                </label>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#1f1d19", borderRadius:12, padding:"8px 10px", border:"1px solid #3a362f" }}>
+                  <span style={{ fontSize:16 }}>📄</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
+                    <div style={{ fontSize:10, color:"#b8b4ad" }}>{t("wizard.docAttached")}</div>
                   </div>
+                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>{t("wizard.docRemove")}</button>
                 </div>
               )}
             </div>
-
-            {preview && (
-              <div style={{ marginTop:12, background:"#2d2b26", color:"#fff", borderRadius:10, padding:"10px 12px" }}>
-                <div style={{ fontSize:10, opacity:.6, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
-                  {t("impact.title")}
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:6, gap:12 }}>
-                  <div>
-                    <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.thisYearTotal)}</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>{t("impact.thisYear")} · {preview.thisYearCount} {t("common.deadlines")}</div>
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:18, fontWeight:800 }}>{budgetMissing ? "—" : formatCurrency(preview.nextYearTotal)}</div>
-                    <div style={{ fontSize:10, opacity:.6 }}>{t("impact.nextYear", { year: preview.nextYear })} · {preview.nextYearCount} {t("common.deadlines")}</div>
-                    {preview.next && (
-                      <div style={{ fontSize:10, opacity:.6 }}>
-                        {t("impact.next", { date: preview.next.toLocaleDateString(lang === "it" ? "it-IT" : "en-US", { day:'2-digit', month:'short' }) })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {budgetMissing && (
-                  <div style={{ marginTop:6, fontSize:10, opacity:.6 }}>
-                    {t("impact.missing")}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
+          </div>
         )}
 
-        {step === 3 && (
-          <>
-            <div style={{ marginTop:2, background:"#fff8f5", border:"1px solid #FBE9E7", borderRadius:10, padding:"10px 12px" }}>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={form.mandatory}
-                  onChange={e => { 
-                    const val = e.target.checked;
-                    set("mandatory", val);
-                    if (val) set("essential", true);
-                  }}
-                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#E53935" }}
-                />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#E53935" }}>{t("options.mandatoryTitle")}</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.mandatoryHint")}</div>
-                </div>
-              </label>
-            </div>
-
-            <div style={{ marginTop:10, background:"#f0f8ff", border:"1px solid #C8E6FF", borderRadius:10, padding:"10px 12px" }}>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={form.essential}
-                  onChange={e => set("essential", e.target.checked)}
-                  disabled={form.mandatory}
-                  style={{ width:20, height:20, cursor: form.mandatory ? "not-allowed" : "pointer", accentColor:"#4CAF6E", opacity: form.mandatory ? 0.5 : 1 }}
-                />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#4CAF6E" }}>{t("options.essentialTitle")}</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.essentialHint")}</div>
-                </div>
-              </label>
-            </div>
-
-            <div style={{ marginTop:14, background:"#EBF2FC", border:"1px solid #5B8DD966", borderRadius:10, padding:"10px 12px" }}>
-              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={form.autoPay}
-                  onChange={e => set("autoPay", e.target.checked)}
-                  style={{ width:20, height:20, cursor:"pointer", accentColor:"#5B8DD9" }}
-                />
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#5B8DD9" }}>{t("options.autoPayTitle")}</div>
-                  <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>{t("options.autoPayHint")}</div>
-                </div>
-              </label>
-            </div>
-
-            <label style={lbl}>{t("wizard.notes")}</label>
-            <textarea value={form.notes} onChange={e => set("notes", e.target.value)} placeholder={t("wizard.notesPlaceholder")} rows={2} style={{ ...inp, resize:"vertical" }}/>
-          </>
-        )}
-
-        <div style={{ display:"flex", gap:10, marginTop:20 }}>
-          <button onClick={onClose} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:600, color:"#6b6961", minHeight:48 }}>{t("actions.cancel")}</button>
+        <div style={{ display:"flex", gap:10, marginTop:"auto" }}>
           {step > 0 && (
-            <button onClick={() => setStep(s => Math.max(0, s - 1))} style={{ flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, color:"#2d2b26", minHeight:48 }}>
+            <button onClick={() => setStep(s => s - 1)} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #3a362f", background:"#1f1d19", color:"#cfc9c2", fontSize:13, fontWeight:700 }}>
               {t("actions.back")}
             </button>
           )}
           {step < lastStep ? (
-            <>
-              {step === 0 && (
-                <button onClick={() => setStep(s => Math.min(lastStep, s + 1))} style={{
-                  flex:1, padding:"14px", borderRadius:14, border:"2px solid #e8e6e0", background:"#fff", color:"#6b6961", cursor:"pointer", fontSize:14, fontWeight:600, minHeight:48
-                }}>{t("actions.skip")}</button>
-              )}
-              <button
-                onClick={() => {
-                  if (step === 1 && !canProceedDetails) return;
-                  setStep(s => Math.min(lastStep, s + 1));
-                }}
-                disabled={step === 1 && !canProceedDetails}
-                style={{
-                  flex:2, padding:"14px", borderRadius:14, border:"none",
-                  background: (step === 1 && !canProceedDetails) ? "#e0ddd6" : "#2d2b26",
-                  color:"#fff",
-                  cursor: (step === 1 && !canProceedDetails) ? "not-allowed" : "pointer",
-                  fontSize:14, fontWeight:700, minHeight:48,
-                  boxShadow:"0 4px 14px rgba(0,0,0,.2)",
-                  opacity: (step === 1 && !canProceedDetails) ? 0.6 : 1,
-                }}
-              >
-                {t("actions.next")}
-              </button>
-            </>
+            <button onClick={() => setStep(s => s + 1)} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontSize:14, fontWeight:800 }}>
+              {t("actions.next")}
+            </button>
           ) : (
-            <button onClick={() => {
-              if (form.title && form.date) {
-                if (editingItem) {
-                  if (onUpdate) onUpdate(form);
-                  onClose();
-                  return;
-                }
-                if (form.recurringEnabled) {
-                  const series = [];
-                  const seriesId = `series_${Date.now()}`;
-                  const startDate = baseDate || new Date(form.date+"T00:00:00");
-                  const schedule = resolveRecurringSchedule(form, startDate);
-                  schedule.dates.forEach((occurrenceDate, i) => {
-                    series.push({
-                      id: Date.now() + i,
-                      title: form.title,
-                      cat: form.cat,
-                      asset: form.asset,
-                      date: occurrenceDate,
-                      budget: baseAmount,
-                      estimateMissing: budgetMissing,
-                      notes: form.notes,
-                      mandatory: form.mandatory,
-                      essential: form.essential,
-                      autoPay: form.autoPay,
-                      documents: i === 0 ? form.documents : [],
-                      done: false,
-                      recurring: {
-                        enabled: true,
-                        interval: schedule.interval,
-                        unit: schedule.unit,
-                        seriesId: seriesId,
-                        index: i + 1,
-                        total: schedule.total,
-                        baseAmount: baseAmount,
-                        endMode: schedule.endMode,
-                        endDate: schedule.endDate,
-                        preset: form.recurringPreset,
-                      }
-                    });
-                  });
-                  onSave(series);
-                } else {
-                  onSave([{ 
-                    id: Date.now(), 
-                    title: form.title,
-                    cat: form.cat,
-                    asset: form.asset,
-                    date: new Date(form.date+"T00:00:00"), 
-                    budget: Number(form.budget)||0,
-                    estimateMissing: budgetMissing,
-                    notes: form.notes,
-                    mandatory: form.mandatory,
-                    essential: form.essential,
-                    autoPay: form.autoPay,
-                    documents: form.documents,
-                    done: false,
-                    recurring: null
-                  }]);
-                }
-                onClose();
-              }
-            }}
-            disabled={!canProceedDetails}
-            style={{
-              flex:2, padding:"14px", borderRadius:14, border:"none",
-              background: !canProceedDetails ? "#e0ddd6" : "#2d2b26",
-              color:"#fff",
-              cursor: !canProceedDetails ? "not-allowed" : "pointer",
-              fontSize:14, fontWeight:700, minHeight:48,
-              boxShadow:"0 4px 14px rgba(0,0,0,.2)",
-              opacity: !canProceedDetails ? 0.6 : 1,
-            }}>{t("actions.add")}</button>
+            <button onClick={finalize} disabled={!canProceedDetails} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: canProceedDetails ? "#E8855D" : "#6b6961", color:"#fff", fontSize:14, fontWeight:800 }}>
+              {t("actions.save")}
+            </button>
           )}
         </div>
       </div>
@@ -1572,38 +1260,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   );
 }
 
-const lbl = { display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginTop:14, marginBottom:5, letterSpacing:".5px", textTransform:"uppercase" };
-const inp = {
-  width:"100%",
-  maxWidth:"100%",
-  minWidth:0,
-  display:"block",
-  padding:"12px 14px",
-  borderRadius:12,
-  border:"2px solid #edecea",
-  fontSize:14,
-  fontFamily:"'Sora',sans-serif",
-  color:"#2d2b26",
-  background:"#faf9f7",
-  outline:"none",
-  boxSizing:"border-box",
-  minHeight:44
-};
-const dateInp = {
-  ...inp,
-  WebkitAppearance:"none",
-  appearance:"none",
-  backgroundClip:"padding-box",
-  paddingRight:36
-};
-const dateInpModal = {
-  ...dateInp,
-  fontSize:16
-};
-
-/* ── CATEGORY MANAGEMENT SHEET ─────────────────────────── */
-/* ── STATISTICHE SHEET ──────────────────────────────────── */
-/* ── STATISTICHE SHEET (NUOVA VERSIONE AGGREGATA) ──────────────────────────────────── */
+function StatsSheet
 function StatsSheet({ open, onClose, deadlines, cats }) {
   const { t } = useTranslation();
   const [view, setView] = useState("anno"); // anno, futuro

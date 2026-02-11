@@ -51,7 +51,8 @@
       "document": "Document",
       "details": "Details",
       "recurring": "Recurring",
-      "options": "Options"
+      "options": "Options",
+      "type": "Type"
     },
     "docLabel": "Document (optional)",
     "docUpload": "📸 Upload document (you can skip)",
@@ -66,7 +67,14 @@
     "budget": "Budget (€)",
     "budgetHint": "If you don't know the amount, leave it empty: it won't count in totals.",
     "notes": "Notes",
-    "notesPlaceholder": "Notes…"
+    "notesPlaceholder": "Notes…",
+    "quickHint": "Set up in 30 seconds",
+    "oneTime": "One‑time",
+    "oneTimeHint": "Title + date, quick",
+    "recurring": "Recurring (bills)",
+    "recurringHint": "Every month, no more forgetting",
+    "dayOfMonth": "Day of month",
+    "budgetPlaceholder": "Optional"
   },
   "recurring": {
     "title": "🔁 Recurring deadline",
