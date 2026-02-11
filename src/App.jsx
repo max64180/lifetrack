@@ -917,6 +917,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     recurringEndDate: ""
   });
   const [mode, setMode] = useState("one"); // one | recurring
+  const stepCardSize = "min(70vw, 240px)";
 
   useEffect(() => { 
     if (!open) {
@@ -1120,24 +1121,30 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         </div>
 
         {step == 0 && (
-          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <div onClick={() => toggleMode("one")} style={{
-              background: mode === "one" ? "#fff" : "#2d2b26",
-              color: mode === "one" ? "#2d2b26" : "#fff",
-              borderRadius:20, padding:"18px", cursor:"pointer",
-              border: mode === "one" ? "2px solid #E8855D" : "2px solid transparent"
-            }}>
-              <div style={{ fontSize:18, fontWeight:800 }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
-              <div style={{ fontSize:13, opacity:.7 }}>{t("wizard.oneTimeHint", { defaultValue: "Titolo + data, veloce" })}</div>
-            </div>
-            <div onClick={() => toggleMode("recurring")} style={{
-              background: mode === "recurring" ? "#2d2b26" : "#1f1d19",
-              color: "#fff",
-              borderRadius:20, padding:"18px", cursor:"pointer",
-              border: mode === "recurring" ? "2px solid #E8855D" : "2px solid #3a362f"
-            }}>
-              <div style={{ fontSize:18, fontWeight:800 }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
-              <div style={{ fontSize:13, color:"#cfc9c2" }}>{t("wizard.recurringHint", { defaultValue: "Ogni mese senza dimenticare" })}</div>
+          <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:18, alignItems:"center" }}>
+              <div onClick={() => toggleMode("one")} style={{
+                width: stepCardSize, height: stepCardSize,
+                background: mode === "one" ? "#fff" : "#2d2b26",
+                color: mode === "one" ? "#2d2b26" : "#fff",
+                borderRadius:20, padding:"18px 16px", cursor:"pointer",
+                border: mode === "one" ? "2px solid #E8855D" : "2px solid #3a362f",
+                display:"flex", flexDirection:"column", justifyContent:"center", textAlign:"center", gap:8
+              }}>
+                <div style={{ fontSize:19, fontWeight:800 }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
+                <div style={{ fontSize:13, opacity:.7 }}>{t("wizard.oneTimeHint", { defaultValue: "Titolo + data, veloce" })}</div>
+              </div>
+              <div onClick={() => toggleMode("recurring")} style={{
+                width: stepCardSize, height: stepCardSize,
+                background: mode === "recurring" ? "#2d2b26" : "#1f1d19",
+                color: "#fff",
+                borderRadius:20, padding:"18px 16px", cursor:"pointer",
+                border: mode === "recurring" ? "2px solid #E8855D" : "2px solid #3a362f",
+                display:"flex", flexDirection:"column", justifyContent:"center", textAlign:"center", gap:8
+              }}>
+                <div style={{ fontSize:19, fontWeight:800 }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
+                <div style={{ fontSize:13, color:"#cfc9c2" }}>{t("wizard.recurringHint", { defaultValue: "Ogni mese senza dimenticare" })}</div>
+              </div>
             </div>
           </div>
         )}
