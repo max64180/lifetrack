@@ -5056,7 +5056,29 @@ export default function App() {
     const idsToDelete = activeDeadlines
       .filter(d => d.recurring && d.recurring.seriesId === deleteConfirm.seriesId && d.recurring.index >= deleteConfirm.currentIndex)
       .map(d => d.id);
-    markDeadlinesDeleted(idsToDelete);
+    const now = Date.now();
+    const seriesId = deleteConfirm.seriesId;
+    const cutoffIndex = deleteConfirm.currentIndex;
+    setDeadlines(p => {
+      const updated = p.map(d => {
+        if (!d?.recurring || d.recurring.seriesId !== seriesId) return d;
+        if ((d.recurring.index || 0) >= cutoffIndex) return d;
+        const endDate = d.date instanceof Date ? d.date.toISOString().split('T')[0] : d.date;
+        return {
+          ...d,
+          recurring: {
+            ...d.recurring,
+            endMode: "date",
+            endDate,
+            total: cutoffIndex - 1
+          }
+        };
+      });
+      const idSet = new Set(idsToDelete.map(id => String(id)));
+      return updated.filter(d => !idSet.has(String(d.id)));
+    });
+    queuePendingDelete(idsToDelete);
+    deleteDeadlinesRemote(idsToDelete, now);
     setExpandedId(null);
     showToast(t("toast.futureDeleted", { count: deleteConfirm.futureCount }));
     setDeleteConfirm(null);
