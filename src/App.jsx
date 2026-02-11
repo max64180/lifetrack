@@ -257,32 +257,47 @@ function collectRecurringSeriesMembers(list, item) {
   });
 }
 
+function buildRecurringTargetIdSet(list, item, seedMembers = []) {
+  const ids = new Set((seedMembers || []).map(d => String(d.id)));
+  if (item?.id !== undefined && item?.id !== null) ids.add(String(item.id));
+  if (!Array.isArray(list) || !hasRecurringData(item)) return ids;
+
+  const rawSeriesId = item.recurring?.seriesId;
+  if (rawSeriesId !== undefined && rawSeriesId !== null && rawSeriesId !== "") {
+    list.forEach(d => {
+      if (!hasRecurringData(d)) return;
+      if (sameSeriesId(d.recurring?.seriesId, rawSeriesId)) ids.add(String(d.id));
+    });
+  }
+
+  collectRecurringSeriesMembers(list, item).forEach(d => ids.add(String(d.id)));
+  return ids;
+}
+
 function dedupeRecurringClonesForItem(list, item) {
   if (!Array.isArray(list)) return list;
   const fp = recurringFingerprint(item);
   if (!fp) return list;
-  const seen = new Set();
-  const out = [];
+  const bestByDate = new Map();
 
-  list.forEach(d => {
-    if (hasRecurringData(d) && recurringFingerprint(d) === fp) {
-      const key = [
-        toDateInputValue(d.date),
-        Number(d.budget) || 0,
-        !!d.done,
-        !!d.autoPay,
-        !!d.mandatory,
-        !!d.essential,
-        d.recurring?.unit || "",
-        Math.max(1, Number(d.recurring?.interval) || 1),
-      ].join("||");
-      if (seen.has(key)) return;
-      seen.add(key);
+  list.forEach((d, index) => {
+    if (!(hasRecurringData(d) && recurringFingerprint(d) === fp)) return;
+    const dateKey = toDateInputValue(d.date);
+    if (!dateKey) return;
+    const score = sameSeriesId(d.recurring?.seriesId, item.recurring?.seriesId) ? 2 : 0;
+    const prev = bestByDate.get(dateKey);
+    if (!prev || score > prev.score || (score === prev.score && index > prev.index)) {
+      bestByDate.set(dateKey, { id: String(d.id), score, index });
     }
-    out.push(d);
   });
 
-  return out;
+  return list.filter(d => {
+    if (!(hasRecurringData(d) && recurringFingerprint(d) === fp)) return true;
+    const dateKey = toDateInputValue(d.date);
+    if (!dateKey) return true;
+    const keep = bestByDate.get(dateKey);
+    return keep && keep.id === String(d.id);
+  });
 }
 
 function normalizeDeadline(raw) {
@@ -470,9 +485,10 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats, activeTab }) {
   const { t } = useTranslation();
   const inRange = deadlines.filter(d => !d.done && d.date >= periodStart && d.date <= periodEnd);
   const tabFiltered = (() => {
-    if (activeTab === "done") return deadlines.filter(d => d.done && !d.skipped);
-    if (activeTab === "overdue") return deadlines.filter(d => d.date < TODAY && !d.done);
-    return inRange;
+    if (activeTab === "done") return deadlines.filter(d => d.done && !d.skipped && d.date >= periodStart && d.date <= periodEnd);
+    if (activeTab === "overdue") return deadlines.filter(d => d.date < TODAY && !d.done && d.date >= periodStart && d.date <= periodEnd);
+    if (activeTab === "timeline") return deadlines.filter(d => d.date >= TODAY && !d.done && d.date >= periodStart && d.date <= periodEnd);
+    return deadlines.filter(d => d.date >= periodStart && d.date <= periodEnd);
   })();
   const inRangeBudgeted = tabFiltered.filter(d => !d.estimateMissing);
   const total   = inRangeBudgeted.reduce((s, d) => s + d.budget, 0);
@@ -4581,7 +4597,7 @@ export default function App() {
 
   const filtered = useMemo(() => {
     let list = allDeadlines.filter(d => {
-      if (activeTab === "done") return d.done;
+      if (activeTab === "done") return d.done && d.date >= periodStart && d.date <= periodEnd;
       if (activeTab === "overdue") return d.date < TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done; // scadute non completate nel periodo
       if (activeTab === "timeline") return d.date >= TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done;
       return true;
@@ -4605,7 +4621,7 @@ export default function App() {
   const navCandidates = useMemo(() => {
     let list = allDeadlines.filter(d => {
       if (activeTab === "done") return d.done;
-      if (activeTab === "overdue") return d.date < TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done;
+      if (activeTab === "overdue") return d.date < TODAY && !d.done;
       if (activeTab === "timeline") return d.date >= TODAY && !d.done;
       return true;
     });
@@ -4619,7 +4635,7 @@ export default function App() {
     if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
     if (filterPet) list = list.filter(d => d.petId);
     return list;
-  }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet, periodStart, periodEnd]);
+  }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet]);
   const availableYears = useMemo(() => {
     const years = new Set();
     navCandidates.forEach(d => {
@@ -4929,8 +4945,7 @@ export default function App() {
     const { item, form, seriesMembers = [] } = editConfirm;
     const fallbackMembers = collectRecurringSeriesMembers(activeDeadlines, item);
     const targetMembers = seriesMembers.length ? seriesMembers : fallbackMembers;
-    const targetIdSet = new Set(targetMembers.map(d => String(d.id)));
-    if (targetIdSet.size === 0) targetIdSet.add(String(item.id));
+    const seedMembers = targetMembers.length ? targetMembers : [item];
     const rawSeriesId = item.recurring?.seriesId;
     const stableSeriesId =
       rawSeriesId === undefined || rawSeriesId === null || rawSeriesId === ""
@@ -4957,6 +4972,7 @@ export default function App() {
       (formEndMode === "count" && schedule.count !== item.recurring.total);
 
     const finalizeSeriesUpdate = (list) => dedupeRecurringClonesForItem(list, item);
+    const getLiveTargetIds = (list) => buildRecurringTargetIdSet(list, item, seedMembers);
 
     const buildSeries = (dates, startIdx, total, scheduleData = schedule) => {
       return dates.map((occurrenceDate, i) => ({
@@ -4990,22 +5006,26 @@ export default function App() {
       } : d)));
     } else if (scope === "future") {
       if (!form.recurringEnabled) {
-        setDeadlines(p => finalizeSeriesUpdate(p.map(d => {
-          if (!targetIdSet.has(String(d.id))) return d;
-          const dDate = toDate(d.date);
-          if (!isValidDate(dDate) || dDate < currentDate) return d;
-          const isCurrent = String(d.id) === String(item.id);
-          return {
-            ...d,
-            ...fields,
-            date: isCurrent ? newDate : d.date,
-            documents: isCurrent ? form.documents : d.documents,
-            recurring: null,
-          };
-        })));
+        setDeadlines(p => {
+          const liveTargetIdSet = getLiveTargetIds(p);
+          return finalizeSeriesUpdate(p.map(d => {
+            if (!liveTargetIdSet.has(String(d.id))) return d;
+            const dDate = toDate(d.date);
+            if (!isValidDate(dDate) || dDate < currentDate) return d;
+            const isCurrent = String(d.id) === String(item.id);
+            return {
+              ...d,
+              ...fields,
+              date: isCurrent ? newDate : d.date,
+              documents: isCurrent ? form.documents : d.documents,
+              recurring: null,
+            };
+          }));
+        });
       } else {
         setDeadlines(p => {
-          const selected = p.filter(d => targetIdSet.has(String(d.id)));
+          const liveTargetIdSet = getLiveTargetIds(p);
+          const selected = p.filter(d => liveTargetIdSet.has(String(d.id)));
           const past = selected
             .filter(d => {
               const dDate = toDate(d.date);
@@ -5017,7 +5037,7 @@ export default function App() {
               if (da !== db) return da - db;
               return (a?.recurring?.index || 0) - (b?.recurring?.index || 0);
             });
-          const others = p.filter(d => !targetIdSet.has(String(d.id)));
+          const others = p.filter(d => !liveTargetIdSet.has(String(d.id)));
           const futureDates = schedule.dates;
           const newTotal = past.length + futureDates.length;
           const updatedPast = past.map(d => ({
@@ -5041,21 +5061,25 @@ export default function App() {
       }
     } else if (scope === "all") {
       if (!form.recurringEnabled) {
-        setDeadlines(p => finalizeSeriesUpdate(p.map(d => {
-          if (!targetIdSet.has(String(d.id))) return d;
-          const isCurrent = String(d.id) === String(item.id);
-          return {
-            ...d,
-            ...fields,
-            date: isCurrent ? newDate : d.date,
-            documents: isCurrent ? form.documents : d.documents,
-            recurring: null,
-          };
-        })));
+        setDeadlines(p => {
+          const liveTargetIdSet = getLiveTargetIds(p);
+          return finalizeSeriesUpdate(p.map(d => {
+            if (!liveTargetIdSet.has(String(d.id))) return d;
+            const isCurrent = String(d.id) === String(item.id);
+            return {
+              ...d,
+              ...fields,
+              date: isCurrent ? newDate : d.date,
+              documents: isCurrent ? form.documents : d.documents,
+              recurring: null,
+            };
+          }));
+        });
       } else if (scheduleChanged) {
         setDeadlines(p => {
+          const liveTargetIdSet = getLiveTargetIds(p);
           const selected = p
-            .filter(d => targetIdSet.has(String(d.id)))
+            .filter(d => liveTargetIdSet.has(String(d.id)))
             .slice()
             .sort((a, b) => {
               const da = toDate(a.date).getTime() || 0;
@@ -5063,7 +5087,7 @@ export default function App() {
               if (da !== db) return da - db;
               return (a?.recurring?.index || 0) - (b?.recurring?.index || 0);
             });
-          const others = p.filter(d => !targetIdSet.has(String(d.id)));
+          const others = p.filter(d => !liveTargetIdSet.has(String(d.id)));
           const firstSeriesDate = selected[0]?.date;
           const baseForAll = firstSeriesDate instanceof Date && !Number.isNaN(firstSeriesDate.getTime())
             ? new Date(firstSeriesDate)
@@ -5077,26 +5101,29 @@ export default function App() {
           return finalizeSeriesUpdate([...others, ...regenerated]);
         });
       } else {
-        setDeadlines(p => finalizeSeriesUpdate(p.map(d => {
-          if (!targetIdSet.has(String(d.id))) return d;
-          return {
-            ...d,
-            ...fields,
-            documents: String(d.id) === String(item.id) ? form.documents : d.documents,
-            recurring: {
-              ...d.recurring,
-              enabled: true,
-              seriesId: stableSeriesId,
-              interval: schedule.interval,
-              unit: schedule.unit,
-              total: d.recurring.total,
-              baseAmount,
-              endMode: schedule.endMode,
-              endDate: schedule.endDate,
-              preset: form.recurringPreset,
-            }
-          };
-        })));
+        setDeadlines(p => {
+          const liveTargetIdSet = getLiveTargetIds(p);
+          return finalizeSeriesUpdate(p.map(d => {
+            if (!liveTargetIdSet.has(String(d.id))) return d;
+            return {
+              ...d,
+              ...fields,
+              documents: String(d.id) === String(item.id) ? form.documents : d.documents,
+              recurring: {
+                ...d.recurring,
+                enabled: true,
+                seriesId: stableSeriesId,
+                interval: schedule.interval,
+                unit: schedule.unit,
+                total: d.recurring.total,
+                baseAmount,
+                endMode: schedule.endMode,
+                endDate: schedule.endDate,
+                preset: form.recurringPreset,
+              }
+            };
+          }));
+        });
       }
     }
 
