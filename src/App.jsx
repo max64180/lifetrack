@@ -4630,15 +4630,24 @@ export default function App() {
   
   const complete = id => {
     if (petDeadlineIds.has(String(id))) {
-      setPetDeadlines(p => p.map(d => String(d.id) === String(id) ? { ...d, done: !d.done, skipped: d.done ? false : d.skipped } : d));
+      setPetDeadlines(p => p.map(d => String(d.id) === String(id)
+        ? { ...d, done: !d.done, skipped: d.done ? false : d.skipped }
+        : d
+      ));
       setExpandedId(null);
       return;
     }
     const item = activeDeadlines.find(d => d.id === id);
     if (!item) return;
     
+    if (item.done) {
+      setDeadlines(p => p.map(d => d.id === id ? { ...d, done: false, skipped: false } : d));
+      setExpandedId(null);
+      return;
+    }
+
     // Se ha budget > 0 e non è già completata, apri il flow di pagamento
-    if (item.budget > 0 && !item.done) {
+    if (item.budget > 0) {
       setPaymentFlow({ itemId: id, step: 'choose' });
       setPaymentAmount(String(item.budget)); // default = budget previsto
     } else {
