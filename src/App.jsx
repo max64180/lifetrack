@@ -5492,7 +5492,7 @@ export default function App() {
                 height: pullOffset,
                 transition: pulling ? "none" : "height 180ms ease",
                 display:"flex",
-                alignItems:"flex-end",
+                alignItems:"center",
                 justifyContent:"center",
                 color:"#8a877f",
                 fontSize:11,
@@ -5501,7 +5501,22 @@ export default function App() {
                 textTransform:"uppercase"
               }}
             >
-              {pullOffset > 20 ? (pullOffset > 52 ? t("sync.releaseToSync") : t("sync.pullToSync")) : ""}
+              <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                {(pullOffset > 10 || syncing) && (
+                  <div style={{
+                    width:16, height:16, borderRadius:"50%",
+                    border:"2px solid rgba(138,135,127,.3)",
+                    borderTopColor:"#8a877f",
+                    animation:"spin .8s linear infinite"
+                  }}/>
+                )}
+                <span>
+                  {syncing
+                    ? t("sync.saving")
+                    : (pullOffset > 20 ? (pullOffset > 52 ? t("sync.releaseToSync") : t("sync.pullToSync")) : "")}
+                </span>
+              </div>
             </div>
             {isYearCompact ? (
               (recurringSummary.length === 0 && oneOffItems.length === 0 && mandatoryItems.length === 0) ? (
