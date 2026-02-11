@@ -1097,11 +1097,28 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                       return;
                     }
                     try {
-                      const processed = await processAttachmentFile(file);
-                      const base64 = await fileToBase64(processed.blob || file);
-                      const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
+                      if (file.size > FILE_MAX_BYTES) {
+                        throw new Error("file_too_large");
+                      }
+                      const base64 = await fileToBase64(file);
+                      const doc = {
+                        id: Date.now(),
+                        type: 'incoming',
+                        base64,
+                        filename: file.name || "file",
+                        contentType: file.type || "application/octet-stream",
+                        size: file.size,
+                        isImage: isImageType(file.type),
+                        uploadDate: new Date().toISOString()
+                      };
                       set("documents", [doc]);
-                    } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+                    } catch(err) {
+                      if (err?.message === "file_too_large") {
+                        onToast ? onToast(t("toast.fileTooLarge", { size: 10 })) : alert(t("toast.fileTooLarge", { size: 10 }));
+                      } else {
+                        onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload"));
+                      }
+                    }
                     e.target.value = '';
                   }} />
                   {t("wizard.docUpload")}
