@@ -1260,7 +1260,6 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   );
 }
 
-function StatsSheet
 function StatsSheet({ open, onClose, deadlines, cats }) {
   const { t } = useTranslation();
   const [view, setView] = useState("anno"); // anno, futuro
