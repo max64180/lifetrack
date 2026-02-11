@@ -1,3 +1,19 @@
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function withStartTime(startDate, year, monthIndex, day) {
+  return new Date(
+    year,
+    monthIndex,
+    day,
+    startDate.getHours(),
+    startDate.getMinutes(),
+    startDate.getSeconds(),
+    startDate.getMilliseconds()
+  );
+}
+
 export function getOccurrenceDate(startDate, i, intervalVal, unit) {
   const d = new Date(startDate);
   if (unit === "giorni") {
@@ -5,9 +21,20 @@ export function getOccurrenceDate(startDate, i, intervalVal, unit) {
   } else if (unit === "settimane") {
     d.setDate(startDate.getDate() + (intervalVal * 7 * i));
   } else if (unit === "mesi") {
-    d.setMonth(startDate.getMonth() + (intervalVal * i));
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth();
+    const startDay = startDate.getDate();
+    const totalMonths = (startYear * 12) + startMonth + (intervalVal * i);
+    const targetYear = Math.floor(totalMonths / 12);
+    const targetMonth = totalMonths - (targetYear * 12);
+    const day = Math.min(startDay, daysInMonth(targetYear, targetMonth));
+    return withStartTime(startDate, targetYear, targetMonth, day);
   } else if (unit === "anni") {
-    d.setFullYear(startDate.getFullYear() + (intervalVal * i));
+    const targetYear = startDate.getFullYear() + (intervalVal * i);
+    const targetMonth = startDate.getMonth();
+    const startDay = startDate.getDate();
+    const day = Math.min(startDay, daysInMonth(targetYear, targetMonth));
+    return withStartTime(startDate, targetYear, targetMonth, day);
   }
   return d;
 }

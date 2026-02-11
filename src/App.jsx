@@ -52,6 +52,15 @@ const USE_STORAGE = false;
 const formatCurrency = (amount) => `€${Math.round(amount)}`;
 const formatNumber = (amount) => Math.round(amount).toLocaleString(getLocale());
 
+function toDateInputValue(value) {
+  const d = value instanceof Date ? value : new Date(value);
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
 function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months); return d; }
@@ -67,7 +76,7 @@ function getGroupKey(date, range) {
   const y = date.getFullYear();
   const m = date.getMonth();
   if (range === "settimana" || range === "mese") {
-    const key = date.toISOString().split("T")[0];
+    const key = toDateInputValue(date);
     const label = capitalize(date.toLocaleDateString(getLocale(), { weekday:"short", day:"2-digit", month:"short" }));
     return { key, label, order: date.getTime() };
   }
@@ -180,6 +189,7 @@ function resolveRecurringSchedule(form, startDate) {
 function toDate(value) {
   if (value instanceof Date) return value;
   if (value && typeof value.toDate === 'function') return value.toDate();
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00`);
   if (typeof value === 'string' || typeof value === 'number') return new Date(value);
   return new Date(NaN);
 }
@@ -977,9 +987,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       const unit = editingItem.recurring?.unit || "mesi";
       const preset = inferPreset(interval, unit);
       const endMode = inferEndMode(editingItem.recurring);
-      const dateStr = editingItem.date instanceof Date 
-        ? editingItem.date.toISOString().split('T')[0]
-        : new Date(editingItem.date).toISOString().split('T')[0];
+      const dateStr = toDateInputValue(editingItem.date);
       setShowAdvanced(
         preset === "custom" || endMode !== "auto"
       );
@@ -2533,7 +2541,7 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                   <button key={m} type="button" onClick={() => {
                     const base = new Date(schedulePrompt.log.date);
                     base.setMonth(base.getMonth() + m);
-                    setSchedulePrompt(p => ({ ...p, date: base.toISOString().split('T')[0] }));
+                    setSchedulePrompt(p => ({ ...p, date: toDateInputValue(base) }));
                   }} style={{
                     flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7",
                     fontSize:12, fontWeight:700, cursor:"pointer"
@@ -2586,12 +2594,12 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
   const { t } = useTranslation();
   const [form, setForm] = useState({
     title: workLog?.title || prefill?.title || "",
-    date: workLog?.date ? workLog.date.toISOString().split('T')[0] : (prefill?.date || new Date().toISOString().split('T')[0]),
+    date: workLog?.date ? toDateInputValue(workLog.date) : (prefill?.date || toDateInputValue(new Date())),
     km: workLog?.km || "",
     nextKm: workLog?.nextKm || "",
     description: workLog?.description || prefill?.description || "",
     cost: workLog?.cost || prefill?.cost || "",
-    nextDate: workLog?.nextDate ? workLog.nextDate.toISOString().split('T')[0] : (prefill?.nextDate || ""),
+    nextDate: workLog?.nextDate ? toDateInputValue(workLog.nextDate) : (prefill?.nextDate || ""),
     createDeadline: workLog?.createDeadline ?? prefill?.createDeadline ?? true,
     createCompleted: workLog?.createCompleted ?? prefill?.createCompleted ?? false,
     enableNext: !!(workLog?.nextDate || prefill?.nextDate)
@@ -2605,12 +2613,12 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       if (workLog) {
         setForm({
           title: workLog.title,
-          date: workLog.date.toISOString().split('T')[0],
+          date: toDateInputValue(workLog.date),
           km: workLog.km || "",
           nextKm: workLog.nextKm || "",
           description: workLog.description || "",
           cost: workLog.cost || "",
-          nextDate: workLog.nextDate ? workLog.nextDate.toISOString().split('T')[0] : "",
+          nextDate: workLog.nextDate ? toDateInputValue(workLog.nextDate) : "",
           createDeadline: workLog.createDeadline ?? true,
           createCompleted: workLog.createCompleted ?? false,
           enableNext: !!workLog.nextDate
@@ -2620,7 +2628,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       } else if (prefill) {
         setForm({
           title: prefill.title || "",
-          date: prefill.date || new Date().toISOString().split('T')[0],
+          date: prefill.date || toDateInputValue(new Date()),
           km: "",
           nextKm: "",
           description: prefill.description || "",
@@ -2798,7 +2806,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
               <button key={m} type="button" onClick={() => {
                 const base = new Date(form.date + "T00:00:00");
                 base.setMonth(base.getMonth() + m);
-                set("nextDate", base.toISOString().split('T')[0]);
+                set("nextDate", toDateInputValue(base));
                 set("createDeadline", true);
               }} style={{
                 flex:1, padding:"8px 10px", borderRadius:10, border:"1px solid #f0e2c9", background:"#fff",
@@ -3961,9 +3969,7 @@ export default function App() {
     const formEndMode = form.recurringEndMode || "auto";
     const itemEndMode = inferEndMode(item.recurring);
     const itemEndDate = item.recurring?.endDate || "";
-    const itemDateStr = item.date instanceof Date
-      ? item.date.toISOString().split('T')[0]
-      : new Date(item.date).toISOString().split('T')[0];
+    const itemDateStr = toDateInputValue(item.date);
     const endModeChanged = formEndMode !== itemEndMode;
     const endDateChanged = formEndMode === "date" && form.recurringEndDate !== itemEndDate;
     const countChanged = formEndMode === "count" && count !== item.recurring.total;
@@ -4263,9 +4269,9 @@ export default function App() {
     if (petEventForm.schedule) {
       let nextDate = "";
       if (petEventForm.schedulePreset === "exact") nextDate = petEventForm.scheduleDate;
-      if (petEventForm.schedulePreset === "1m") nextDate = addMonths(new Date(petEventForm.date), 1).toISOString().split("T")[0];
-      if (petEventForm.schedulePreset === "6m") nextDate = addMonths(new Date(petEventForm.date), 6).toISOString().split("T")[0];
-      if (petEventForm.schedulePreset === "12m") nextDate = addMonths(new Date(petEventForm.date), 12).toISOString().split("T")[0];
+      if (petEventForm.schedulePreset === "1m") nextDate = toDateInputValue(addMonths(new Date(`${petEventForm.date}T00:00:00`), 1));
+      if (petEventForm.schedulePreset === "6m") nextDate = toDateInputValue(addMonths(new Date(`${petEventForm.date}T00:00:00`), 6));
+      if (petEventForm.schedulePreset === "12m") nextDate = toDateInputValue(addMonths(new Date(`${petEventForm.date}T00:00:00`), 12));
       if (nextDate) {
         const deadline = {
           id: makeId(),
@@ -4292,9 +4298,7 @@ export default function App() {
 
   const startEditPetDeadline = (item) => {
     if (!item) return;
-    const dateStr = item.date instanceof Date
-      ? item.date.toISOString().split("T")[0]
-      : item.date || "";
+    const dateStr = toDateInputValue(item.date || "");
     setEditingPetDeadlineId(String(item.id));
     setPetDeadlineForm({
       title: item.title || "",
@@ -4505,7 +4509,7 @@ export default function App() {
     let list = allDeadlines.filter(d => {
       if (activeTab === "done") return d.done;
       if (activeTab === "overdue") return d.date < TODAY && !d.done; // scadute non completate
-      if (activeTab === "timeline") return d.date >= periodStart && d.date <= periodEnd && !d.done;
+      if (activeTab === "timeline") return d.date >= TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done;
       return true;
     });
     if (filterCat) list = list.filter(d => d.cat === filterCat);
@@ -4528,7 +4532,7 @@ export default function App() {
     let list = allDeadlines.filter(d => {
       if (activeTab === "done") return d.done;
       if (activeTab === "overdue") return d.date < TODAY && !d.done;
-      if (activeTab === "timeline") return !d.done;
+      if (activeTab === "timeline") return d.date >= TODAY && !d.done;
       return true;
     });
     if (filterCat) list = list.filter(d => d.cat === filterCat);
@@ -4863,9 +4867,7 @@ export default function App() {
     const formEndMode = schedule.endMode;
     const itemEndMode = inferEndMode(item.recurring);
     const itemEndDate = item.recurring?.endDate || "";
-    const itemDateStr = item.date instanceof Date
-      ? item.date.toISOString().split('T')[0]
-      : new Date(item.date).toISOString().split('T')[0];
+    const itemDateStr = toDateInputValue(item.date);
     const scheduleChanged =
       form.date !== itemDateStr ||
       interval !== item.recurring.interval ||
@@ -4890,7 +4892,7 @@ export default function App() {
       return false;
     };
 
-    const buildSeries = (dates, startIdx, total) => {
+    const buildSeries = (dates, startIdx, total, scheduleData = schedule) => {
       return dates.map((occurrenceDate, i) => ({
         id: Date.now() + i,
         ...fields,
@@ -4899,14 +4901,14 @@ export default function App() {
         done: false,
         recurring: {
           enabled: true,
-          interval: schedule.interval,
-          unit: schedule.unit,
+          interval: scheduleData.interval,
+          unit: scheduleData.unit,
           seriesId: stableSeriesId,
           index: startIdx + i,
           total,
           baseAmount,
-          endMode: schedule.endMode,
-          endDate: schedule.endDate,
+          endMode: scheduleData.endMode,
+          endDate: scheduleData.endDate,
           preset: form.recurringPreset,
         }
       }));
@@ -4975,7 +4977,20 @@ export default function App() {
       } else if (scheduleChanged) {
         setDeadlines(p => {
           const others = p.filter(d => !belongsToSeries(d));
-          const regenerated = buildSeries(schedule.dates, 1, schedule.total);
+          const seriesItems = p
+            .filter(belongsToSeries)
+            .slice()
+            .sort((a, b) => (a?.recurring?.index || 0) - (b?.recurring?.index || 0));
+          const firstSeriesDate = seriesItems[0]?.date;
+          const baseForAll = firstSeriesDate instanceof Date && !Number.isNaN(firstSeriesDate.getTime())
+            ? new Date(firstSeriesDate)
+            : newDate;
+          if (form.date) {
+            const editedDate = new Date(`${form.date}T00:00:00`);
+            if (!Number.isNaN(editedDate.getTime())) baseForAll.setDate(editedDate.getDate());
+          }
+          const scheduleAll = resolveRecurringSchedule(form, baseForAll);
+          const regenerated = buildSeries(scheduleAll.dates, 1, scheduleAll.total, scheduleAll);
           return [...others, ...regenerated];
         });
       } else {
@@ -5080,7 +5095,7 @@ export default function App() {
       const updated = p.map(d => {
         if (!d?.recurring || d.recurring.seriesId !== seriesId) return d;
         if ((d.recurring.index || 0) >= cutoffIndex) return d;
-        const endDate = d.date instanceof Date ? d.date.toISOString().split('T')[0] : d.date;
+        const endDate = toDateInputValue(d.date);
         return {
           ...d,
           recurring: {
@@ -5123,7 +5138,7 @@ export default function App() {
     // Suggerisci +7 giorni da oggi
     const suggested = new Date(TODAY);
     suggested.setDate(suggested.getDate() + 7);
-    setPostponeDate(suggested.toISOString().split('T')[0]);
+    setPostponeDate(toDateInputValue(suggested));
   };
   
   const confirmPostpone = () => {
@@ -6166,7 +6181,7 @@ export default function App() {
               d.cat === showAsset.cat &&
               d.title === payload.title &&
               d.date instanceof Date &&
-              d.date.toISOString().split('T')[0] === payload.date
+              toDateInputValue(d.date) === payload.date
             );
             if (alreadyExists) return;
 
