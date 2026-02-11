@@ -1090,17 +1090,28 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 <label style={{ display:"block", padding:"10px", borderRadius:10, border:"1px dashed #e8e6e0", background:"#fff", color:"#8a877f", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", minHeight:44 }}>
                   <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if(file) {
-                      try {
-                        const processed = await processAttachmentFile(file);
-                        const base64 = processed.isImage
-                          ? await compressImage(file, 1600)
-                          : await fileToBase64(file);
-                        const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
-                        set("documents", [doc]);
-                      } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+                    if (!file) return;
+                    if (file.size === 0) {
+                      onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload"));
                       e.target.value = '';
+                      return;
                     }
+                    try {
+                      const processed = await processAttachmentFile(file);
+                      let base64;
+                      if (processed.isImage) {
+                        try {
+                          base64 = await compressImage(file, 1600);
+                        } catch (err) {
+                          base64 = await fileToBase64(file);
+                        }
+                      } else {
+                        base64 = await fileToBase64(file);
+                      }
+                      const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
+                      set("documents", [doc]);
+                    } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+                    e.target.value = '';
                   }} />
                   {t("wizard.docUpload")}
                 </label>
@@ -4028,20 +4039,32 @@ export default function App() {
   const processAttachmentFile = async (file) => {
     const isImage = isImageType(file.type);
     if (isImage) {
-      let blob = await compressImageToBlob(file, { maxWidth: 1600, quality: 0.8 });
-      if (blob.size > IMAGE_MAX_BYTES) {
-        blob = await compressImageToBlob(file, { maxWidth: 1280, quality: 0.7 });
+      try {
+        let blob = await compressImageToBlob(file, { maxWidth: 1600, quality: 0.8 });
+        if (blob.size > IMAGE_MAX_BYTES) {
+          blob = await compressImageToBlob(file, { maxWidth: 1280, quality: 0.7 });
+        }
+        if (blob.size > IMAGE_MAX_BYTES) {
+          throw new Error("image_too_large");
+        }
+        return {
+          blob,
+          contentType: "image/jpeg",
+          filename: file.name || "photo.jpg",
+          size: blob.size,
+          isImage: true
+        };
+      } catch (err) {
+        // Fallback for formats the browser can't decode (e.g. HEIC)
+        if (file.size > FILE_MAX_BYTES) throw new Error("file_too_large");
+        return {
+          blob: file,
+          contentType: file.type || "application/octet-stream",
+          filename: file.name || "file",
+          size: file.size,
+          isImage: true
+        };
       }
-      if (blob.size > IMAGE_MAX_BYTES) {
-        throw new Error("image_too_large");
-      }
-      return {
-        blob,
-        contentType: "image/jpeg",
-        filename: file.name || "photo.jpg",
-        size: blob.size,
-        isImage: true
-      };
     }
     if (file.size > FILE_MAX_BYTES) {
       throw new Error("file_too_large");
