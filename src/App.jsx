@@ -1119,6 +1119,14 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           </div>
           <div style={{ fontSize:12, color:"#8f8a83", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
         </div>
+        <style>{`
+          .wizard-field-row{display:flex;gap:10px;flex-wrap:wrap}
+          .wizard-field-col{flex:1 1 200px;min-width:0}
+          .wizard-field-col input{max-width:100%;box-sizing:border-box}
+          @media (max-width: 420px){
+            .wizard-field-row{flex-direction:column}
+          }
+        `}</style>
 
         {step == 0 && (
           <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -1154,12 +1162,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.title")}</label>
             <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
 
-            <div style={{ display:"flex", gap:10, flexWrap:"wrap", rowGap:10 }}>
-              <div style={{ flex:"1 1 160px", minWidth:160 }}>
+            <div className="wizard-field-row">
+              <div className="wizard-field-col">
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.dueDate", { defaultValue: "Data scadenza" })}</label>
                 <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
-              <div style={{ flex:"1 1 160px", minWidth:160 }}>
+              <div className="wizard-field-col">
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
                 <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
