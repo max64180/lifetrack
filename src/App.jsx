@@ -906,7 +906,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const [step, setStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({ 
-    title:"", cat:"", asset:null, date:"", budget:"", notes:"", 
+    title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
+    priority:"",
     mandatory:false, essential:true, autoPay:false, documents:[],
     recurringEnabled: false,
     recurringInterval: 1,
@@ -925,7 +926,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       setShowAdvanced(false);
       setMode("one");
       setForm({ 
-        title:"", cat:"", asset:null, date:"", budget:"", notes:"", 
+        title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
+        priority:"",
         mandatory:false, essential:true, autoPay:false, documents:[],
         recurringEnabled: false,
         recurringInterval: 1,
@@ -948,6 +950,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         preset === "custom" || endMode !== "auto"
       );
       setMode(editingItem.recurring?.enabled ? "recurring" : "one");
+      const priority = editingItem.mandatory ? "mandatory" : (editingItem.essential ? "essential" : "optional");
       setForm({
         title: editingItem.title,
         cat: editingItem.cat,
@@ -955,6 +958,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         date: dateStr,
         budget: editingItem.estimateMissing ? "" : String(editingItem.budget),
         notes: editingItem.notes || "",
+        priority,
         mandatory: editingItem.mandatory || false,
         essential: editingItem.essential !== undefined ? editingItem.essential : true,
         autoPay: editingItem.autoPay || false,
@@ -980,23 +984,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   if (!open) return null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const toggleMandatory = () => {
-    setForm(f => {
-      const next = !f.mandatory;
-      return { ...f, mandatory: next, essential: next ? true : f.essential };
-    });
-  };
-  const toggleEssential = () => {
-    setForm(f => {
-      const next = !f.essential;
-      return { ...f, essential: next, mandatory: next ? f.mandatory : false };
-    });
-  };
+  const setPriority = (priority) => setForm(f => ({ ...f, priority }));
   const selectedCat = cats.find(c => c.id === form.cat) || null;
   const hasAssets = !!(selectedCat && selectedCat.assets && selectedCat.assets.length > 0);
   const steps = [
     t("wizard.step.type", { defaultValue: "Tipo" }),
     t("wizard.step.details", { defaultValue: "Dati" }),
+    t("wizard.step.priority", { defaultValue: "Priorita" }),
     t("wizard.step.document", { defaultValue: "Documento" })
   ];
   const lastStep = steps.length - 1;
@@ -1037,7 +1031,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   })();
 
   const canProceedDetails = form.title.trim() && form.date && form.cat;
-  const disableNext = step === 1 && !canProceedDetails;
+  const canProceedPriority = !!form.priority;
+  const canFinalize = canProceedDetails && canProceedPriority;
+  const disableNext = (step === 1 && !canProceedDetails) || (step === 2 && !canProceedPriority);
 
   const toggleMode = (next) => {
     setMode(next);
@@ -1050,9 +1046,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   };
 
   const finalize = () => {
-    if (!form.title || !form.date || !form.cat) return;
+    if (!form.title || !form.date || !form.cat || !form.priority) return;
+    const mandatory = form.priority === "mandatory";
+    const essential = form.priority === "essential";
     if (editingItem) {
-      onUpdate(form);
+      onUpdate({ ...form, mandatory, essential });
       return;
     }
     if (form.recurringEnabled) {
@@ -1070,8 +1068,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           budget: baseAmount,
           estimateMissing: budgetMissing,
           notes: form.notes,
-          mandatory: form.mandatory,
-          essential: form.mandatory ? true : form.essential,
+          mandatory,
+          essential,
           autoPay: form.recurringEnabled ? form.autoPay : false,
           date: occurrenceDate,
           documents: i === 0 ? form.documents : [],
@@ -1101,8 +1099,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         budget: baseAmount,
         estimateMissing: budgetMissing,
         notes: form.notes,
-        mandatory: form.mandatory,
-        essential: form.mandatory ? true : form.essential,
+        mandatory,
+        essential,
         autoPay: form.recurringEnabled ? form.autoPay : false,
         date: newDate,
         documents: form.documents,
@@ -1194,22 +1192,6 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               </div>
             </div>
 
-            <div style={{ display:"flex", gap:6, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-              <button type="button" onClick={toggleMandatory} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.mandatory ? "#FFF0EC" : "#f4f1ec", color: form.mandatory ? "#E53935" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ fontSize:12, color:"#E8855D" }}>⚠️</span>{t("wizard.mandatoryShort", { defaultValue: "Inderogabile" })}
-              </button>
-              <button type="button" onClick={toggleEssential} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.essential ? "#E8F5E9" : "#f4f1ec", color: form.essential ? "#4CAF6E" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
-                {t("wizard.essentialShort", { defaultValue: "Essenziale" })}
-              </button>
-              {mode === "recurring" && (
-                <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
-                  {t("wizard.autoShort", { defaultValue: "Automatico" })}
-                </button>
-              )}
-            </div>
-
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(90px, 1fr))", gap:8, width:"100%" }}>
               {cats.map(c => (
@@ -1249,38 +1231,72 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         )}
 
         {step == 2 && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
+            <button onClick={() => setPriority("mandatory")} style={{
+              minHeight:148, borderRadius:20, border: form.priority === "mandatory" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
+              background: form.priority === "mandatory" ? "#FFF0EC" : "#f7f4f0", color:"#6d6760",
+              padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+            }}>
+              <div style={{ fontSize:26 }}>⚠️</div>
+              <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.mandatoryShort", { defaultValue: "Inderogabile" })}</div>
+              <div style={{ fontSize:12, color:"#8f8a83" }}>{t("wizard.priorityMandatoryHint", { defaultValue: "Se non paghi rischi sanzioni o problemi immediati." })}</div>
+            </button>
+            <button onClick={() => setPriority("essential")} style={{
+              minHeight:148, borderRadius:20, border: form.priority === "essential" ? "2px solid #4CAF6E" : "2px dashed #d4cfc8",
+              background: form.priority === "essential" ? "#E8F5E9" : "#f7f4f0", color:"#6d6760",
+              padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+            }}>
+              <div style={{ width:12, height:12, borderRadius:"50%", background:"#4CAF6E" }} />
+              <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.essentialShort", { defaultValue: "Essenziale" })}</div>
+              <div style={{ fontSize:12, color:"#8f8a83" }}>{t("wizard.priorityEssentialHint", { defaultValue: "Necessaria alla vita quotidiana." })}</div>
+            </button>
+            <button onClick={() => setPriority("optional")} style={{
+              minHeight:148, borderRadius:20, border: form.priority === "optional" ? "2px solid #8f8a83" : "2px dashed #d4cfc8",
+              background: form.priority === "optional" ? "#efece7" : "#f7f4f0", color:"#6d6760",
+              padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+            }}>
+              <div style={{ fontSize:24 }}>●</div>
+              <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.priorityOptional", { defaultValue: "Superfluo" })}</div>
+              <div style={{ fontSize:12, color:"#8f8a83" }}>{t("wizard.priorityOptionalHint", { defaultValue: "Spesa su cui puoi risparmiare." })}</div>
+            </button>
+          </div>
+        )}
+
+        {step == 3 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
-            <div style={{ background:"#fff", borderRadius:16, padding:"14px", border:"1px solid #e2ddd6" }}>
-              {form.documents.length === 0 ? (
-                <label style={{ display:"block", padding:"12px", borderRadius:12, border:"1px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
-                  <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (file.size > FILE_MAX_BYTES) {
-                      onToast ? onToast(t("toast.fileTooLarge", { size: 10 })) : alert(t("toast.fileTooLarge", { size: 10 }));
-                      e.target.value = '';
-                      return;
-                    }
-                    try {
-                      const base64 = await fileToBase64(file);
-                      const doc = { id: Date.now(), type: 'incoming', base64, filename: file.name || "file", contentType: file.type || "application/octet-stream", size: file.size, isImage: isImageType(file.type), uploadDate: new Date().toISOString() };
-                      set("documents", [doc]);
-                    } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
+              <label style={{
+                minHeight:148, borderRadius:20, border:"2px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > FILE_MAX_BYTES) {
+                    onToast ? onToast(t("toast.fileTooLarge", { size: 10 })) : alert(t("toast.fileTooLarge", { size: 10 }));
                     e.target.value = '';
-                  }} />
-                  {t("wizard.docUpload")}
-                </label>
-              ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:12, padding:"8px 10px", border:"1px solid #e2ddd6" }}>
-                  <span style={{ fontSize:16 }}>📄</span>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
-                    <div style={{ fontSize:10, color:"#8f8a83" }}>{t("wizard.docAttached")}</div>
-                  </div>
-                  <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>{t("wizard.docRemove")}</button>
-                </div>
-              )}
+                    return;
+                  }
+                  try {
+                    const base64 = await fileToBase64(file);
+                    const doc = { id: Date.now(), type: 'incoming', base64, filename: file.name || "file", contentType: file.type || "application/octet-stream", size: file.size, isImage: isImageType(file.type), uploadDate: new Date().toISOString() };
+                    set("documents", [doc]);
+                  } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
+                  e.target.value = '';
+                }} />
+                <div style={{ fontSize:26 }}>📎</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("wizard.docUploadTitle", { defaultValue: "Carica file" })}</div>
+                <div style={{ fontSize:12, color:"#8f8a83" }}>{form.documents.length ? form.documents[0].filename : t("wizard.docUpload", { defaultValue: "Documento opzionale" })}</div>
+              </label>
+              <button type="button" onClick={() => set("documents", [])} style={{
+                minHeight:148, borderRadius:20, border:"2px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <div style={{ fontSize:26 }}>{form.documents.length ? "✕" : "✓"}</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("wizard.noDocument", { defaultValue: "Nessun documento" })}</div>
+                <div style={{ fontSize:12, color:"#8f8a83" }}>{t("wizard.noDocumentHint", { defaultValue: "Puoi continuare anche senza allegato." })}</div>
+              </button>
             </div>
           </div>
         )}
@@ -1299,7 +1315,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               {t("actions.next")}
             </button>
           ) : (
-            <button onClick={finalize} disabled={!canProceedDetails} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: canProceedDetails ? "#E8855D" : "#c1bbb4", color:"#fff", fontSize:14, fontWeight:800 }}>
+            <button onClick={finalize} disabled={!canFinalize} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: canFinalize ? "#E8855D" : "#c1bbb4", color:"#fff", fontSize:14, fontWeight:800 }}>
               {t("actions.save")}
             </button>
           )}
