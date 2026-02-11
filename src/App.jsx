@@ -391,7 +391,7 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
         <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"rgba(255,255,255,.08)" }}>
           <div style={{ width:"100%", background:"#E8855D" }}/>
         </div>
-        <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap", minHeight:20, alignItems:"center" }}>
           {urgent > 0 && (
             <div style={{ background:"rgba(232,133,93,.25)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>⚡</span>
