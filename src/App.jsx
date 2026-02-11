@@ -1136,7 +1136,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           .wizard-field-col{min-width:0}
           .wizard-field-col input{max-width:100%;box-sizing:border-box;display:block;width:100%}
           .wizard-date-wrap{position:relative}
-          .wizard-date-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#8f8a83;pointer-events:none;line-height:1}
+          .wizard-date-icon{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:13px;color:#8f8a83;pointer-events:none;line-height:1}
           @media (max-width: 420px){
             .wizard-field-row{grid-template-columns:1fr}
           }
@@ -1180,7 +1180,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               <div className="wizard-field-col">
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.dueDate", { defaultValue: "Data scadenza" })}</label>
                 <div className="wizard-date-wrap">
-                  <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", minWidth:0, padding:"12px 36px 12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                  <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", minWidth:0, padding:"12px 42px 12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
                   <span className="wizard-date-icon">📅</span>
                 </div>
               </div>
