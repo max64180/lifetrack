@@ -906,7 +906,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const [step, setStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState({ 
-    title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
+    title:"", cat:"", asset:null, date:"", budget:"", notes:"", 
     mandatory:false, essential:true, autoPay:false, documents:[],
     recurringEnabled: false,
     recurringInterval: 1,
@@ -925,7 +925,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       setShowAdvanced(false);
       setMode("one");
       setForm({ 
-        title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
+        title:"", cat:"", asset:null, date:"", budget:"", notes:"", 
         mandatory:false, essential:true, autoPay:false, documents:[],
         recurringEnabled: false,
         recurringInterval: 1,
@@ -992,8 +992,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       return { ...f, essential: next, mandatory: next ? f.mandatory : false };
     });
   };
-  const selectedCat = getCat(cats, form.cat);
-  const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
+  const selectedCat = cats.find(c => c.id === form.cat) || null;
+  const hasAssets = !!(selectedCat && selectedCat.assets && selectedCat.assets.length > 0);
   const steps = [
     t("wizard.step.type", { defaultValue: "Tipo" }),
     t("wizard.step.details", { defaultValue: "Dati" }),
@@ -1036,7 +1036,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       : `Every ${countSafe} ${unitLabel(form.recurringUnit, countSafe)}`;
   })();
 
-  const canProceedDetails = form.title.trim() && form.date;
+  const canProceedDetails = form.title.trim() && form.date && form.cat;
+  const disableNext = step === 1 && !canProceedDetails;
 
   const toggleMode = (next) => {
     setMode(next);
@@ -1044,11 +1045,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       set("recurringEnabled", true);
     } else {
       set("recurringEnabled", false);
+      set("autoPay", false);
     }
   };
 
   const finalize = () => {
-    if (!form.title || !form.date) return;
+    if (!form.title || !form.date || !form.cat) return;
     if (editingItem) {
       onUpdate(form);
       return;
@@ -1070,7 +1072,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           notes: form.notes,
           mandatory: form.mandatory,
           essential: form.mandatory ? true : form.essential,
-          autoPay: form.autoPay,
+          autoPay: form.recurringEnabled ? form.autoPay : false,
           date: occurrenceDate,
           documents: i === 0 ? form.documents : [],
           done: false,
@@ -1101,7 +1103,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         notes: form.notes,
         mandatory: form.mandatory,
         essential: form.mandatory ? true : form.essential,
-        autoPay: form.autoPay,
+        autoPay: form.recurringEnabled ? form.autoPay : false,
         date: newDate,
         documents: form.documents,
         recurring: null,
@@ -1200,10 +1202,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
                 {t("wizard.essentialShort", { defaultValue: "Essenziale" })}
               </button>
-              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
-                {t("wizard.autoShort", { defaultValue: "Automatico" })}
-              </button>
+              {mode === "recurring" && (
+                <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
+                  {t("wizard.autoShort", { defaultValue: "Automatico" })}
+                </button>
+              )}
             </div>
 
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
@@ -1291,7 +1295,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             {t("actions.abandon", { defaultValue: "Abbandona" })}
           </button>
           {step < lastStep ? (
-            <button onClick={() => setStep(s => s + 1)} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background:"#E8855D", color:"#fff", fontSize:14, fontWeight:800 }}>
+            <button onClick={() => !disableNext && setStep(s => s + 1)} disabled={disableNext} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: disableNext ? "#c1bbb4" : "#E8855D", color:"#fff", fontSize:14, fontWeight:800, cursor: disableNext ? "not-allowed" : "pointer" }}>
               {t("actions.next")}
             </button>
           ) : (
