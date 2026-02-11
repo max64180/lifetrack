@@ -343,16 +343,28 @@
     "mandatory": "⚠ Mandatory deadline",
     "autoPayActive": "🔄 Automatic payment active",
     "autoCompleted": "✓ Auto-completed at due date",
-    "skipped": "⏭ Skipped",
+    "skipped": "Not due",
     "estimateMissing": "To estimate",
     "estimateMissingTitle": "💡 Missing estimate",
     "addEstimate": "Add estimate"
   },
   "units": {
-    "day": { "one": "day", "other": "days" },
-    "week": { "one": "week", "other": "weeks" },
-    "month": { "one": "month", "other": "months" },
-    "year": { "one": "year", "other": "years" }
+    "day": {
+      "one": "day",
+      "other": "days"
+    },
+    "week": {
+      "one": "week",
+      "other": "weeks"
+    },
+    "month": {
+      "one": "month",
+      "other": "months"
+    },
+    "year": {
+      "one": "year",
+      "other": "years"
+    }
   },
   "docs": {
     "title": "📎 Documents",
@@ -448,7 +460,7 @@
   },
   "toast": {
     "autoPayCompleted": "✓ {{count}} automatic payments completed",
-    "deadlineSkipped": "✓ Deadline skipped",
+    "deadlineSkipped": "✓ Marked as not due",
     "paidFull": "✓ Paid €{{amount}}",
     "notPaid": "✓ Marked as not paid",
     "paidAmount": "✓ Paid €{{amount}}",
@@ -522,5 +534,8 @@
   },
   "errors": {
     "fileUpload": "File upload error"
+  },
+  "confirm": {
+    "skipNonDue": "Mark this deadline as not due?\nThe budget will be set to 0 and the deadline will remain incomplete."
   }
 }
