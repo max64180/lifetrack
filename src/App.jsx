@@ -980,6 +980,18 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   if (!open) return null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const toggleMandatory = () => {
+    setForm(f => {
+      const next = !f.mandatory;
+      return { ...f, mandatory: next, essential: next ? true : f.essential };
+    });
+  };
+  const toggleEssential = () => {
+    setForm(f => {
+      const next = !f.essential;
+      return { ...f, essential: next, mandatory: next ? f.mandatory : false };
+    });
+  };
   const selectedCat = getCat(cats, form.cat);
   const hasAssets = selectedCat.assets && selectedCat.assets.length > 0;
   const steps = [
@@ -1057,7 +1069,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           estimateMissing: budgetMissing,
           notes: form.notes,
           mandatory: form.mandatory,
-          essential: form.essential,
+          essential: form.mandatory ? true : form.essential,
           autoPay: form.autoPay,
           date: occurrenceDate,
           documents: i === 0 ? form.documents : [],
@@ -1088,7 +1100,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         estimateMissing: budgetMissing,
         notes: form.notes,
         mandatory: form.mandatory,
-        essential: form.essential,
+        essential: form.mandatory ? true : form.essential,
         autoPay: form.autoPay,
         date: newDate,
         documents: form.documents,
@@ -1120,9 +1132,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           <div style={{ fontSize:12, color:"#8f8a83", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
         </div>
         <style>{`
-          .wizard-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+          .wizard-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start;align-content:start;grid-auto-rows:min-content}
           .wizard-field-col{min-width:0}
-          .wizard-field-col input{max-width:100%;box-sizing:border-box}
+          .wizard-field-col input{max-width:100%;box-sizing:border-box;display:block;width:100%}
           @media (max-width: 420px){
             .wizard-field-row{grid-template-columns:1fr}
           }
@@ -1174,14 +1186,14 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             </div>
 
             <div style={{ display:"flex", gap:6, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-              <button type="button" onClick={() => set("mandatory", !form.mandatory)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.mandatory ? "#FFF0EC" : "#f4f1ec", color: form.mandatory ? "#E53935" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+              <button type="button" onClick={toggleMandatory} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.mandatory ? "#FFF0EC" : "#f4f1ec", color: form.mandatory ? "#E53935" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ fontSize:12, color:"#E8855D" }}>⚠️</span>{t("wizard.mandatoryShort", { defaultValue: "Inderogabile" })}
               </button>
               <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
                 {t("wizard.autoShort", { defaultValue: "Automatico" })}
               </button>
-              <button type="button" onClick={() => set("essential", !form.essential)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.essential ? "#E8F5E9" : "#f4f1ec", color: form.essential ? "#4CAF6E" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+              <button type="button" onClick={toggleEssential} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.essential ? "#E8F5E9" : "#f4f1ec", color: form.essential ? "#4CAF6E" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
                 {t("wizard.essentialShort", { defaultValue: "Essenziale" })}
               </button>
@@ -5039,6 +5051,13 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
         input:focus,select:focus,textarea:focus{border-color:#5B8DD9!important;background:#fff!important;outline:none;}
+        input[type="date"]{
+          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%238f8a83'%3E%3Cpath d='M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm12 8H5v10h14V10zm0-4H5v2h14V6z'/%3E%3C/svg%3E");
+          background-repeat:no-repeat;
+          background-position:right 12px center;
+          padding-right:36px;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator{opacity:0;}
         ::-webkit-scrollbar{display:none}
       `}</style>
 
