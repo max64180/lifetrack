@@ -188,13 +188,45 @@ function isValidDate(d) {
   return d instanceof Date && !Number.isNaN(d.getTime());
 }
 
+function hasRecurringData(item) {
+  if (!item?.recurring || typeof item.recurring !== "object" || Array.isArray(item.recurring)) return false;
+  if (item.recurring.enabled === true) return true;
+  return [
+    item.recurring.seriesId,
+    item.recurring.interval,
+    item.recurring.unit,
+    item.recurring.index,
+    item.recurring.total,
+  ].some(v => v !== undefined && v !== null && v !== "");
+}
+
+function sameSeriesId(left, right) {
+  if (left === undefined || left === null || left === "") return false;
+  if (right === undefined || right === null || right === "") return false;
+  return String(left) === String(right);
+}
+
 function normalizeDeadline(raw) {
   if (!raw) return null;
   const date = toDate(raw.date);
   if (!isValidDate(date)) return null;
   const rawId = raw.id ?? raw.docId;
   const parsedId = typeof rawId === "string" && /^\d+$/.test(rawId) ? Number(rawId) : rawId;
-  return { ...raw, id: parsedId ?? rawId, date };
+  const recurring = raw.recurring && typeof raw.recurring === "object" && !Array.isArray(raw.recurring)
+    ? {
+        ...raw.recurring,
+        enabled:
+          raw.recurring.enabled === true ||
+          [
+            raw.recurring.seriesId,
+            raw.recurring.interval,
+            raw.recurring.unit,
+            raw.recurring.index,
+            raw.recurring.total,
+          ].some(v => v !== undefined && v !== null && v !== ""),
+      }
+    : raw.recurring;
+  return { ...raw, id: parsedId ?? rawId, date, recurring };
 }
 
 function normalizeWorkLogs(raw = {}) {
@@ -951,7 +983,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       setShowAdvanced(
         preset === "custom" || endMode !== "auto"
       );
-      setMode(editingItem.recurring?.enabled ? "recurring" : "one");
+      const editingIsRecurring = hasRecurringData(editingItem);
+      setMode(editingIsRecurring ? "recurring" : "one");
       const priority = editingItem.mandatory ? "mandatory" : (editingItem.essential ? "essential" : "optional");
       setForm({
         title: editingItem.title,
@@ -966,7 +999,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         essential: editingItem.essential !== undefined ? editingItem.essential : true,
         autoPay: editingItem.autoPay || false,
         documents: editingItem.documents || [],
-        recurringEnabled: editingItem.recurring?.enabled || false,
+        recurringEnabled: editingIsRecurring,
         recurringInterval: interval,
         recurringUnit: unit,
         recurringCount: editingItem.recurring?.total || 12,
@@ -4742,7 +4775,7 @@ export default function App() {
     const item = editingDeadline;
     const fields = buildFieldsFromForm(form);
 
-    if (item.recurring && item.recurring.enabled) {
+    if (hasRecurringData(item)) {
       setEditConfirm({ item, form });
       return;
     }
@@ -4792,7 +4825,11 @@ export default function App() {
   const applyEditScope = (scope) => {
     if (!editConfirm) return;
     const { item, form } = editConfirm;
-    const seriesId = item.recurring?.seriesId;
+    const rawSeriesId = item.recurring?.seriesId;
+    const stableSeriesId =
+      rawSeriesId === undefined || rawSeriesId === null || rawSeriesId === ""
+        ? `series_${Date.now()}`
+        : String(rawSeriesId);
     const currentIndex = item.recurring?.index || 1;
     const baseAmount = Number(form.budget) || 0;
     const fields = buildFieldsFromForm(form);
@@ -4813,6 +4850,22 @@ export default function App() {
       (formEndMode === "date" && schedule.endDate !== itemEndDate) ||
       (formEndMode === "count" && schedule.count !== item.recurring.total);
 
+    const belongsToSeries = (d) => {
+      if (!d?.recurring || typeof d.recurring !== "object") return false;
+      if (sameSeriesId(d.recurring.seriesId, rawSeriesId)) return true;
+      if (rawSeriesId === undefined || rawSeriesId === null || rawSeriesId === "") {
+        return (
+          hasRecurringData(d) &&
+          d.title === item.title &&
+          d.cat === item.cat &&
+          (d.asset || "") === (item.asset || "") &&
+          Math.max(1, Number(d.recurring?.interval) || 1) === Math.max(1, Number(item.recurring?.interval) || 1) &&
+          (d.recurring?.unit || "mesi") === (item.recurring?.unit || "mesi")
+        );
+      }
+      return false;
+    };
+
     const buildSeries = (dates, startIdx, total) => {
       return dates.map((occurrenceDate, i) => ({
         id: Date.now() + i,
@@ -4824,7 +4877,7 @@ export default function App() {
           enabled: true,
           interval: schedule.interval,
           unit: schedule.unit,
-          seriesId,
+          seriesId: stableSeriesId,
           index: startIdx + i,
           total,
           baseAmount,
@@ -4846,8 +4899,8 @@ export default function App() {
     } else if (scope === "future") {
       if (!form.recurringEnabled) {
         setDeadlines(p => p.map(d => {
-          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
-          if (d.recurring.index < currentIndex) return d;
+          if (!belongsToSeries(d)) return d;
+          if ((d.recurring?.index || 1) < currentIndex) return d;
           const isCurrent = d.id === item.id;
           return {
             ...d,
@@ -4859,14 +4912,16 @@ export default function App() {
         }));
       } else {
         setDeadlines(p => {
-          const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
-          const past = p.filter(d => d.recurring && d.recurring.seriesId === seriesId && d.recurring.index < currentIndex);
+          const others = p.filter(d => !belongsToSeries(d));
+          const past = p.filter(d => belongsToSeries(d) && (d.recurring?.index || 1) < currentIndex);
           const futureDates = schedule.dates;
           const newTotal = past.length + futureDates.length;
           const updatedPast = past.map(d => ({
             ...d,
             recurring: {
               ...d.recurring,
+              enabled: true,
+              seriesId: stableSeriesId,
               interval: schedule.interval,
               unit: schedule.unit,
               total: newTotal,
@@ -4883,7 +4938,7 @@ export default function App() {
     } else if (scope === "all") {
       if (!form.recurringEnabled) {
         setDeadlines(p => p.map(d => {
-          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
+          if (!belongsToSeries(d)) return d;
           const isCurrent = d.id === item.id;
           return {
             ...d,
@@ -4895,19 +4950,21 @@ export default function App() {
         }));
       } else if (scheduleChanged) {
         setDeadlines(p => {
-          const others = p.filter(d => !d.recurring || d.recurring.seriesId !== seriesId);
+          const others = p.filter(d => !belongsToSeries(d));
           const regenerated = buildSeries(schedule.dates, 1, schedule.total);
           return [...others, ...regenerated];
         });
       } else {
         setDeadlines(p => p.map(d => {
-          if (!d.recurring || d.recurring.seriesId !== seriesId) return d;
+          if (!belongsToSeries(d)) return d;
           return {
             ...d,
             ...fields,
             documents: d.id === item.id ? form.documents : d.documents,
             recurring: {
               ...d.recurring,
+              enabled: true,
+              seriesId: stableSeriesId,
               interval: schedule.interval,
               unit: schedule.unit,
               total: d.recurring.total,
