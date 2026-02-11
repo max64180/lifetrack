@@ -993,6 +993,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const steps = [
     t("wizard.step.type", { defaultValue: "Tipo" }),
     t("wizard.step.details", { defaultValue: "Dati" }),
+    t("wizard.step.recurring", { defaultValue: "Ricorrenza" }),
     t("wizard.step.priority", { defaultValue: "Priorita" }),
     t("wizard.step.document", { defaultValue: "Documento" })
   ];
@@ -1034,9 +1035,21 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   })();
 
   const canProceedDetails = form.title.trim() && form.date && form.cat;
+  const canProceedRecurring = (() => {
+    if (mode !== "recurring" || !form.recurringEnabled) return true;
+    const validInterval = Math.max(1, parseInt(form.recurringInterval) || 0) > 0;
+    const validCount = Math.max(1, parseInt(form.recurringCount) || 0) > 0;
+    if (!validInterval) return false;
+    if (form.recurringEndMode === "count") return validCount;
+    if (form.recurringEndMode === "date") return !!form.recurringEndDate;
+    return true;
+  })();
   const canProceedPriority = !!form.priority;
   const canFinalize = canProceedDetails && canProceedPriority;
-  const disableNext = (step === 1 && !canProceedDetails) || (step === 2 && !canProceedPriority);
+  const disableNext =
+    (step === 1 && !canProceedDetails) ||
+    (step === 2 && !canProceedRecurring) ||
+    (step === 3 && !canProceedPriority);
 
   const toggleMode = (next) => {
     setMode(next);
@@ -1045,6 +1058,21 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     } else {
       set("recurringEnabled", false);
       set("autoPay", false);
+    }
+  };
+  const applyRecurringPreset = (preset) => {
+    set("recurringPreset", preset);
+    setMode("recurring");
+    set("recurringEnabled", true);
+    if (preset === "mensile") {
+      set("recurringInterval", 1);
+      set("recurringUnit", "mesi");
+    } else if (preset === "trimestrale") {
+      set("recurringInterval", 3);
+      set("recurringUnit", "mesi");
+    } else if (preset === "annuale") {
+      set("recurringInterval", 1);
+      set("recurringUnit", "anni");
     }
   };
 
@@ -1234,6 +1262,107 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         )}
 
         {step == 2 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
+              <button onClick={() => toggleMode("one")} style={{
+                minHeight:120, borderRadius:20, border: mode === "one" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
+                background: mode === "one" ? "#fff" : "#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <div style={{ fontSize:22 }}>1x</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
+              </button>
+              <button onClick={() => toggleMode("recurring")} style={{
+                minHeight:120, borderRadius:20, border: mode === "recurring" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
+                background: mode === "recurring" ? "#fff" : "#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <div style={{ fontSize:22 }}>↺</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
+              </button>
+            </div>
+
+            {mode === "recurring" && (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8 }}>
+                  {[
+                    { key:"mensile", label: t("wizard.monthly", { defaultValue: "Mensile" }) },
+                    { key:"trimestrale", label: t("wizard.quarterly", { defaultValue: "Trimestrale" }) },
+                    { key:"annuale", label: t("wizard.yearly", { defaultValue: "Annuale" }) },
+                    { key:"custom", label: t("wizard.custom", { defaultValue: "Custom" }) },
+                  ].map(p => (
+                    <button key={p.key} onClick={() => applyRecurringPreset(p.key)} style={{
+                      padding:"10px 8px", borderRadius:12, border: form.recurringPreset === p.key ? "2px solid #E8855D" : "1px solid #d4cfc8",
+                      background: form.recurringPreset === p.key ? "#FFF0EC" : "#fff", color:"#6d6760", fontSize:12, fontWeight:700, cursor:"pointer"
+                    }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {form.recurringPreset === "custom" && (
+                  <div className="wizard-field-row">
+                    <div className="wizard-field-col">
+                      <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("recurring.every", { defaultValue: "Ogni" })}</label>
+                      <input type="number" min="1" value={form.recurringInterval} onChange={e => set("recurringInterval", Math.max(1, Number(e.target.value) || 1))} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                    </div>
+                    <div className="wizard-field-col">
+                      <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.unit", { defaultValue: "Unita" })}</label>
+                      <select value={form.recurringUnit} onChange={e => set("recurringUnit", e.target.value)} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }}>
+                        <option value="giorni">{t("units.day.other", { defaultValue:"giorni" })}</option>
+                        <option value="settimane">{t("units.week.other", { defaultValue:"settimane" })}</option>
+                        <option value="mesi">{t("units.month.other", { defaultValue:"mesi" })}</option>
+                        <option value="anni">{t("units.year.other", { defaultValue:"anni" })}</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8 }}>
+                  {[
+                    { key:"auto", label:t("wizard.endAuto", { defaultValue:"Auto" }) },
+                    { key:"count", label:t("wizard.endCount", { defaultValue:"N volte" }) },
+                    { key:"date", label:t("wizard.endDate", { defaultValue:"Fino a data" }) },
+                  ].map(m => (
+                    <button key={m.key} onClick={() => set("recurringEndMode", m.key)} style={{
+                      padding:"10px 8px", borderRadius:12, border: form.recurringEndMode === m.key ? "2px solid #E8855D" : "1px solid #d4cfc8",
+                      background: form.recurringEndMode === m.key ? "#FFF0EC" : "#fff", color:"#6d6760", fontSize:12, fontWeight:700, cursor:"pointer"
+                    }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                {form.recurringEndMode === "count" && (
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.endAfter", { defaultValue:"Numero occorrenze" })}</label>
+                    <input type="number" min="1" value={form.recurringCount} onChange={e => set("recurringCount", Math.max(1, Number(e.target.value) || 1))} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                  </div>
+                )}
+
+                {form.recurringEndMode === "date" && (
+                  <div className="wizard-date-wrap">
+                    <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.endDate", { defaultValue:"Fino a data" })}</label>
+                    <input className="wizard-date-input" type="date" value={form.recurringEndDate} onChange={e => set("recurringEndDate", e.target.value)} style={{ width:"100%", minWidth:0, padding:"12px 42px 12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                    <span className="wizard-date-icon">📅</span>
+                  </div>
+                )}
+
+                <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ alignSelf:"flex-start", padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
+                  {t("wizard.autoShort", { defaultValue: "Automatico" })}
+                </button>
+
+                <div style={{ padding:"12px", borderRadius:14, background:"#f4f1ec", color:"#6d6760", border:"1px solid #e2ddd6" }}>
+                  <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
+                  <div style={{ fontSize:12, marginTop:4 }}>{t("wizard.occurrences", { defaultValue: "Occorrenze generate" })}: {totalOccurrences}</div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {step == 3 && (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
             <button onClick={() => setPriority("mandatory")} style={{
               minHeight:148, borderRadius:20, border: form.priority === "mandatory" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
@@ -1265,7 +1394,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           </div>
         )}
 
-        {step == 3 && (
+        {step == 4 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
