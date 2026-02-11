@@ -4995,11 +4995,7 @@ export default function App() {
     const now = Date.now();
     const idSet = new Set(ids.map(id => String(id)));
     suppressDeadlinesRef.current = true;
-    setDeadlines(p => p.map(d => {
-      const match = idSet.has(String(d.id));
-      if (!match) return d;
-      return { ...d, deleted: true, deletedAt: now, updatedAt: now };
-    }));
+    setDeadlines(p => p.filter(d => !idSet.has(String(d.id))));
     queuePendingDelete(ids);
     deleteDeadlinesRemote(ids, now);
   };
