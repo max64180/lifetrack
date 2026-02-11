@@ -48,6 +48,9 @@
   "wizard": {
     "newTitle": "Nuova scadenza",
     "editTitle": "Modifica scadenza",
+    "mandatoryShort": "Inderogabile",
+    "autoShort": "Automatico",
+    "essentialShort": "Essenziale",
     "step": {
       "document": "Documento",
       "details": "Dati",

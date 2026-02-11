@@ -48,6 +48,9 @@
   "wizard": {
     "newTitle": "New deadline",
     "editTitle": "Edit deadline",
+    "mandatoryShort": "Mandatory",
+    "autoShort": "Automatic",
+    "essentialShort": "Essential",
     "step": {
       "document": "Document",
       "details": "Details",

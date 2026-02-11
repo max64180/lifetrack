@@ -1154,32 +1154,40 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.title")}</label>
             <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
 
-            <div style={{ display:"flex", gap:10 }}>
-              <div style={{ flex:1 }}>
-                <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.date")}</label>
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap", rowGap:10 }}>
+              <div style={{ flex:"1 1 160px", minWidth:160 }}>
+                <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.dueDate", { defaultValue: "Data scadenza" })}</label>
                 <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
-              <div style={{ flex:1 }}>
+              <div style={{ flex:"1 1 160px", minWidth:160 }}>
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
                 <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
             </div>
 
-            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-              <button type="button" onClick={() => set("mandatory", !form.mandatory)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.mandatory ? "#FFF0EC" : "#2d2b26", color: form.mandatory ? "#E53935" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>⚠️ {t("card.mandatory")}</button>
-              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.autoPay ? "#EBF2FC" : "#2d2b26", color: form.autoPay ? "#5B8DD9" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>↺ {t("filters.autoPay", { defaultValue: "Automatico" })}</button>
-              <button type="button" onClick={() => set("essential", !form.essential)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.essential ? "#E8F5E9" : "#2d2b26", color: form.essential ? "#4CAF6E" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>● {t("filters.essential", { defaultValue: "Essenziale" })}</button>
+            <div style={{ display:"flex", gap:6, flexWrap:"nowrap", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+              <button type="button" onClick={() => set("mandatory", !form.mandatory)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.mandatory ? "#FFF0EC" : "#f4f1ec", color: form.mandatory ? "#E53935" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ fontSize:12, color:"#E8855D" }}>⚠️</span>{t("wizard.mandatoryShort", { defaultValue: "Inderogabile" })}
+              </button>
+              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
+                {t("wizard.autoShort", { defaultValue: "Automatico" })}
+              </button>
+              <button type="button" onClick={() => set("essential", !form.essential)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.essential ? "#E8F5E9" : "#f4f1ec", color: form.essential ? "#4CAF6E" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
+                {t("wizard.essentialShort", { defaultValue: "Essenziale" })}
+              </button>
             </div>
 
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6, width:"100%" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(90px, 1fr))", gap:8, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
-                  background: form.cat === c.id ? c.light : "#2d2b26",
-                  border: `2px solid ${form.cat === c.id ? c.color : "transparent"}`,
+                  background: form.cat === c.id ? c.light : "#f4f1ec",
+                  border: `2px solid ${form.cat === c.id ? c.color : "#e2ddd6"}`,
                   borderRadius:10, padding:"6px", cursor:"pointer", fontSize:11,
                   fontWeight: form.cat === c.id ? 700 : 600,
-                  color: form.cat === c.id ? c.color : "#cfc9c2",
+                  color: form.cat === c.id ? c.color : "#6d6760",
                   minHeight:36
                 }}>
                   <span style={{ fontSize:13 }}>{c.icon}</span> {t(c.labelKey || "", { defaultValue: c.label })}
