@@ -370,23 +370,40 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
     .filter(d => d.date >= yearStart && d.date <= yearEnd && !d.estimateMissing)
     .reduce((s, d) => s + d.budget, 0);
 
+  const yearCount = deadlines.filter(d => d.date >= yearStart && d.date <= yearEnd).length;
+
   return (
     <div style={{ padding:"8px 14px 0" }}>
       <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"10px 12px" }}>
-        <div style={{ fontSize:9, color:"rgba(255,255,255,.45)", fontWeight:600 }}>
-          {t("budgetBar.yearTotal", { defaultValue: "Spesa anno in corso" })}: <strong style={{ color:"#fff" }}>{formatCurrency(yearTotal)}</strong>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:12 }}>
+          <div>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,.45)", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>
+              {t("budgetBar.yearTotal", { defaultValue: "Spesa anno in corso" })}
+            </div>
+            <div style={{ fontSize:18, fontWeight:600, color:"rgba(255,255,255,.75)", marginTop:2 }}>
+              {formatCurrency(yearTotal)}
+            </div>
+          </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>
+              {t("budgetBar.deadlinesYear", { defaultValue: "Scadenze anno" })}
+            </div>
+            <div style={{ fontSize:18, fontWeight:600, color:"rgba(255,255,255,.7)", marginTop:2 }}>
+              {yearCount}
+            </div>
+          </div>
         </div>
-        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"6px 0 8px" }} />
+
+        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"8px 0 10px" }} />
+
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:8 }}>
           <div>
             <div style={{ fontSize:9, color:"rgba(255,255,255,.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("budgetBar.title")}</div>
             <div style={{ fontSize:24, fontWeight:800, color:"#fff", letterSpacing:"-1px", marginTop:1, fontFamily:"'Sora',sans-serif" }}>{formatCurrency(total)}</div>
           </div>
-          <div style={{ display:"flex", gap:10 }}>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:8, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
-              <div style={{ fontSize:14, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
-            </div>
+          <div style={{ textAlign:"right" }}>
+            <div style={{ fontSize:8, color:"rgba(255,255,255,.35)", fontWeight:700, textTransform:"uppercase" }}>{t("budgetBar.deadlines")}</div>
+            <div style={{ fontSize:14, fontWeight:800, color:"rgba(255,255,255,.7)" }}>{count}</div>
           </div>
         </div>
 
@@ -410,11 +427,21 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
               </span>
             </div>
           )}
+          {urgent === 0 && missingCount === 0 && (
+            <div style={{ background:"rgba(255,255,255,.12)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontSize:10 }}>◼</span>
+              <span style={{ fontSize:10, fontWeight:800, color:"#b8b4ad" }}>
+                {t("budgetBar.neutral", { defaultValue: "Interrogabili" })}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+function YearDetailRow}
 
 function YearDetailRow({ item, cats }) {
   const { t } = useTranslation();
