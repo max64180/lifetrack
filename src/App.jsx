@@ -3216,6 +3216,7 @@ export default function App() {
   const pullActiveRef = useRef(false);
   const [pullOffset, setPullOffset] = useState(0);
   const [pulling, setPulling] = useState(false);
+  const [pullSyncing, setPullSyncing] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
   const [cats, setCats] = useState(DEFAULT_CATS);
@@ -4039,7 +4040,12 @@ export default function App() {
     lastManualSyncRef.current = now;
     showToast(t("toast.syncStarted"));
     if (syncNowRef.current) {
-      await syncNowRef.current("manual");
+      setPullSyncing(true);
+      try {
+        await syncNowRef.current("manual");
+      } finally {
+        setPullSyncing(false);
+      }
     }
   };
 
@@ -5503,7 +5509,7 @@ export default function App() {
             >
               <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                {(pullOffset > 10 || syncing) && (
+                {(pullOffset > 10 || syncing || pullSyncing) && (
                   <div style={{
                     width:16, height:16, borderRadius:"50%",
                     border:"2px solid rgba(138,135,127,.3)",
@@ -5512,7 +5518,7 @@ export default function App() {
                   }}/>
                 )}
                 <span>
-                  {syncing
+                  {(syncing || pullSyncing)
                     ? t("sync.saving")
                     : (pullOffset > 20 ? (pullOffset > 52 ? t("sync.releaseToSync") : t("sync.pullToSync")) : "")}
                 </span>
