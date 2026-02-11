@@ -1033,6 +1033,18 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       ? `Ogni ${countSafe} ${unitLabel(form.recurringUnit, countSafe)}`
       : `Every ${countSafe} ${unitLabel(form.recurringUnit, countSafe)}`;
   })();
+  const previewMonths = useMemo(() => {
+    if (!baseDate || Number.isNaN(baseDate.getTime())) return [];
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(baseDate);
+      d.setMonth(d.getMonth() + i);
+      const active = occurrences.some(o => o.getMonth() === d.getMonth() && o.getFullYear() === d.getFullYear());
+      const label = d.toLocaleDateString(getLocale(), { month: "short" }).replace(".", "").toUpperCase();
+      months.push({ label, active });
+    }
+    return months;
+  }, [baseDate, occurrences, i18n.language]);
 
   const canProceedDetails = form.title.trim() && form.date && form.cat;
   const canProceedRecurring = (() => {
@@ -1050,6 +1062,20 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     (step === 1 && !canProceedDetails) ||
     (step === 2 && !canProceedRecurring) ||
     (step === 3 && !canProceedPriority);
+  const goNext = () => {
+    if (step === 1 && mode === "one") {
+      setStep(3);
+      return;
+    }
+    setStep(s => Math.min(lastStep, s + 1));
+  };
+  const goBack = () => {
+    if (step === 3 && mode === "one") {
+      setStep(1);
+      return;
+    }
+    setStep(s => Math.max(0, s - 1));
+  };
 
   const toggleMode = (next) => {
     setMode(next);
@@ -1253,43 +1279,18 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               </>
             )}
 
-            {mode === "recurring" && (
-              <div style={{ marginTop:8, padding:"12px", borderRadius:14, background:"#f4f1ec", color:"#6d6760", border:"1px solid #e2ddd6" }}>
-                <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
-              </div>
-            )}
           </div>
         )}
 
         {step == 2 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
-              <button onClick={() => toggleMode("one")} style={{
-                minHeight:120, borderRadius:20, border: mode === "one" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
-                background: mode === "one" ? "#fff" : "#f7f4f0", color:"#6d6760",
-                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
-              }}>
-                <div style={{ fontSize:22 }}>1x</div>
-                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
-              </button>
-              <button onClick={() => toggleMode("recurring")} style={{
-                minHeight:120, borderRadius:20, border: mode === "recurring" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
-                background: mode === "recurring" ? "#fff" : "#f7f4f0", color:"#6d6760",
-                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
-              }}>
-                <div style={{ fontSize:22 }}>↺</div>
-                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
-              </button>
-            </div>
-
-            {mode === "recurring" && (
-              <>
+            <>
+                <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.frequency", { defaultValue: "Frequenza" })}</div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8 }}>
                   {[
                     { key:"mensile", label: t("wizard.monthly", { defaultValue: "Mensile" }) },
                     { key:"trimestrale", label: t("wizard.quarterly", { defaultValue: "Trimestrale" }) },
                     { key:"annuale", label: t("wizard.yearly", { defaultValue: "Annuale" }) },
-                    { key:"custom", label: t("wizard.custom", { defaultValue: "Custom" }) },
                   ].map(p => (
                     <button key={p.key} onClick={() => applyRecurringPreset(p.key)} style={{
                       padding:"10px 8px", borderRadius:12, border: form.recurringPreset === p.key ? "2px solid #E8855D" : "1px solid #d4cfc8",
@@ -1299,6 +1300,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                     </button>
                   ))}
                 </div>
+                <button onClick={() => applyRecurringPreset("custom")} style={{
+                  alignSelf:"flex-start", padding:"10px 12px", borderRadius:12, border: form.recurringPreset === "custom" ? "2px solid #E8855D" : "1px solid #d4cfc8",
+                  background: form.recurringPreset === "custom" ? "#FFF0EC" : "#fff", color:"#6d6760", fontSize:12, fontWeight:700, cursor:"pointer"
+                }}>
+                  {t("wizard.custom", { defaultValue: "Custom" })}
+                </button>
 
                 {form.recurringPreset === "custom" && (
                   <div className="wizard-field-row">
@@ -1318,6 +1325,23 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   </div>
                 )}
 
+                <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase", marginTop:4 }}>{t("wizard.previewMonths", { defaultValue: "Anteprima prossime date" })}</div>
+                <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e2ddd6", padding:"10px 12px" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6, marginBottom:8 }}>
+                    {previewMonths.map((m, idx) => (
+                      <div key={`${m.label}_${idx}`} style={{ textAlign:"center", fontSize:11, fontWeight:700, color:"#8f8a83" }}>{m.label}</div>
+                    ))}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(6, 1fr)", gap:6 }}>
+                    {previewMonths.map((m, idx) => (
+                      <div key={`dot_${m.label}_${idx}`} style={{ display:"flex", justifyContent:"center" }}>
+                        <span style={{ width:10, height:10, borderRadius:"50%", background: m.active ? "#E8855D" : "#d4cfc8", display:"inline-block" }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase", marginTop:4 }}>{t("wizard.endSeries", { defaultValue: "Fine serie" })}</div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8 }}>
                   {[
                     { key:"auto", label:t("wizard.endAuto", { defaultValue:"Auto" }) },
@@ -1334,7 +1358,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 </div>
 
                 {form.recurringEndMode === "count" && (
-                  <div>
+                  <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e2ddd6", padding:"10px 12px" }}>
                     <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.endAfter", { defaultValue:"Numero occorrenze" })}</label>
                     <input type="number" min="1" value={form.recurringCount} onChange={e => set("recurringCount", Math.max(1, Number(e.target.value) || 1))} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
                   </div>
@@ -1357,8 +1381,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
                   <div style={{ fontSize:12, marginTop:4 }}>{t("wizard.occurrences", { defaultValue: "Occorrenze generate" })}: {totalOccurrences}</div>
                 </div>
-              </>
-            )}
+            </>
           </div>
         )}
 
@@ -1435,7 +1458,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         <div style={{ display:"flex", gap:10, marginTop:"auto" }}>
           {step > 0 && (
-            <button onClick={() => setStep(s => s - 1)} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
+            <button onClick={goBack} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
               {t("actions.back")}
             </button>
           )}
@@ -1443,7 +1466,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             {t("actions.abandon", { defaultValue: "Abbandona" })}
           </button>
           {step < lastStep ? (
-            <button onClick={() => !disableNext && setStep(s => s + 1)} disabled={disableNext} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: disableNext ? "#c1bbb4" : "#E8855D", color:"#fff", fontSize:14, fontWeight:800, cursor: disableNext ? "not-allowed" : "pointer" }}>
+            <button onClick={() => !disableNext && goNext()} disabled={disableNext} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: disableNext ? "#c1bbb4" : "#E8855D", color:"#fff", fontSize:14, fontWeight:800, cursor: disableNext ? "not-allowed" : "pointer" }}>
               {t("actions.next")}
             </button>
           ) : (
