@@ -990,24 +990,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const setPriority = (priority) => setForm(f => ({ ...f, priority }));
   const selectedCat = cats.find(c => c.id === form.cat) || null;
   const hasAssets = !!(selectedCat && selectedCat.assets && selectedCat.assets.length > 0);
-  const steps = mode === "recurring"
-    ? [
-        t("wizard.step.type", { defaultValue: "Tipo" }),
-        t("wizard.step.details", { defaultValue: "Dati" }),
-        t("wizard.step.recurring", { defaultValue: "Ricorrenza" }),
-        t("wizard.step.priority", { defaultValue: "Priorita" }),
-        t("wizard.step.document", { defaultValue: "Documento" })
-      ]
-    : [
-        t("wizard.step.type", { defaultValue: "Tipo" }),
-        t("wizard.step.details", { defaultValue: "Dati" }),
-        t("wizard.step.priority", { defaultValue: "Priorita" }),
-        t("wizard.step.document", { defaultValue: "Documento" })
-      ];
-  const stepKeys = mode === "recurring"
-    ? ["type", "details", "recurring", "priority", "document"]
-    : ["type", "details", "priority", "document"];
-  const currentStepKey = stepKeys[step];
+  const steps = [
+    t("wizard.step.type", { defaultValue: "Tipo" }),
+    t("wizard.step.details", { defaultValue: "Dati" }),
+    t("wizard.step.recurring", { defaultValue: "Ricorrenza" }),
+    t("wizard.step.priority", { defaultValue: "Priorita" }),
+    t("wizard.step.document", { defaultValue: "Documento" })
+  ];
   const lastStep = steps.length - 1;
   const interval = Math.max(1, parseInt(form.recurringInterval) || 1);
   const count = Math.max(1, parseInt(form.recurringCount) || 1);
@@ -1058,13 +1047,9 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const canProceedPriority = !!form.priority;
   const canFinalize = canProceedDetails && canProceedPriority;
   const disableNext =
-    (currentStepKey === "details" && !canProceedDetails) ||
-    (currentStepKey === "recurring" && !canProceedRecurring) ||
-    (currentStepKey === "priority" && !canProceedPriority);
-
-  useEffect(() => {
-    if (step > lastStep) setStep(lastStep);
-  }, [step, lastStep]);
+    (step === 1 && !canProceedDetails) ||
+    (step === 2 && !canProceedRecurring) ||
+    (step === 3 && !canProceedPriority);
 
   const toggleMode = (next) => {
     setMode(next);
@@ -1190,7 +1175,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           }
         `}</style>
 
-        {currentStepKey === "type" && (
+        {step == 0 && (
           <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:18, alignItems:"center" }}>
               <div onClick={() => toggleMode("one")} style={{
@@ -1219,7 +1204,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           </div>
         )}
 
-        {currentStepKey === "details" && (
+        {step == 1 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.title")}</label>
             <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
@@ -1268,12 +1253,37 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               </>
             )}
 
+            {mode === "recurring" && (
+              <div style={{ marginTop:8, padding:"12px", borderRadius:14, background:"#f4f1ec", color:"#6d6760", border:"1px solid #e2ddd6" }}>
+                <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
+              </div>
+            )}
           </div>
         )}
 
-        {currentStepKey === "recurring" && (
+        {step == 2 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
+              <button onClick={() => toggleMode("one")} style={{
+                minHeight:120, borderRadius:20, border: mode === "one" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
+                background: mode === "one" ? "#fff" : "#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <div style={{ fontSize:22 }}>1x</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
+              </button>
+              <button onClick={() => toggleMode("recurring")} style={{
+                minHeight:120, borderRadius:20, border: mode === "recurring" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
+                background: mode === "recurring" ? "#fff" : "#f7f4f0", color:"#6d6760",
+                padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
+              }}>
+                <div style={{ fontSize:22 }}>↺</div>
+                <div style={{ fontSize:17, fontWeight:800, color:"#2d2b26" }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
+              </button>
+            </div>
+
+            {mode === "recurring" && (
+              <>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(110px, 1fr))", gap:8 }}>
                   {[
                     { key:"mensile", label: t("wizard.monthly", { defaultValue: "Mensile" }) },
@@ -1347,11 +1357,12 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
                   <div style={{ fontSize:12, marginTop:4 }}>{t("wizard.occurrences", { defaultValue: "Occorrenze generate" })}: {totalOccurrences}</div>
                 </div>
-            </>
+              </>
+            )}
           </div>
         )}
 
-        {currentStepKey === "priority" && (
+        {step == 3 && (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
             <button onClick={() => setPriority("mandatory")} style={{
               minHeight:148, borderRadius:20, border: form.priority === "mandatory" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
@@ -1383,7 +1394,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           </div>
         )}
 
-        {currentStepKey === "document" && (
+        {step == 4 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
