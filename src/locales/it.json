@@ -499,7 +499,7 @@
     "deadlines": "Scadenze",
     "missing": "⚠ {{count}} da stimare",
     "urgent": "Urgenti {{count}}",
-    "yearTotal": "Spesa anno in corso",
+    "yearTotal": "Budget previsto {{year}}",
     "deadlinesYear": "Scadenze anno",
     "neutral": "Interrogabili",
     "periodSelected": "Periodo selezionato",

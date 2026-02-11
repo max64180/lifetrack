@@ -499,7 +499,7 @@
     "deadlines": "Deadlines",
     "missing": "⚠ {{count}} to estimate",
     "urgent": "Urgent {{count}}",
-    "yearTotal": "Current year spend",
+    "yearTotal": "Planned budget {{year}}",
     "deadlinesYear": "Year deadlines",
     "neutral": "Checkable",
     "periodSelected": "Selected period",

@@ -395,7 +395,7 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats, activeTab }) {
           </div>
           <div style={{ textAlign:"right" }}>
             <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:800, textTransform:"uppercase", letterSpacing:".6px" }}>
-              {t("budgetBar.yearTotal", { defaultValue: "Anno in corso" })}
+              {t("budgetBar.yearTotal", { year: currentYear, defaultValue: `Budget previsto ${currentYear}` })}
             </div>
             <div style={{ fontSize:17, fontWeight:600, color:"rgba(255,255,255,.75)", marginTop:2 }}>
               {formatCurrency(yearTotal)}
