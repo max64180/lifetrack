@@ -460,7 +460,7 @@
   },
   "toast": {
     "autoPayCompleted": "✓ {{count}} automatic payments completed",
-    "deadlineSkipped": "✓ Marked as not due",
+    "deadlineSkipped": "✓ Marked as not due (completed)",
     "paidFull": "✓ Paid €{{amount}}",
     "notPaid": "✓ Marked as not paid",
     "paidAmount": "✓ Paid €{{amount}}",
@@ -536,6 +536,6 @@
     "fileUpload": "File upload error"
   },
   "confirm": {
-    "skipNonDue": "Mark this deadline as not due?\nThe budget will be set to 0 and the deadline will remain incomplete."
+    "skipNonDue": "Mark this deadline as not due?\nThe budget will be set to 0 and the deadline will be marked as completed."
   }
 }

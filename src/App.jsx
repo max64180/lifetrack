@@ -561,7 +561,9 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           {item.estimateMissing ? (
             <span style={{ fontSize:11, fontWeight:700, color:"#8a6d1f" }}>{t("card.estimateMissing")}</span>
           ) : (
-            item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>
+            item.skipped
+              ? <span style={{ fontSize:12, fontWeight:800, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
+              : item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>
           )}
           <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
@@ -4630,7 +4632,7 @@ export default function App() {
       const item = petDeadlines.find(d => String(d.id) === String(id));
       if (item?.recurring?.enabled && !window.confirm(t("confirm.skipNonDue"))) return;
       setPetDeadlines(p => p.map(d => String(d.id) === String(id)
-        ? { ...d, done: false, skipped: true, cost: 0 }
+        ? { ...d, done: true, skipped: true, cost: 0 }
         : d
       ));
       setExpandedId(null);
@@ -4642,7 +4644,7 @@ export default function App() {
     if (item.recurring?.enabled && !window.confirm(t("confirm.skipNonDue"))) return;
     setDeadlines(p => p.map(d => d.id === id ? {
       ...d,
-      done: false,
+      done: true,
       skipped: true,
       budget: 0,
       estimateMissing: false

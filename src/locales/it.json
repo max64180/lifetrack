@@ -460,7 +460,7 @@
   },
   "toast": {
     "autoPayCompleted": "✓ {{count}} pagamenti automatici completati",
-    "deadlineSkipped": "✓ Segnata come non dovuta",
+    "deadlineSkipped": "✓ Segnata come non dovuta (completata)",
     "paidFull": "✓ Pagata €{{amount}}",
     "notPaid": "✓ Segnata come non pagata",
     "paidAmount": "✓ Pagata €{{amount}}",
@@ -536,6 +536,6 @@
     "fileUpload": "Errore caricamento file"
   },
   "confirm": {
-    "skipNonDue": "Segnare questa scadenza come non dovuta?\nIl budget verrà azzerato e la scadenza resterà non completata."
+    "skipNonDue": "Segnare questa scadenza come non dovuta?\nIl budget verrà azzerato e la scadenza sarà segnata come completata."
   }
 }
