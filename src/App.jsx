@@ -908,6 +908,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
   const [form, setForm] = useState({ 
     title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
     priority:"",
+    documentChoice:"none",
     mandatory:false, essential:true, autoPay:false, documents:[],
     recurringEnabled: false,
     recurringInterval: 1,
@@ -928,6 +929,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       setForm({ 
         title:"", cat:"casa", asset:null, date:"", budget:"", notes:"", 
         priority:"",
+        documentChoice:"none",
         mandatory:false, essential:true, autoPay:false, documents:[],
         recurringEnabled: false,
         recurringInterval: 1,
@@ -959,6 +961,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
         budget: editingItem.estimateMissing ? "" : String(editingItem.budget),
         notes: editingItem.notes || "",
         priority,
+        documentChoice: (editingItem.documents || []).length ? "upload" : "none",
         mandatory: editingItem.mandatory || false,
         essential: editingItem.essential !== undefined ? editingItem.essential : true,
         autoPay: editingItem.autoPay || false,
@@ -1267,7 +1270,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(150px, 1fr))", gap:12 }}>
               <label style={{
-                minHeight:148, borderRadius:20, border:"2px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760",
+                minHeight:148, borderRadius:20, border: form.documentChoice === "upload" ? "2px solid #E8855D" : "2px dashed #d4cfc8", background: form.documentChoice === "upload" ? "#fff" : "#f7f4f0", color:"#6d6760",
                 padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
               }}>
                 <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
@@ -1281,7 +1284,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   try {
                     const base64 = await fileToBase64(file);
                     const doc = { id: Date.now(), type: 'incoming', base64, filename: file.name || "file", contentType: file.type || "application/octet-stream", size: file.size, isImage: isImageType(file.type), uploadDate: new Date().toISOString() };
-                    set("documents", [doc]);
+                    setForm(f => ({ ...f, documents:[doc], documentChoice:"upload" }));
                   } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
                   e.target.value = '';
                 }} />
@@ -1289,11 +1292,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                 <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("wizard.docUploadTitle", { defaultValue: "Carica file" })}</div>
                 <div style={{ fontSize:12, color:"#8f8a83" }}>{form.documents.length ? form.documents[0].filename : t("wizard.docUpload", { defaultValue: "Documento opzionale" })}</div>
               </label>
-              <button type="button" onClick={() => set("documents", [])} style={{
-                minHeight:148, borderRadius:20, border:"2px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760",
+              <button type="button" onClick={() => setForm(f => ({ ...f, documents:[], documentChoice:"none" }))} style={{
+                minHeight:148, borderRadius:20, border: form.documentChoice === "none" ? "2px solid #E8855D" : "2px dashed #d4cfc8", background: form.documentChoice === "none" ? "#fff" : "#f7f4f0", color:"#6d6760",
                 padding:"16px 14px", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, textAlign:"center", cursor:"pointer"
               }}>
-                <div style={{ fontSize:26 }}>{form.documents.length ? "✕" : "✓"}</div>
+                <div style={{ fontSize:26 }}>✓</div>
                 <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("wizard.noDocument", { defaultValue: "Nessun documento" })}</div>
                 <div style={{ fontSize:12, color:"#8f8a83" }}>{t("wizard.noDocumentHint", { defaultValue: "Puoi continuare anche senza allegato." })}</div>
               </button>
