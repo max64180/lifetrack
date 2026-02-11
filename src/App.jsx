@@ -984,7 +984,6 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
       }));
     }
   }, [open, presetAsset, editingItem]);
-  if (!open) return null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setPriority = (priority) => setForm(f => ({ ...f, priority }));
@@ -1167,6 +1166,8 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
     }
     onClose();
   };
+
+  if (!open) return null;
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
