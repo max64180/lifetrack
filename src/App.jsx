@@ -1120,11 +1120,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
           <div style={{ fontSize:12, color:"#8f8a83", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
         </div>
         <style>{`
-          .wizard-field-row{display:flex;gap:10px;flex-wrap:wrap}
-          .wizard-field-col{flex:1 1 200px;min-width:0}
+          .wizard-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+          .wizard-field-col{min-width:0}
           .wizard-field-col input{max-width:100%;box-sizing:border-box}
           @media (max-width: 420px){
-            .wizard-field-row{flex-direction:column}
+            .wizard-field-row{grid-template-columns:1fr}
           }
         `}</style>
 
