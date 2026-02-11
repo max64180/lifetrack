@@ -4049,6 +4049,33 @@ export default function App() {
     }
   };
 
+  const handlePullStart = (e) => {
+    if (!listRef.current) return;
+    if (listRef.current.scrollTop > 0) return;
+    pullActiveRef.current = true;
+    pullStartRef.current = e.touches[0].clientY;
+    setPulling(true);
+  };
+
+  const handlePullMove = (e) => {
+    if (!pullActiveRef.current || !listRef.current) return;
+    if (listRef.current.scrollTop > 0) return;
+    const delta = e.touches[0].clientY - pullStartRef.current;
+    if (delta <= 0) return;
+    if (e.cancelable) e.preventDefault();
+    setPullOffset(Math.min(delta, 80));
+  };
+
+  const handlePullEnd = () => {
+    if (!pullActiveRef.current) return;
+    pullActiveRef.current = false;
+    setPulling(false);
+    if (pullOffset > 52) {
+      triggerManualSync();
+    }
+    setPullOffset(0);
+  };
+
   const triggerRepairSync = async () => {
     if (!syncEnabled) {
       showToast(t("toast.syncDisabled"));
@@ -5319,6 +5346,29 @@ export default function App() {
         </div>
       )}
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+
+      {(pullOffset > 0 || pullSyncing) && (
+        <div style={{
+          position:"fixed", top:0, left:0, right:0,
+          height: Math.max(pullOffset, pullSyncing ? 32 : 0),
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
+          paddingBottom:6, zIndex:110, pointerEvents:"none",
+          color:"#8a877f", fontSize:11, fontWeight:700, letterSpacing:".3px", textTransform:"uppercase"
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{
+              width:16, height:16, borderRadius:"50%",
+              border:"2px solid rgba(138,135,127,.3)",
+              borderTopColor:"#8a877f",
+              animation:"spin .8s linear infinite"
+            }}/>
+            <span>
+              {pullSyncing ? t("sync.saving") : (pullOffset > 52 ? t("sync.releaseToSync") : t("sync.pullToSync"))}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* HEADER - primary section */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18" }}>
@@ -5350,7 +5400,12 @@ export default function App() {
       </div>
 
       {mainSection === "deadlines" && (
-        <>
+        <div
+          onTouchStart={handlePullStart}
+          onTouchMove={handlePullMove}
+          onTouchEnd={handlePullEnd}
+          style={{ display:"flex", flexDirection:"column", flex:1 }}
+        >
           {/* TAB: Timeline / Scadute / Completate */}
           <div style={{ display:"flex", gap:0, background:"#fff", borderBottom:"1px solid #edecea", position:"sticky", top:0, zIndex:50 }}>
             {[
@@ -5467,30 +5522,6 @@ export default function App() {
           {/* LISTA */}
           <div
             ref={listRef}
-            onTouchStart={(e) => {
-              if (!listRef.current) return;
-              if (listRef.current.scrollTop > 0) return;
-              pullActiveRef.current = true;
-              pullStartRef.current = e.touches[0].clientY;
-              setPulling(true);
-            }}
-            onTouchMove={(e) => {
-              if (!pullActiveRef.current || !listRef.current) return;
-              if (listRef.current.scrollTop > 0) return;
-              const delta = e.touches[0].clientY - pullStartRef.current;
-              if (delta <= 0) return;
-              e.preventDefault();
-              setPullOffset(Math.min(delta, 80));
-            }}
-            onTouchEnd={() => {
-              if (!pullActiveRef.current) return;
-              pullActiveRef.current = false;
-              setPulling(false);
-              if (pullOffset > 52) {
-                triggerManualSync();
-              }
-              setPullOffset(0);
-            }}
             style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}
           >
             <div
@@ -5507,7 +5538,6 @@ export default function App() {
                 textTransform:"uppercase"
               }}
             >
-              <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 {(pullOffset > 10 || syncing || pullSyncing) && (
                   <div style={{
@@ -5767,7 +5797,7 @@ export default function App() {
             cursor:"pointer", boxShadow:"0 6px 24px rgba(232,133,93,.45)",
             display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
           }}>+</button>
-        </>
+        </div>
       )}
 
       {mainSection === "assets" && (
