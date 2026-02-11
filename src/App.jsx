@@ -3588,13 +3588,20 @@ export default function App() {
     startSync();
     const current = deadlinesRef.current || [];
     const prevMap = new Map((prevDeadlinesRef.current || []).map(d => [String(d.id), d]));
+    const currentIdSet = new Set(current.map(d => String(d.id)));
+    const removedIds = (prevDeadlinesRef.current || [])
+      .map(d => String(d.id))
+      .filter(id => !currentIdSet.has(id));
+    if (removedIds.length) {
+      removedIds.forEach(id => pendingDeleteRef.current.add(id));
+    }
     const changed = current.filter(d => {
       const prev = prevMap.get(String(d.id));
       return !prev || !isSameDeadline(prev, d);
     });
 
     try {
-      if (changed.length) {
+      if (changed.length || removedIds.length) {
         const now = Date.now();
         const chunkSize = 400;
         for (let i = 0; i < changed.length; i += chunkSize) {
@@ -3606,12 +3613,26 @@ export default function App() {
           });
           await batch.commit();
         }
+        for (let i = 0; i < removedIds.length; i += chunkSize) {
+          const batch = writeBatch(db);
+          removedIds.slice(i, i + chunkSize).forEach(id => {
+            batch.set(
+              doc(db, 'users', user.uid, 'deadlines', id),
+              { deleted: true, deletedAt: now, updatedAt: now },
+              { merge: true }
+            );
+          });
+          await batch.commit();
+        }
         await setDoc(doc(db, 'users', user.uid), {
           deadlinesVersion: now,
           lastUpdate: new Date().toISOString()
         }, { merge: true });
         deadlinesVersionRef.current = now;
         try { localStorage.setItem("lifetrack_deadlines_version", String(now)); } catch (err) {}
+      }
+      if (removedIds.length) {
+        removedIds.forEach(id => pendingDeleteRef.current.delete(id));
       }
       prevDeadlinesRef.current = current;
       pendingSaveRef.current = false;
@@ -3628,6 +3649,9 @@ export default function App() {
       }
     } catch (error) {
       console.error("Firebase deadline save error:", error);
+      if (removedIds.length) {
+        removedIds.forEach(id => pendingDeleteRef.current.delete(id));
+      }
       pendingSaveRef.current = false;
       endSync();
       showToast(t("toast.syncError", { code: error?.code || "unknown" }));
