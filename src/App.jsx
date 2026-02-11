@@ -6303,7 +6303,7 @@ export default function App() {
         }}>
           <div style={{
             width:"90%", maxWidth:420, background:"#fff", borderRadius:18, padding:"18px 18px 16px",
-            boxShadow:"0 18px 60px rgba(0,0,0,.25)"
+            boxShadow:"0 18px 60px rgba(0,0,0,.25)", maxHeight:"85vh", overflowY:"auto", WebkitOverflowScrolling:"touch"
           }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
               <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26" }}>{t("dev.title")}</div>
