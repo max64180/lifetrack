@@ -5802,7 +5802,7 @@ export default function App() {
           </div>
 
           <button onClick={() => setShowFilters(true)} style={{
-            position:"fixed", bottom:88, right: "calc(50% - 260px)", width:48, height:48, borderRadius:"50%",
+            position:"fixed", bottom:88, right: "calc(50% - 195px + 72px)", width:48, height:48, borderRadius:"50%",
             background:"#2d2b26", border:"none", color:"#fff", fontSize:20, fontWeight:700,
             cursor:"pointer", boxShadow:"0 6px 20px rgba(0,0,0,.2)",
             display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
