@@ -3991,6 +3991,7 @@ export default function App() {
   const [showCats, setShowCats] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
@@ -5448,21 +5449,6 @@ export default function App() {
             ))}
           </div>
 
-          {/* FILTRO SMART */}
-          <PriorityFilter
-            activeTab={activeTab}
-            filterMandatory={filterMandatory}
-            setFilterMandatory={setFilterMandatory}
-            filterAutoPay={filterAutoPay}
-            setFilterAutoPay={setFilterAutoPay}
-            filterManual={filterManual}
-            setFilterManual={setFilterManual}
-            filterEstimateMissing={filterEstimateMissing}
-            setFilterEstimateMissing={setFilterEstimateMissing}
-            filterPet={filterPet}
-            setFilterPet={setFilterPet}
-          />
-
           {/* Period navigator (above list) */}
           <div style={{ padding:"6px 14px 4px", background:"#f5f4f0" }}>
             <div style={{
@@ -5814,6 +5800,13 @@ export default function App() {
               {remoteInfo.lastSync ? ` · sync:${new Date(remoteInfo.lastSync).toLocaleTimeString(getLocale(), { hour:'2-digit', minute:'2-digit' })}` : ""}
             </div>
           </div>
+
+          <button onClick={() => setShowFilters(true)} style={{
+            position:"fixed", bottom:88, right: "calc(50% - 260px)", width:48, height:48, borderRadius:"50%",
+            background:"#2d2b26", border:"none", color:"#fff", fontSize:20, fontWeight:700,
+            cursor:"pointer", boxShadow:"0 6px 20px rgba(0,0,0,.2)",
+            display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
+          }}>≡</button>
 
           {/* FAB */}
           <button onClick={() => setShowAdd(true)} style={{
@@ -6730,6 +6723,41 @@ export default function App() {
                 flex:1, padding:"12px", borderRadius:12, border:"none", background:"#E53935", 
                 color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, minHeight:44 
               }}>{t("deleteSeries.confirm")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFilters && (
+        <div onClick={() => setShowFilters(false)} style={{
+          position:"fixed", inset:0, background:"rgba(18,17,13,.6)", zIndex:220,
+          display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background:"#fff", borderRadius:"24px 24px 0 0", padding:"0 0 20px", width:"100%", maxWidth:480,
+            animation:"sheetUp .28s cubic-bezier(.34,1.56,.64,1) both", maxHeight:"70vh", overflowY:"auto",
+          }}>
+            <style>{`@keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+            <div style={{ width:44, height:5, background:"#e0ddd6", borderRadius:3, margin:"12px auto 10px" }}/>
+            <div style={{ padding:"0 14px 6px", fontSize:12, color:"#8a877f", fontWeight:800, textTransform:"uppercase", letterSpacing:".5px" }}>Filtri</div>
+            <PriorityFilter
+              activeTab={activeTab}
+              filterMandatory={filterMandatory}
+              setFilterMandatory={setFilterMandatory}
+              filterAutoPay={filterAutoPay}
+              setFilterAutoPay={setFilterAutoPay}
+              filterManual={filterManual}
+              setFilterManual={setFilterManual}
+              filterEstimateMissing={filterEstimateMissing}
+              setFilterEstimateMissing={setFilterEstimateMissing}
+              filterPet={filterPet}
+              setFilterPet={setFilterPet}
+            />
+            <div style={{ padding:"0 14px 10px" }}>
+              <button onClick={() => setShowFilters(false)} style={{
+                width:"100%", padding:"12px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff",
+                fontSize:13, fontWeight:700, cursor:"pointer"
+              }}>{t("actions.close")}</button>
             </div>
           </div>
         </div>
