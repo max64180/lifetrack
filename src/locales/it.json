@@ -343,16 +343,28 @@
     "mandatory": "⚠ Scadenza inderogabile",
     "autoPayActive": "🔄 Pagamento automatico attivo",
     "autoCompleted": "✓ Completata automaticamente alla scadenza",
-    "skipped": "⏭ Scadenza saltata",
+    "skipped": "Non dovuta",
     "estimateMissing": "Da stimare",
     "estimateMissingTitle": "💡 Stima mancante",
     "addEstimate": "Aggiungi stima"
   },
   "units": {
-    "day": { "one": "giorno", "other": "giorni" },
-    "week": { "one": "settimana", "other": "settimane" },
-    "month": { "one": "mese", "other": "mesi" },
-    "year": { "one": "anno", "other": "anni" }
+    "day": {
+      "one": "giorno",
+      "other": "giorni"
+    },
+    "week": {
+      "one": "settimana",
+      "other": "settimane"
+    },
+    "month": {
+      "one": "mese",
+      "other": "mesi"
+    },
+    "year": {
+      "one": "anno",
+      "other": "anni"
+    }
   },
   "docs": {
     "title": "📎 Documenti",
@@ -448,7 +460,7 @@
   },
   "toast": {
     "autoPayCompleted": "✓ {{count}} pagamenti automatici completati",
-    "deadlineSkipped": "✓ Scadenza saltata",
+    "deadlineSkipped": "✓ Segnata come non dovuta",
     "paidFull": "✓ Pagata €{{amount}}",
     "notPaid": "✓ Segnata come non pagata",
     "paidAmount": "✓ Pagata €{{amount}}",
@@ -522,5 +534,8 @@
   },
   "errors": {
     "fileUpload": "Errore caricamento file"
+  },
+  "confirm": {
+    "skipNonDue": "Segnare questa scadenza come non dovuta?\nIl budget verrà azzerato e la scadenza resterà non completata."
   }
 }

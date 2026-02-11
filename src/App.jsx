@@ -455,6 +455,11 @@ function YearDetailRow({ item, cats }) {
             {t("card.estimateMissing")}
           </div>
         )}
+        {item.skipped && (
+          <div style={{ fontSize:9, fontWeight:700, color:"#6b6961", textTransform:"uppercase", letterSpacing:".3px" }}>
+            {t("card.skipped")}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -614,7 +619,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
           )}
 
-          {item.skipped && item.done && (
+          {item.skipped && (
             <div style={{ fontSize:11, color:"#6b6961", background:"#f0efe8", borderRadius:10, padding:"8px 10px", marginBottom:12, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
               {t("card.skipped")}
             </div>
@@ -4443,7 +4448,7 @@ export default function App() {
         petId: d.petId,
         date: rawDate,
         budget: Number(d.cost) || 0,
-        estimateMissing: !(Number(d.cost) > 0),
+        estimateMissing: d.skipped ? false : !(Number(d.cost) > 0),
         notes: d.notes || "",
         recurring: d.recurring || null,
         mandatory: false,
@@ -4582,14 +4587,26 @@ export default function App() {
 
   const skip = id => {
     if (petDeadlineIds.has(String(id))) {
-      setPetDeadlines(p => p.map(d => String(d.id) === String(id) ? { ...d, done: true, skipped: true } : d));
+      const item = petDeadlines.find(d => String(d.id) === String(id));
+      if (item?.recurring?.enabled && !window.confirm(t("confirm.skipNonDue"))) return;
+      setPetDeadlines(p => p.map(d => String(d.id) === String(id)
+        ? { ...d, done: false, skipped: true, cost: 0 }
+        : d
+      ));
       setExpandedId(null);
       showToast(t("toast.deadlineSkipped"));
       return;
     }
     const item = activeDeadlines.find(d => d.id === id);
     if (!item || item.done) return;
-    setDeadlines(p => p.map(d => d.id === id ? { ...d, done: true, skipped: true } : d));
+    if (item.recurring?.enabled && !window.confirm(t("confirm.skipNonDue"))) return;
+    setDeadlines(p => p.map(d => d.id === id ? {
+      ...d,
+      done: false,
+      skipped: true,
+      budget: 0,
+      estimateMissing: false
+    } : d));
     setExpandedId(null);
     showToast(t("toast.deadlineSkipped"));
   };
