@@ -501,7 +501,10 @@
     "urgent": "Urgent {{count}}",
     "yearTotal": "Current year spend",
     "deadlinesYear": "Year deadlines",
-    "neutral": "Checkable"
+    "neutral": "Checkable",
+    "periodSelected": "Selected period",
+    "deadlinesCount": "{{count}} deadlines",
+    "mandatory": "Mandatory {{count}}"
   },
   "common": {
     "deadlines": "deadlines"

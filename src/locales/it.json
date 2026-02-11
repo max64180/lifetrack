@@ -501,7 +501,10 @@
     "urgent": "Urgenti {{count}}",
     "yearTotal": "Spesa anno in corso",
     "deadlinesYear": "Scadenze anno",
-    "neutral": "Interrogabili"
+    "neutral": "Interrogabili",
+    "periodSelected": "Periodo selezionato",
+    "deadlinesCount": "{{count}} scadenze",
+    "mandatory": "Inderogabili {{count}}"
   },
   "common": {
     "deadlines": "scadenze"
