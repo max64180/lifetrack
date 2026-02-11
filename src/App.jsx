@@ -34,6 +34,8 @@ const POLL_MAX_MS = 90 * 60 * 1000;
 const MIN_POLL_GAP_MS = 10 * 60 * 1000;
 const MANUAL_SYNC_COOLDOWN_MS = 60 * 1000;
 const FULL_SYNC_EVERY_MS = 24 * 60 * 60 * 1000;
+const SYNC_POLL_ENABLED = false;
+const FOCUS_SYNC_GAP_MS = 2 * 60 * 60 * 1000;
 const RANGE_IDS = new Set(RANGES.map(r => r.id));
 const getSafeRange = (value) => (RANGE_IDS.has(value) ? value : "mese");
 const MAX_ATTACHMENTS = 3;
@@ -3208,6 +3210,7 @@ export default function App() {
   const [showDev, setShowDev] = useState(false);
   const syncNowRef = useRef(null);
   const lastManualSyncRef = useRef(0);
+  const lastFocusCheckRef = useRef(0);
   const listRef = useRef(null);
   const pullStartRef = useRef(0);
   const pullActiveRef = useRef(false);
@@ -3453,6 +3456,7 @@ export default function App() {
 
     const scheduleNext = (delay) => {
       if (cancelled) return;
+      if (!SYNC_POLL_ENABLED) return;
       if (pollStateRef.current.timer) clearTimeout(pollStateRef.current.timer);
       pollStateRef.current.timer = setTimeout(() => fetchOnce("poll"), delay);
     };
@@ -3460,6 +3464,7 @@ export default function App() {
     const fetchOnce = async (reason = "poll") => {
       if (cancelled) return;
       if (!syncEnabled) return;
+      if (reason === "poll" && !SYNC_POLL_ENABLED) return;
       if (reason === "poll" && (pendingSaveRef.current || syncing)) {
         scheduleNext(Math.max(pollStateRef.current.backoffMs, POLL_BASE_MS));
         return;
@@ -3497,6 +3502,7 @@ export default function App() {
           pollStateRef.current.backoffMs = POLL_BASE_MS;
           const visibleCount = (deadlinesRef.current || []).filter(d => !d?.deleted).length;
           setRemoteInfo({ count: visibleCount, lastSync: Date.now(), error: null });
+          lastFocusCheckRef.current = Date.now();
           if (!cancelled && !pendingSaveRef.current) {
             suppressMetaRef.current = true;
             setCats(userData.categories || DEFAULT_CATS);
@@ -3623,7 +3629,11 @@ export default function App() {
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        fetchOnce("focus");
+        const now = Date.now();
+        if (now - lastFocusCheckRef.current >= FOCUS_SYNC_GAP_MS) {
+          lastFocusCheckRef.current = now;
+          fetchOnce("focus");
+        }
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
