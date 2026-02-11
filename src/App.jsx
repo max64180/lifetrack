@@ -1098,16 +1098,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                     }
                     try {
                       const processed = await processAttachmentFile(file);
-                      let base64;
-                      if (processed.isImage) {
-                        try {
-                          base64 = await compressImage(file, 1600);
-                        } catch (err) {
-                          base64 = await fileToBase64(file);
-                        }
-                      } else {
-                        base64 = await fileToBase64(file);
-                      }
+                      const base64 = await fileToBase64(processed.blob || file);
                       const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
                       set("documents", [doc]);
                     } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
