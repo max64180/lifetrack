@@ -4487,6 +4487,7 @@ export default function App() {
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
   const baseYear = TODAY.getFullYear();
+  const baseMonthIndex = TODAY.getFullYear() * 12 + TODAY.getMonth();
   const navCandidates = useMemo(() => {
     let list = allDeadlines.filter(d => {
       if (activeTab === "done") return d.done;
@@ -4512,7 +4513,17 @@ export default function App() {
     });
     return Array.from(years).sort((a, b) => a - b);
   }, [navCandidates]);
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    navCandidates.forEach(d => {
+      if (d?.date instanceof Date && !Number.isNaN(d.date.getTime())) {
+        months.add(d.date.getFullYear() * 12 + d.date.getMonth());
+      }
+    });
+    return Array.from(months).sort((a, b) => a - b);
+  }, [navCandidates]);
   const isYearCompact = range === "anno";
+  const isMonthView = range === "mese";
   const prevYear = useMemo(() => {
     if (!isYearCompact || availableYears.length === 0) return null;
     const current = period.year;
@@ -4527,6 +4538,20 @@ export default function App() {
   }, [isYearCompact, availableYears, period.year]);
   const canPrevYear = isYearCompact && prevYear !== null;
   const canNextYear = isYearCompact && nextYear !== null;
+  const prevMonth = useMemo(() => {
+    if (!isMonthView || availableMonths.length === 0) return null;
+    const current = period.year * 12 + (period.month ?? 0);
+    const prev = availableMonths.filter(m => m < current).pop();
+    return typeof prev === "number" ? prev : null;
+  }, [isMonthView, availableMonths, period.year, period.month]);
+  const nextMonth = useMemo(() => {
+    if (!isMonthView || availableMonths.length === 0) return null;
+    const current = period.year * 12 + (period.month ?? 0);
+    const next = availableMonths.find(m => m > current);
+    return typeof next === "number" ? next : null;
+  }, [isMonthView, availableMonths, period.year, period.month]);
+  const canPrevMonth = isMonthView && prevMonth !== null;
+  const canNextMonth = isMonthView && nextMonth !== null;
   const yearDetailLimit = 6;
   const mandatoryItems = useMemo(() => {
     if (!isYearCompact) return [];
@@ -5296,14 +5321,18 @@ export default function App() {
                       if (canPrevYear) setPeriodOffset(prevYear - baseYear);
                       return;
                     }
+                    if (isMonthView) {
+                      if (canPrevMonth) setPeriodOffset(prevMonth - baseMonthIndex);
+                      return;
+                    }
                     setPeriodOffset(o => o - 1);
                   }}
-                  disabled={isYearCompact && !canPrevYear}
+                  disabled={(isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth)}
                   style={{
                     width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
-                    cursor: isYearCompact && !canPrevYear ? "not-allowed" : "pointer",
+                    cursor: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? "not-allowed" : "pointer",
                     background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
-                    opacity: isYearCompact && !canPrevYear ? 0.35 : 1
+                    opacity: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? 0.35 : 1
                   }}
                 >‹</button>
                 <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
@@ -5341,14 +5370,18 @@ export default function App() {
                       if (canNextYear) setPeriodOffset(nextYear - baseYear);
                       return;
                     }
+                    if (isMonthView) {
+                      if (canNextMonth) setPeriodOffset(nextMonth - baseMonthIndex);
+                      return;
+                    }
                     setPeriodOffset(o => o + 1);
                   }}
-                  disabled={isYearCompact && !canNextYear}
+                  disabled={(isYearCompact && !canNextYear) || (isMonthView && !canNextMonth)}
                   style={{
                     width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
-                    cursor: isYearCompact && !canNextYear ? "not-allowed" : "pointer",
+                    cursor: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? "not-allowed" : "pointer",
                     background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
-                    opacity: isYearCompact && !canNextYear ? 0.35 : 1
+                    opacity: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? 0.35 : 1
                   }}
                 >›</button>
               </div>
