@@ -1177,11 +1177,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <div className="wizard-field-row">
               <div className="wizard-field-col">
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.dueDate", { defaultValue: "Data scadenza" })}</label>
-                <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
               <div className="wizard-field-col">
                 <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
-                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
+                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", minWidth:0, padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
             </div>
 
@@ -1189,13 +1189,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               <button type="button" onClick={toggleMandatory} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.mandatory ? "#FFF0EC" : "#f4f1ec", color: form.mandatory ? "#E53935" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ fontSize:12, color:"#E8855D" }}>⚠️</span>{t("wizard.mandatoryShort", { defaultValue: "Inderogabile" })}
               </button>
-              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
-                {t("wizard.autoShort", { defaultValue: "Automatico" })}
-              </button>
               <button type="button" onClick={toggleEssential} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.essential ? "#E8F5E9" : "#f4f1ec", color: form.essential ? "#4CAF6E" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block" }} />
                 {t("wizard.essentialShort", { defaultValue: "Essenziale" })}
+              </button>
+              <button type="button" onClick={() => set("autoPay", !form.autoPay)} style={{ padding:"7px 10px", borderRadius:999, border:"1px solid #e2ddd6", background: form.autoPay ? "#EBF2FC" : "#f4f1ec", color: form.autoPay ? "#5B8DD9" : "#6d6760", fontSize:12, fontWeight:800, cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ width:18, height:18, borderRadius:6, background:"#EBF2FC", color:"#5B8DD9", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:12, border:"1px solid #c9dbf3" }}>↺</span>
+                {t("wizard.autoShort", { defaultValue: "Automatico" })}
               </button>
             </div>
 
@@ -5052,12 +5052,14 @@ export default function App() {
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
         input:focus,select:focus,textarea:focus{border-color:#5B8DD9!important;background:#fff!important;outline:none;}
         input[type="date"]{
-          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%238f8a83'%3E%3Cpath d='M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm12 8H5v10h14V10zm0-4H5v2h14V6z'/%3E%3C/svg%3E");
-          background-repeat:no-repeat;
-          background-position:right 12px center;
-          padding-right:36px;
+          background-image:none;
+          padding-right:12px;
+          min-width:0;
         }
-        input[type="date"]::-webkit-calendar-picker-indicator{opacity:0;}
+        input[type="date"]::-webkit-calendar-picker-indicator{
+          opacity:1;
+          display:block;
+        }
         ::-webkit-scrollbar{display:none}
       `}</style>
 
