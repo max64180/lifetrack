@@ -355,15 +355,20 @@ function RangeSelector({ active, onChange, tone = "dark", compact = false, paddi
 }
 
 /* Budget summary bar */
-function BudgetBar({ deadlines, periodStart, periodEnd, cats }) {
+function BudgetBar({ deadlines, periodStart, periodEnd, cats, activeTab }) {
   const { t } = useTranslation();
   const inRange = deadlines.filter(d => !d.done && d.date >= periodStart && d.date <= periodEnd);
-  const inRangeBudgeted = inRange.filter(d => !d.estimateMissing);
+  const tabFiltered = (() => {
+    if (activeTab === "done") return deadlines.filter(d => d.done && !d.skipped);
+    if (activeTab === "overdue") return deadlines.filter(d => d.date < TODAY && !d.done);
+    return inRange;
+  })();
+  const inRangeBudgeted = tabFiltered.filter(d => !d.estimateMissing);
   const total   = inRangeBudgeted.reduce((s, d) => s + d.budget, 0);
-  const count   = inRange.length;
-  const missingCount = inRange.filter(d => d.estimateMissing).length;
-  const urgent  = inRange.filter(d => diffDays(d.date) <= 7).length;
-  const mandatoryCount = inRange.filter(d => d.mandatory).length;
+  const count   = tabFiltered.length;
+  const missingCount = tabFiltered.filter(d => d.estimateMissing).length;
+  const urgent  = tabFiltered.filter(d => diffDays(d.date) <= 7).length;
+  const mandatoryCount = tabFiltered.filter(d => d.mandatory).length;
   const currentYear = new Date().getFullYear();
   const yearStart = new Date(currentYear, 0, 1, 0, 0, 0, 0);
   const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
@@ -5414,7 +5419,7 @@ export default function App() {
         {/* Budget bar only in deadlines */}
         {mainSection === "deadlines" && (
           <div style={{ background:"#1e1c18" }}>
-            <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats}/>
+            <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats} activeTab={activeTab}/>
           </div>
         )}
       </div>
