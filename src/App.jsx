@@ -874,7 +874,7 @@ function PaymentFlowModal({ open, item, onConfirm, onClose, step, amount, setAmo
   );
 }
 
-function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem }) {
+function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingItem, onToast }) {
   const { t, i18n } = useTranslation();
   const [step, setStep] = useState(0); // 0 doc, 1 base, 2 options
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -1098,7 +1098,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                           : await fileToBase64(file);
                         const doc = { id: Date.now(), type: 'incoming', base64, filename: processed.filename, contentType: processed.contentType, size: processed.size, isImage: processed.isImage, uploadDate: new Date().toISOString() };
                         set("documents", [doc]);
-                      } catch(err) { alert(t("errors.fileUpload")); }
+                      } catch(err) { onToast ? onToast(t("errors.fileUpload")) : alert(t("errors.fileUpload")); }
                       e.target.value = '';
                     }
                   }} />
@@ -2458,7 +2458,8 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
                 date: formData.date,
                 cost: formData.cost ? parseFloat(formData.cost) : 0,
                 description: formData.description,
-                completed: true
+                completed: true,
+                documents: formData.documents || []
               });
             }}
           />
@@ -2736,7 +2737,8 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
         title: form.title,
         date: form.date,
         cost: form.cost ? parseFloat(form.cost) : 0,
-        description: form.description
+        description: form.description,
+        documents: attachments
       });
     }
     onClose();
@@ -6021,6 +6023,7 @@ export default function App() {
         cats={cats}
         presetAsset={presetAsset}
         editingItem={editingDeadline}
+        onToast={showToast}
       />
       <StatsSheet open={showStats} onClose={() => setShowStats(false)} deadlines={activeDeadlines} cats={cats}/>
       {/* AssetListSheet no longer used in main nav */}
@@ -6086,7 +6089,7 @@ export default function App() {
               mandatory: false,
               autoPay: false,
               essential: false,
-              documents: [],
+              documents: payload.documents || [],
               done: !!payload.completed
             };
             add(newDeadline);
