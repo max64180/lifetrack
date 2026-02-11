@@ -4484,7 +4484,47 @@ export default function App() {
   }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
+  const baseYear = TODAY.getFullYear();
+  const navCandidates = useMemo(() => {
+    let list = allDeadlines.filter(d => {
+      if (activeTab === "done") return d.done;
+      if (activeTab === "overdue") return d.date < TODAY && !d.done;
+      if (activeTab === "timeline") return !d.done;
+      return true;
+    });
+    if (filterCat) list = list.filter(d => d.cat === filterCat);
+    if (filterAsset) list = list.filter(d => d.asset === filterAsset);
+    if (filterMandatory) list = list.filter(d => d.mandatory);
+    if (filterRecurring) list = list.filter(d => d.recurring && d.recurring.enabled);
+    if (filterAutoPay) list = list.filter(d => d.autoPay);
+    if (filterManual) list = list.filter(d => !d.autoPay);
+    if (filterEssential) list = list.filter(d => d.essential);
+    if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
+    if (filterPet) list = list.filter(d => d.petId);
+    return list;
+  }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet]);
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    navCandidates.forEach(d => {
+      if (d?.date instanceof Date && !Number.isNaN(d.date.getTime())) years.add(d.date.getFullYear());
+    });
+    return Array.from(years).sort((a, b) => a - b);
+  }, [navCandidates]);
   const isYearCompact = range === "anno";
+  const prevYear = useMemo(() => {
+    if (!isYearCompact || availableYears.length === 0) return null;
+    const current = period.year;
+    const prev = availableYears.filter(y => y < current).pop();
+    return typeof prev === "number" ? prev : null;
+  }, [isYearCompact, availableYears, period.year]);
+  const nextYear = useMemo(() => {
+    if (!isYearCompact || availableYears.length === 0) return null;
+    const current = period.year;
+    const next = availableYears.find(y => y > current);
+    return typeof next === "number" ? next : null;
+  }, [isYearCompact, availableYears, period.year]);
+  const canPrevYear = isYearCompact && prevYear !== null;
+  const canNextYear = isYearCompact && nextYear !== null;
   const yearDetailLimit = 6;
   const mandatoryItems = useMemo(() => {
     if (!isYearCompact) return [];
@@ -5248,10 +5288,22 @@ export default function App() {
               boxShadow:"0 3px 10px rgba(0,0,0,.05)"
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <button onClick={() => setPeriodOffset(o => o - 1)} style={{
-                  width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-                  background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
-                }}>‹</button>
+                <button
+                  onClick={() => {
+                    if (isYearCompact) {
+                      if (canPrevYear) setPeriodOffset(prevYear - baseYear);
+                      return;
+                    }
+                    setPeriodOffset(o => o - 1);
+                  }}
+                  disabled={isYearCompact && !canPrevYear}
+                  style={{
+                    width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
+                    cursor: isYearCompact && !canPrevYear ? "not-allowed" : "pointer",
+                    background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
+                    opacity: isYearCompact && !canPrevYear ? 0.35 : 1
+                  }}
+                >‹</button>
                 <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
                   <button
                     onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
@@ -5281,10 +5333,22 @@ export default function App() {
                     {t("range.year", { defaultValue:"Anno" })}
                   </button>
                 </div>
-                <button onClick={() => setPeriodOffset(o => o + 1)} style={{
-                  width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0", cursor:"pointer",
-                  background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800
-                }}>›</button>
+                <button
+                  onClick={() => {
+                    if (isYearCompact) {
+                      if (canNextYear) setPeriodOffset(nextYear - baseYear);
+                      return;
+                    }
+                    setPeriodOffset(o => o + 1);
+                  }}
+                  disabled={isYearCompact && !canNextYear}
+                  style={{
+                    width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
+                    cursor: isYearCompact && !canNextYear ? "not-allowed" : "pointer",
+                    background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
+                    opacity: isYearCompact && !canNextYear ? 0.35 : 1
+                  }}
+                >›</button>
               </div>
             </div>
           </div>
