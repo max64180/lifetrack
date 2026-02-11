@@ -4754,8 +4754,9 @@ export default function App() {
       startEditPetDeadline(item);
       return;
     }
+    // Keep add-flow and edit-flow strictly separated.
+    setShowAdd(false);
     setEditingDeadline(item);
-    setShowAdd(true);
   };
   
   const complete = id => {
@@ -4925,10 +4926,10 @@ export default function App() {
           }
         });
       });
-      setDeadlines(p => [...p.filter(d => d.id !== item.id), ...newSeries]);
+      setDeadlines(p => [...p.filter(d => String(d.id) !== String(item.id)), ...newSeries]);
     } else {
       const newDate = new Date(form.date + "T00:00:00");
-      setDeadlines(p => p.map(d => d.id === item.id ? {
+      setDeadlines(p => p.map(d => String(d.id) === String(item.id) ? {
         ...d,
         ...fields,
         date: newDate,
@@ -4938,6 +4939,7 @@ export default function App() {
     }
 
     setEditingDeadline(null);
+    setShowAdd(false);
   };
 
   const applyEditScope = (scope) => {
@@ -5129,6 +5131,7 @@ export default function App() {
 
     setEditConfirm(null);
     setEditingDeadline(null);
+    setShowAdd(false);
     setExpandedId(null);
   };
   
