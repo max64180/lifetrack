@@ -26,6 +26,7 @@
   },
   "actions": {
     "cancel": "Cancel",
+    "abandon": "Discard",
     "back": "Back",
     "next": "Next",
     "skip": "Skip",

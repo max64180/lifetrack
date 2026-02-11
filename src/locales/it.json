@@ -26,6 +26,7 @@
   },
   "actions": {
     "cancel": "Annulla",
+    "abandon": "Abbandona",
     "back": "Indietro",
     "next": "Avanti",
     "skip": "Salta",

@@ -1101,23 +1101,23 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{
-      position:"fixed", inset:0, background:"#1f1d19", zIndex:200,
+      position:"fixed", inset:0, background:"#f6f2ed", zIndex:200,
       display:"flex", alignItems:"stretch", justifyContent:"center"
     }}>
       <div style={{
-        width:"100%", maxWidth:480, color:"#fff", padding:"20px 18px 28px",
+        width:"100%", maxWidth:480, color:"#2d2b26", padding:"20px 18px 28px",
         display:"flex", flexDirection:"column", gap:16, overflowY:"auto"
       }}>
         <div style={{ marginTop:6 }}>
           <div style={{ fontSize:22, fontWeight:800, letterSpacing:"-.3px" }}>{editingItem ? t("wizard.editTitle") : t("wizard.newTitle")}</div>
-          <div style={{ fontSize:13, color:"#b8b4ad", marginTop:4 }}>{t("wizard.quickHint", { defaultValue: "Configura in 30 secondi" })}</div>
+          <div style={{ fontSize:13, color:"#8f8a83", marginTop:4 }}>{t("wizard.quickHint", { defaultValue: "Configura in 30 secondi" })}</div>
         </div>
 
         <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-          <div style={{ flex:1, height:6, borderRadius:6, background:"#3a362f" }}>
+          <div style={{ flex:1, height:6, borderRadius:6, background:"#e2ddd6" }}>
             <div style={{ width:`${((step+1)/steps.length)*100}%`, height:"100%", borderRadius:6, background:"#E8855D" }}/>
           </div>
-          <div style={{ fontSize:12, color:"#b8b4ad", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
+          <div style={{ fontSize:12, color:"#8f8a83", fontWeight:700 }}>{`Step ${step+1} di ${steps.length} · ${steps[step]}`}</div>
         </div>
 
         {step == 0 && (
@@ -1125,10 +1125,10 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             <div style={{ display:"flex", flexDirection:"column", gap:18, alignItems:"center" }}>
               <div onClick={() => toggleMode("one")} style={{
                 width: stepCardSize, height: stepCardSize,
-                background: mode === "one" ? "#fff" : "#2d2b26",
-                color: mode === "one" ? "#2d2b26" : "#fff",
+                background: mode === "one" ? "#fff" : "#f4f1ec",
+                color: mode === "one" ? "#2d2b26" : "#6d6760",
                 borderRadius:20, padding:"18px 16px", cursor:"pointer",
-                border: mode === "one" ? "2px solid #E8855D" : "2px solid #3a362f",
+                border: mode === "one" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
                 display:"flex", flexDirection:"column", justifyContent:"center", textAlign:"center", gap:8
               }}>
                 <div style={{ fontSize:19, fontWeight:800 }}>{t("wizard.oneTime", { defaultValue: "Una tantum" })}</div>
@@ -1136,14 +1136,14 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               </div>
               <div onClick={() => toggleMode("recurring")} style={{
                 width: stepCardSize, height: stepCardSize,
-                background: mode === "recurring" ? "#2d2b26" : "#1f1d19",
-                color: "#fff",
+                background: mode === "recurring" ? "#fff" : "#f4f1ec",
+                color: mode === "recurring" ? "#2d2b26" : "#6d6760",
                 borderRadius:20, padding:"18px 16px", cursor:"pointer",
-                border: mode === "recurring" ? "2px solid #E8855D" : "2px solid #3a362f",
+                border: mode === "recurring" ? "2px solid #E8855D" : "2px dashed #d4cfc8",
                 display:"flex", flexDirection:"column", justifyContent:"center", textAlign:"center", gap:8
               }}>
                 <div style={{ fontSize:19, fontWeight:800 }}>{t("wizard.recurring", { defaultValue: "Ricorrente (bollette)" })}</div>
-                <div style={{ fontSize:13, color:"#cfc9c2" }}>{t("wizard.recurringHint", { defaultValue: "Ogni mese senza dimenticare" })}</div>
+                <div style={{ fontSize:13, color:"#8f8a83" }}>{t("wizard.recurringHint", { defaultValue: "Ogni mese senza dimenticare" })}</div>
               </div>
             </div>
           </div>
@@ -1151,17 +1151,17 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         {step == 1 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{t("wizard.title")}</label>
-            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
+            <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.title")}</label>
+            <input value={form.title} onChange={e => set("title", e.target.value)} placeholder={t("wizard.titlePlaceholder")} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
 
             <div style={{ display:"flex", gap:10 }}>
               <div style={{ flex:1 }}>
-                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.date")}</label>
-                <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
+                <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{mode === "recurring" ? t("wizard.dayOfMonth", { defaultValue: "Giorno" }) : t("wizard.date")}</label>
+                <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
               <div style={{ flex:1 }}>
-                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
-                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"none", fontSize:16 }} />
+                <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase" }}>{t("wizard.budget")}</label>
+                <input type="number" value={form.budget} onChange={e => set("budget", e.target.value)} placeholder={t("wizard.budgetPlaceholder", { defaultValue: "Opzionale" })} style={{ width:"100%", padding:"12px 14px", borderRadius:14, border:"1px solid #e2ddd6", background:"#fff", color:"#2d2b26", fontSize:16 }} />
               </div>
             </div>
 
@@ -1171,7 +1171,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               <button type="button" onClick={() => set("essential", !form.essential)} style={{ padding:"8px 12px", borderRadius:999, border:"none", background: form.essential ? "#E8F5E9" : "#2d2b26", color: form.essential ? "#4CAF6E" : "#cfc9c2", fontSize:12, fontWeight:800, cursor:"pointer" }}>● {t("filters.essential", { defaultValue: "Essenziale" })}</button>
             </div>
 
-            <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
+            <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase", marginTop:6 }}>{t("wizard.category")}</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(80px, 1fr))", gap:6, width:"100%" }}>
               {cats.map(c => (
                 <button key={c.id} onClick={() => { set("cat", c.id); set("asset", null); }} style={{
@@ -1189,11 +1189,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
             {hasAssets && (
               <>
-                <label style={{ fontSize:11, fontWeight:800, color:"#b8b4ad", textTransform:"uppercase", marginTop:6 }}>{t("wizard.asset")}</label>
+                <label style={{ fontSize:11, fontWeight:800, color:"#8f8a83", textTransform:"uppercase", marginTop:6 }}>{t("wizard.asset")}</label>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   {selectedCat.assets.map(a => (
                     <button key={a} onClick={() => set("asset", a)} style={{
-                      padding:"8px 12px", borderRadius:999, border:"none", background: form.asset === a ? "#E8855D" : "#2d2b26", color: form.asset === a ? "#fff" : "#cfc9c2",
+                      padding:"8px 12px", borderRadius:999, border:"none", background: form.asset === a ? "#E8855D" : "#f0ebe5", color: form.asset === a ? "#fff" : "#6d6760",
                       fontSize:12, fontWeight:700, cursor:"pointer"
                     }}>{a}</button>
                   ))}
@@ -1202,7 +1202,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
             )}
 
             {mode === "recurring" && (
-              <div style={{ marginTop:8, padding:"12px", borderRadius:14, background:"#2d2b26", color:"#cfc9c2" }}>
+              <div style={{ marginTop:8, padding:"12px", borderRadius:14, background:"#f4f1ec", color:"#6d6760", border:"1px solid #e2ddd6" }}>
                 <div style={{ fontSize:12, fontWeight:700 }}>{t("recurring.every", { defaultValue: "Ricorrenza" })}: {recurringLabel}</div>
               </div>
             )}
@@ -1211,10 +1211,10 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         {step == 2 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <div style={{ fontSize:12, color:"#b8b4ad", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
-            <div style={{ background:"#2d2b26", borderRadius:16, padding:"14px" }}>
+            <div style={{ fontSize:12, color:"#8f8a83", fontWeight:800, textTransform:"uppercase" }}>{t("wizard.docLabel")}</div>
+            <div style={{ background:"#fff", borderRadius:16, padding:"14px", border:"1px solid #e2ddd6" }}>
               {form.documents.length === 0 ? (
-                <label style={{ display:"block", padding:"12px", borderRadius:12, border:"1px dashed #3a362f", background:"#1f1d19", color:"#cfc9c2", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
+                <label style={{ display:"block", padding:"12px", borderRadius:12, border:"1px dashed #d4cfc8", background:"#f7f4f0", color:"#6d6760", fontSize:12, fontWeight:700, cursor:"pointer", textAlign:"center" }}>
                   <input type="file" accept="image/*,application/pdf,*/*" style={{ display:"none" }} onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -1233,11 +1233,11 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
                   {t("wizard.docUpload")}
                 </label>
               ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#1f1d19", borderRadius:12, padding:"8px 10px", border:"1px solid #3a362f" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:"#fff", borderRadius:12, padding:"8px 10px", border:"1px solid #e2ddd6" }}>
                   <span style={{ fontSize:16 }}>📄</span>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
-                    <div style={{ fontSize:10, color:"#b8b4ad" }}>{t("wizard.docAttached")}</div>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{form.documents[0].filename}</div>
+                    <div style={{ fontSize:10, color:"#8f8a83" }}>{t("wizard.docAttached")}</div>
                   </div>
                   <button type="button" onClick={() => set("documents", [])} style={{ padding:"4px 8px", borderRadius:6, border:"none", background:"#FFF0EC", color:"#E53935", fontSize:11, fontWeight:600, cursor:"pointer" }}>{t("wizard.docRemove")}</button>
                 </div>
@@ -1248,8 +1248,13 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
 
         <div style={{ display:"flex", gap:10, marginTop:"auto" }}>
           {step > 0 && (
-            <button onClick={() => setStep(s => s - 1)} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #3a362f", background:"#1f1d19", color:"#cfc9c2", fontSize:13, fontWeight:700 }}>
+            <button onClick={() => setStep(s => s - 1)} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
               {t("actions.back")}
+            </button>
+          )}
+          {step === lastStep && (
+            <button onClick={onClose} style={{ flex:1, padding:"12px", borderRadius:14, border:"2px solid #d4cfc8", background:"#fff", color:"#6d6760", fontSize:13, fontWeight:700 }}>
+              {t("actions.abandon", { defaultValue: "Abbandona" })}
             </button>
           )}
           {step < lastStep ? (
@@ -1257,7 +1262,7 @@ function AddSheet({ open, onClose, onSave, onUpdate, cats, presetAsset, editingI
               {t("actions.next")}
             </button>
           ) : (
-            <button onClick={finalize} disabled={!canProceedDetails} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: canProceedDetails ? "#E8855D" : "#6b6961", color:"#fff", fontSize:14, fontWeight:800 }}>
+            <button onClick={finalize} disabled={!canProceedDetails} style={{ flex:2, padding:"12px", borderRadius:14, border:"none", background: canProceedDetails ? "#E8855D" : "#c1bbb4", color:"#fff", fontSize:14, fontWeight:800 }}>
               {t("actions.save")}
             </button>
           )}
