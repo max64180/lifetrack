@@ -5388,7 +5388,10 @@ export default function App() {
               { id:"overdue", labelKey:"tabs.overdue" },
               { id:"done", labelKey:"tabs.done" }
             ].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              <button key={tab.id} onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === "overdue") setPeriodOffset(0);
+              }} style={{
                 flex:1, padding:"8px 0", border:"none", background:"transparent", cursor:"pointer",
                 fontSize:13, fontWeight: activeTab === tab.id ? 700 : 500,
                 color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
