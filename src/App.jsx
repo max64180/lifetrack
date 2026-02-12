@@ -2744,6 +2744,15 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
 
   const handleSave = async () => {
     if (!form.title || !form.date) return;
+    const fallbackNextDate = (() => {
+      const base = new Date(form.date + "T00:00:00");
+      if (Number.isNaN(base.getTime())) return "";
+      base.setMonth(base.getMonth() + 12);
+      return toDateInputValue(base);
+    })();
+    const nextDateValue = form.enableNext
+      ? (form.nextDate || fallbackNextDate)
+      : "";
     
     const saved = {
       id: workLog?.id || createClientId("worklog"),
@@ -2753,9 +2762,9 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       nextKm: form.nextKm ? parseInt(form.nextKm) : null,
       description: form.description,
       cost: form.cost ? parseFloat(form.cost) : 0,
-      nextDate: form.nextDate ? new Date(form.nextDate + "T00:00:00") : null,
+      nextDate: nextDateValue ? new Date(nextDateValue + "T00:00:00") : null,
       createDeadline: form.createDeadline,
-      nextScheduled: form.enableNext && form.createDeadline && !!form.nextDate,
+      nextScheduled: form.enableNext && form.createDeadline && !!nextDateValue,
       createCompleted: form.createCompleted
     };
     let uploaded = [];
@@ -2780,10 +2789,10 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     const attachments = [...(existingAttachments || []), ...uploaded];
     onSave({ ...saved, attachments });
 
-    if (form.enableNext && form.nextDate && form.createDeadline && onCreateDeadline) {
+    if (form.enableNext && nextDateValue && form.createDeadline && onCreateDeadline) {
       onCreateDeadline({
         title: form.title,
-        date: form.nextDate,
+        date: nextDateValue,
         cost: form.cost ? parseFloat(form.cost) : 0,
         description: form.description
       });
@@ -2882,6 +2891,13 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
                   set("nextDate", "");
                   set("createDeadline", false);
                 } else {
+                  if (!form.nextDate && form.date) {
+                    const base = new Date(form.date + "T00:00:00");
+                    if (!Number.isNaN(base.getTime())) {
+                      base.setMonth(base.getMonth() + 12);
+                      set("nextDate", toDateInputValue(base));
+                    }
+                  }
                   set("createDeadline", true);
                 }
               }}
