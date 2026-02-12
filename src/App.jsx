@@ -7,8 +7,16 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "fire
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
 import { compressImage, compressImageToBlob, fileToBase64 } from "./utils/files";
-import { computeOccurrences, getAutoEndDate, getOccurrenceDate } from "./utils/recurrence";
+import { computeOccurrences, getAutoEndDate } from "./utils/recurrence";
 import { deriveNextMaintenanceDate, shouldCreateNextDeadline } from "./utils/maintenance";
+import { extendAutoRecurringSeries } from "./utils/rollingRecurring";
+import {
+  filterByTabAndPeriod,
+  filterByTabAnyPeriod,
+  collectAvailableMonths,
+  collectAvailableYears,
+  findAdjacentMonths,
+} from "./utils/deadlineFilters";
 import {
   hasRecurringData,
   collectRecurringSeriesMembers,
@@ -3860,82 +3868,8 @@ export default function App() {
   useEffect(() => {
     if (!user || loading) return;
     if (!deadlines.length) return;
-
-    const horizon = getAutoEndDate();
-    const seriesMap = new Map();
-
-    deadlines.forEach(d => {
-      if (d?.deleted) return;
-      if (!d?.recurring?.enabled) return;
-      const endMode = d.recurring.endMode || "auto";
-      if (endMode !== "auto") return;
-      const seriesId = d.recurring.seriesId;
-      if (!seriesId) return;
-      if (!seriesMap.has(seriesId)) seriesMap.set(seriesId, []);
-      seriesMap.get(seriesId).push(d);
-    });
-
-    if (seriesMap.size === 0) return;
-
-    let updated = false;
-    let nextDeadlines = deadlines;
-    const newItems = [];
-
-    seriesMap.forEach((items, seriesId) => {
-      const ordered = items
-        .slice()
-        .sort((a, b) => (a.recurring?.index || 0) - (b.recurring?.index || 0));
-      const last = ordered[ordered.length - 1];
-      if (!last || !isValidDate(last.date)) return;
-      if (last.date >= horizon) return;
-
-      const interval = last.recurring?.interval || 1;
-      const unit = last.recurring?.unit || "mesi";
-      const lastIndex = Math.max(...ordered.map(d => d.recurring?.index || 0));
-      const template = last;
-
-      const additions = [];
-      let guard = 0;
-      let step = 1;
-      let nextDate = getOccurrenceDate(last.date, step, interval, unit);
-
-      while (nextDate <= horizon && guard < 800) {
-        guard += 1;
-        const newIndex = lastIndex + additions.length + 1;
-        const newId = `${seriesId}_${newIndex}`;
-        additions.push({
-          ...template,
-          id: newId,
-          date: nextDate,
-          done: false,
-          skipped: false,
-          documents: [],
-          recurring: {
-            ...template.recurring,
-            index: newIndex,
-          }
-        });
-        step += 1;
-        nextDate = getOccurrenceDate(last.date, step, interval, unit);
-      }
-
-      if (additions.length > 0) {
-        const newTotal = lastIndex + additions.length;
-        updated = true;
-        nextDeadlines = nextDeadlines.map(d => (
-          d.recurring?.seriesId === seriesId
-            ? { ...d, recurring: { ...d.recurring, total: newTotal } }
-            : d
-        ));
-        newItems.push(
-          ...additions.map(d => ({ ...d, recurring: { ...d.recurring, total: newTotal } }))
-        );
-      }
-    });
-
-    if (updated) {
-      setDeadlines([...nextDeadlines, ...newItems]);
-    }
+    const rolled = extendAutoRecurringSeries(deadlines);
+    if (rolled.updated) setDeadlines(rolled.deadlines);
   }, [deadlines, user, loading]);
 
   const [filterCat, setFilterCat] = useState(null);
@@ -4529,21 +4463,23 @@ export default function App() {
   const allDeadlines = useMemo(() => [...activeDeadlines, ...petDeadlineItems], [activeDeadlines, petDeadlineItems]);
 
   const filtered = useMemo(() => {
-    let list = allDeadlines.filter(d => {
-      if (activeTab === "done") return d.done && d.date >= periodStart && d.date <= periodEnd;
-      if (activeTab === "overdue") return d.date < TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done; // scadute non completate nel periodo
-      if (activeTab === "timeline") return d.date >= TODAY && d.date >= periodStart && d.date <= periodEnd && !d.done;
-      return true;
+    const list = filterByTabAndPeriod(allDeadlines, {
+      activeTab,
+      periodStart,
+      periodEnd,
+      today: TODAY,
+      filters: {
+        filterCat,
+        filterAsset,
+        filterMandatory,
+        filterRecurring,
+        filterAutoPay,
+        filterManual,
+        filterEssential,
+        filterEstimateMissing,
+        filterPet,
+      },
     });
-    if (filterCat) list = list.filter(d => d.cat === filterCat);
-    if (filterAsset) list = list.filter(d => d.asset === filterAsset);
-    if (filterMandatory) list = list.filter(d => d.mandatory);
-    if (filterRecurring) list = list.filter(d => d.recurring && d.recurring.enabled);
-    if (filterAutoPay) list = list.filter(d => d.autoPay);
-    if (filterManual) list = list.filter(d => !d.autoPay);
-    if (filterEssential) list = list.filter(d => d.essential);
-    if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
-    if (filterPet) list = list.filter(d => d.petId);
     list.sort((a, b) => a.date - b.date);
     return list;
   }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
@@ -4552,38 +4488,27 @@ export default function App() {
   const baseYear = TODAY.getFullYear();
   const baseMonthIndex = TODAY.getFullYear() * 12 + TODAY.getMonth();
   const navCandidates = useMemo(() => {
-    let list = allDeadlines.filter(d => {
-      if (activeTab === "done") return d.done;
-      if (activeTab === "overdue") return d.date < TODAY && !d.done;
-      if (activeTab === "timeline") return d.date >= TODAY && !d.done;
-      return true;
+    return filterByTabAnyPeriod(allDeadlines, {
+      activeTab,
+      today: TODAY,
+      filters: {
+        filterCat,
+        filterAsset,
+        filterMandatory,
+        filterRecurring,
+        filterAutoPay,
+        filterManual,
+        filterEssential,
+        filterEstimateMissing,
+        filterPet,
+      },
     });
-    if (filterCat) list = list.filter(d => d.cat === filterCat);
-    if (filterAsset) list = list.filter(d => d.asset === filterAsset);
-    if (filterMandatory) list = list.filter(d => d.mandatory);
-    if (filterRecurring) list = list.filter(d => d.recurring && d.recurring.enabled);
-    if (filterAutoPay) list = list.filter(d => d.autoPay);
-    if (filterManual) list = list.filter(d => !d.autoPay);
-    if (filterEssential) list = list.filter(d => d.essential);
-    if (filterEstimateMissing) list = list.filter(d => d.estimateMissing);
-    if (filterPet) list = list.filter(d => d.petId);
-    return list;
   }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet]);
   const availableYears = useMemo(() => {
-    const years = new Set();
-    navCandidates.forEach(d => {
-      if (d?.date instanceof Date && !Number.isNaN(d.date.getTime())) years.add(d.date.getFullYear());
-    });
-    return Array.from(years).sort((a, b) => a - b);
+    return collectAvailableYears(navCandidates);
   }, [navCandidates]);
   const availableMonths = useMemo(() => {
-    const months = new Set();
-    navCandidates.forEach(d => {
-      if (d?.date instanceof Date && !Number.isNaN(d.date.getTime())) {
-        months.add(d.date.getFullYear() * 12 + d.date.getMonth());
-      }
-    });
-    return Array.from(months).sort((a, b) => a - b);
+    return collectAvailableMonths(navCandidates);
   }, [navCandidates]);
   const isYearCompact = range === "anno";
   const isMonthView = range === "mese";
@@ -4603,15 +4528,11 @@ export default function App() {
   const canNextYear = isYearCompact && nextYear !== null;
   const prevMonth = useMemo(() => {
     if (!isMonthView || availableMonths.length === 0) return null;
-    const current = period.year * 12 + (period.month ?? 0);
-    const prev = availableMonths.filter(m => m < current).pop();
-    return typeof prev === "number" ? prev : null;
+    return findAdjacentMonths(availableMonths, period.year, period.month ?? 0).prevMonth;
   }, [isMonthView, availableMonths, period.year, period.month]);
   const nextMonth = useMemo(() => {
     if (!isMonthView || availableMonths.length === 0) return null;
-    const current = period.year * 12 + (period.month ?? 0);
-    const next = availableMonths.find(m => m > current);
-    return typeof next === "number" ? next : null;
+    return findAdjacentMonths(availableMonths, period.year, period.month ?? 0).nextMonth;
   }, [isMonthView, availableMonths, period.year, period.month]);
   const canPrevMonth = isMonthView && prevMonth !== null;
   const canNextMonth = isMonthView && nextMonth !== null;
