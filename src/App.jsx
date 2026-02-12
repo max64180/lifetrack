@@ -8,6 +8,13 @@ import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat } from "./utils/cats";
 import { compressImage, compressImageToBlob, fileToBase64 } from "./utils/files";
 import { computeOccurrences, getAutoEndDate, getOccurrenceDate } from "./utils/recurrence";
+import { deriveNextMaintenanceDate, shouldCreateNextDeadline } from "./utils/maintenance";
+import {
+  hasRecurringData,
+  collectRecurringSeriesMembers,
+  buildRecurringTargetIdSet,
+  dedupeRecurringClonesForItem,
+} from "./utils/seriesEdit";
 import PriorityFilter from "./components/PriorityFilter";
 import i18n from "./i18n";
 
@@ -209,108 +216,6 @@ function toDate(value) {
 
 function isValidDate(d) {
   return d instanceof Date && !Number.isNaN(d.getTime());
-}
-
-function hasRecurringData(item) {
-  if (!item?.recurring || typeof item.recurring !== "object" || Array.isArray(item.recurring)) return false;
-  if (item.recurring.enabled === true) return true;
-  return [
-    item.recurring.seriesId,
-    item.recurring.interval,
-    item.recurring.unit,
-    item.recurring.index,
-    item.recurring.total,
-  ].some(v => v !== undefined && v !== null && v !== "");
-}
-
-function sameSeriesId(left, right) {
-  if (left === undefined || left === null || left === "") return false;
-  if (right === undefined || right === null || right === "") return false;
-  return String(left) === String(right);
-}
-
-function recurringFingerprint(item) {
-  if (!hasRecurringData(item)) return "";
-  const interval = Math.max(1, Number(item.recurring?.interval) || 1);
-  const unit = item.recurring?.unit || "mesi";
-  return [item.title || "", item.cat || "", item.asset || "", interval, unit].join("||");
-}
-
-function collectRecurringSeriesMembers(list, item) {
-  if (!Array.isArray(list) || !hasRecurringData(item)) return [];
-  const fp = recurringFingerprint(item);
-  const rawSeriesId = item.recurring?.seriesId;
-
-  let primary = [];
-  if (rawSeriesId !== undefined && rawSeriesId !== null && rawSeriesId !== "") {
-    primary = list.filter(d => hasRecurringData(d) && sameSeriesId(d.recurring?.seriesId, rawSeriesId));
-  }
-  if (primary.length === 0) {
-    primary = list.filter(d => hasRecurringData(d) && recurringFingerprint(d) === fp);
-  }
-  if (primary.length === 0) return [];
-
-  const merged = new Map(primary.map(d => [String(d.id), d]));
-  const primaryDates = new Set(primary.map(d => toDateInputValue(d.date)));
-
-  // Include accidental clone-series entries that overlap on same date/signature.
-  list.forEach(d => {
-    if (!hasRecurringData(d)) return;
-    if (merged.has(String(d.id))) return;
-    if (recurringFingerprint(d) !== fp) return;
-    const k = toDateInputValue(d.date);
-    if (primaryDates.has(k)) merged.set(String(d.id), d);
-  });
-
-  return Array.from(merged.values()).sort((a, b) => {
-    const da = toDate(a.date).getTime() || 0;
-    const db = toDate(b.date).getTime() || 0;
-    if (da !== db) return da - db;
-    return (a?.recurring?.index || 0) - (b?.recurring?.index || 0);
-  });
-}
-
-function buildRecurringTargetIdSet(list, item, seedMembers = []) {
-  const ids = new Set((seedMembers || []).map(d => String(d.id)));
-  if (item?.id !== undefined && item?.id !== null) ids.add(String(item.id));
-  if (!Array.isArray(list) || !hasRecurringData(item)) return ids;
-
-  const rawSeriesId = item.recurring?.seriesId;
-  if (rawSeriesId !== undefined && rawSeriesId !== null && rawSeriesId !== "") {
-    list.forEach(d => {
-      if (!hasRecurringData(d)) return;
-      if (sameSeriesId(d.recurring?.seriesId, rawSeriesId)) ids.add(String(d.id));
-    });
-  }
-
-  collectRecurringSeriesMembers(list, item).forEach(d => ids.add(String(d.id)));
-  return ids;
-}
-
-function dedupeRecurringClonesForItem(list, item) {
-  if (!Array.isArray(list)) return list;
-  const fp = recurringFingerprint(item);
-  if (!fp) return list;
-  const bestByDate = new Map();
-
-  list.forEach((d, index) => {
-    if (!(hasRecurringData(d) && recurringFingerprint(d) === fp)) return;
-    const dateKey = toDateInputValue(d.date);
-    if (!dateKey) return;
-    const score = sameSeriesId(d.recurring?.seriesId, item.recurring?.seriesId) ? 2 : 0;
-    const prev = bestByDate.get(dateKey);
-    if (!prev || score > prev.score || (score === prev.score && index > prev.index)) {
-      bestByDate.set(dateKey, { id: String(d.id), score, index });
-    }
-  });
-
-  return list.filter(d => {
-    if (!(hasRecurringData(d) && recurringFingerprint(d) === fp)) return true;
-    const dateKey = toDateInputValue(d.date);
-    if (!dateKey) return true;
-    const keep = bestByDate.get(dateKey);
-    return keep && keep.id === String(d.id);
-  });
 }
 
 function normalizeDeadline(raw) {
@@ -2744,15 +2649,12 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
 
   const handleSave = async () => {
     if (!form.title || !form.date) return;
-    const fallbackNextDate = (() => {
-      const base = new Date(form.date + "T00:00:00");
-      if (Number.isNaN(base.getTime())) return "";
-      base.setMonth(base.getMonth() + 12);
-      return toDateInputValue(base);
-    })();
-    const nextDateValue = form.enableNext
-      ? (form.nextDate || fallbackNextDate)
-      : "";
+    const nextDateValue = deriveNextMaintenanceDate({
+      formDate: form.date,
+      nextDate: form.nextDate,
+      enableNext: form.enableNext,
+      defaultMonths: 12,
+    });
     
     const saved = {
       id: workLog?.id || createClientId("worklog"),
@@ -2764,7 +2666,11 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
       cost: form.cost ? parseFloat(form.cost) : 0,
       nextDate: nextDateValue ? new Date(nextDateValue + "T00:00:00") : null,
       createDeadline: form.createDeadline,
-      nextScheduled: form.enableNext && form.createDeadline && !!nextDateValue,
+      nextScheduled: shouldCreateNextDeadline({
+        enableNext: form.enableNext,
+        createDeadline: form.createDeadline,
+        nextDate: nextDateValue,
+      }),
       createCompleted: form.createCompleted
     };
     let uploaded = [];
@@ -2789,7 +2695,11 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     const attachments = [...(existingAttachments || []), ...uploaded];
     onSave({ ...saved, attachments });
 
-    if (form.enableNext && nextDateValue && form.createDeadline && onCreateDeadline) {
+    if (shouldCreateNextDeadline({
+      enableNext: form.enableNext,
+      createDeadline: form.createDeadline,
+      nextDate: nextDateValue,
+    }) && onCreateDeadline) {
       onCreateDeadline({
         title: form.title,
         date: nextDateValue,
@@ -2891,11 +2801,15 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
                   set("nextDate", "");
                   set("createDeadline", false);
                 } else {
-                  if (!form.nextDate && form.date) {
-                    const base = new Date(form.date + "T00:00:00");
-                    if (!Number.isNaN(base.getTime())) {
-                      base.setMonth(base.getMonth() + 12);
-                      set("nextDate", toDateInputValue(base));
+                  if (!form.nextDate) {
+                    const autoNextDate = deriveNextMaintenanceDate({
+                      formDate: form.date,
+                      nextDate: "",
+                      enableNext: true,
+                      defaultMonths: 12,
+                    });
+                    if (autoNextDate) {
+                      set("nextDate", autoNextDate);
                     }
                   }
                   set("createDeadline", true);
