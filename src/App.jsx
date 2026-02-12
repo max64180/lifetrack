@@ -63,6 +63,7 @@ const dateInpModal = {
 // Format currency without decimals (fix #1)
 const formatCurrency = (amount) => `€${Math.round(amount)}`;
 const formatNumber = (amount) => Math.round(amount).toLocaleString(getLocale());
+const createClientId = (prefix = "id") => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 function toDateInputValue(value) {
   const d = value instanceof Date ? value : new Date(value);
@@ -2745,7 +2746,7 @@ function AddWorkModal({ open, onClose, assetKey, assetName, catId, isAuto, onSav
     if (!form.title || !form.date) return;
     
     const saved = {
-      id: workLog?.id || Date.now(),
+      id: workLog?.id || createClientId("worklog"),
       title: form.title,
       date: new Date(form.date + "T00:00:00"),
       km: form.km ? parseInt(form.km) : null,
@@ -6302,7 +6303,7 @@ export default function App() {
 
             const budget = Number(payload.cost) || 0;
             const newDeadline = {
-              id: Date.now(),
+              id: createClientId("deadline"),
               title: payload.title,
               cat: showAsset.cat,
               asset: showAsset.asset,
