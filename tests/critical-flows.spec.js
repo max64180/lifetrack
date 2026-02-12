@@ -9,10 +9,12 @@ async function loginIfNeeded(page) {
   await expect(page.getByText("LifeTrack")).toBeVisible();
 
   const timelineTab = page.getByRole("button", { name: /timeline/i });
+  const emailInput = page.getByPlaceholder(/email\.com/i);
+  await expect(timelineTab.or(emailInput)).toBeVisible({ timeout: 20000 });
   if (await timelineTab.isVisible().catch(() => false)) return;
 
-  await page.getByPlaceholder(/email\.com/i).fill(E2E_EMAIL);
-  await page.getByPlaceholder(/password/i).fill(E2E_PASSWORD);
+  await emailInput.fill(E2E_EMAIL);
+  await page.locator('input[type="password"]').fill(E2E_PASSWORD);
   await page.getByRole("button", { name: /accedi|login/i }).click();
   await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 20000 });
 }
