@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run test:unit && vite build",
+    "build": "npm run test:unit -- --no-cache && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:unit": "vitest run",
