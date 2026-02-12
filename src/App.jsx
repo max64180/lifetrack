@@ -2497,25 +2497,15 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
             }}
             onUploadAttachments={onUploadAttachments}
             onCreateDeadline={(formData) => {
-              // Create a new deadline linked to this asset
-              const newDeadline = {
-                id: Date.now(),
+              if (!onCreateDeadline) return;
+              onCreateDeadline({
                 title: formData.title,
-                cat: catId,
-                asset: assetName,
-                date: new Date(formData.date + "T00:00:00"),
-                budget: formData.cost ? parseFloat(formData.cost) : 0,
-                notes: formData.description || "",
-                recurring: null,
-                mandatory: false,
-                autoPay: false,
-                documents: [],
-                done: false
-              };
-              // This will be handled by parent - need to pass it up
-              // For now just close modal
-              setShowAddWork(false);
-              setEditingWorkLog(null);
+                date: formData.date,
+                cost: formData.cost ? parseFloat(formData.cost) : 0,
+                description: formData.description || "",
+                completed: false,
+                documents: formData.documents || []
+              });
             }}
             onCreateCompleted={(formData) => {
               if (!onCreateDeadline) return;
