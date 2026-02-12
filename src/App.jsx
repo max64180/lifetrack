@@ -44,6 +44,18 @@ const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 20000;
 const USE_STORAGE = false;
 
+const dateInpModal = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid #e8e6e0",
+  background: "#fff",
+  color: "#2d2b26",
+  fontSize: 13,
+  fontFamily: "inherit",
+};
+
 
 
 
