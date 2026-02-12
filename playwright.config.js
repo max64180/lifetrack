@@ -1,7 +1,12 @@
 import { defineConfig } from "@playwright/test";
+import path from "node:path";
+
+const tmpBase = process.env.TMPDIR || "/tmp";
+const pwOutDir = path.join(tmpBase, "lifetrack-playwright-results");
 
 export default defineConfig({
   testDir: "tests",
+  outputDir: pwOutDir,
   timeout: 30_000,
   expect: { timeout: 5_000 },
   use: {
