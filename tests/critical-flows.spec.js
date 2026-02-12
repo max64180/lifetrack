@@ -47,8 +47,18 @@ async function seedLocalData(page) {
       mk(0, 15, true, "E2E_DONE", "E2E_ASSET"),
       mk(1, 20, false, "E2E_TIMELINE", "E2E_ASSET"),
     ];
+    const categories = [
+      {
+        id: "casa",
+        label: "Casa",
+        icon: "🏠",
+        color: "#E8855D",
+        assets: ["E2E_ASSET"],
+      },
+    ];
 
     localStorage.setItem("lifetrack_sync_enabled", "false");
+    localStorage.setItem("lifetrack_categories", JSON.stringify(categories));
     localStorage.setItem("lifetrack_deadlines", JSON.stringify(deadlines));
     localStorage.setItem("lifetrack_worklogs", JSON.stringify({}));
     localStorage.setItem("lifetrack_asset_docs", JSON.stringify({}));
@@ -63,7 +73,7 @@ test("new deadline wizard opens from + without white screen", async ({ page }) =
   await seedLocalData(page);
 
   await page.getByRole("button", { name: "+" }).last().click();
-  await expect(page.getByText(/nuova scadenza|modifica scadenza/i)).toBeVisible();
+  await expect(page.getByText(/nuova scadenza|modifica scadenza|new deadline|edit deadline/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /avanti|next/i })).toBeVisible();
 });
 
@@ -83,7 +93,7 @@ test("asset add-work modal opens without runtime crash", async ({ page }) => {
   await seedLocalData(page);
 
   await page.getByRole("button", { name: /asset/i }).click();
-  await page.getByText("E2E_ASSET").first().click();
+  await page.getByRole("button", { name: /e2e_asset/i }).first().click();
   await page.getByRole("button", { name: /aggiungi|add/i }).first().click();
-  await expect(page.getByText(/titolo/i)).toBeVisible();
+  await expect(page.getByText(/titolo|title/i)).toBeVisible();
 });
