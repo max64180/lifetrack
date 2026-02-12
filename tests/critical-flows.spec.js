@@ -15,7 +15,7 @@ async function loginIfNeeded(page) {
 
   await emailInput.fill(E2E_EMAIL);
   await page.locator('input[type="password"]').fill(E2E_PASSWORD);
-  await page.getByRole("button", { name: /accedi|login/i }).click();
+  await page.getByRole("button", { name: /accedi|sign in|login/i }).click();
   await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 20000 });
 }
 
