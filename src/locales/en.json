@@ -169,6 +169,11 @@
     "toEstimate": "To estimate",
     "showMore": "Show more",
     "showLess": "Show less",
+    "summary": {
+      "overdue": "{{count}} overdue",
+      "today": "{{count}} today",
+      "next7": "{{count}} in the next days"
+    },
     "today": "today",
     "inNextDays": "in the next days",
     "inNext7": "In the next 7 days",

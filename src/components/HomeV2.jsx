@@ -1,6 +1,32 @@
 import { useMemo, useState } from "react";
 
 const DAY_MS = 86400000;
+const INTER_FONT = "'Inter', 'Sora', system-ui, -apple-system, sans-serif";
+const SERIF_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
+
+const TOKENS = {
+  bgPrimary: "#F2EAE3",
+  bgCard: "#F7F0EA",
+  bgElevated: "#FFFFFF",
+  bgAlertSoft: "#F6E9E7",
+  textPrimary: "#3F342C",
+  textSecondary: "#6F6258",
+  textMuted: "#9A8F86",
+  textAlert: "#B3473A",
+  textIndispensabile: "#A5542A",
+  btnPrimaryBg: "#6E8C99",
+  btnPrimaryText: "#FFFFFF",
+  btnSecondaryBg: "#E9E1DA",
+  btnSecondaryText: "#5C5148",
+  statusOverdue: "#B3473A",
+  statusToday: "#6E8C99",
+  statusUpcoming: "#C6A14A",
+  statusNeutral: "#CFC6BE",
+  borderLight: "#DDD3CA",
+  borderSoft: "#E7DED6",
+};
+
+const SHADOW_CARD = "0 6px 18px rgba(90, 70, 50, 0.08)";
 
 function startOfDay(value) {
   const d = value instanceof Date ? new Date(value) : new Date(value);
@@ -12,22 +38,257 @@ function getDayDiff(date, today) {
   return Math.round((startOfDay(date) - today) / DAY_MS);
 }
 
-function toLineCount(overdueCount, todayCount, next7Count, t) {
-  return [
-    overdueCount > 0 ? t("tabs.overdue") : null,
-    todayCount > 0 ? t("home.today", { defaultValue: "oggi" }) : null,
-    next7Count > 0 ? t("home.inNextDays", { defaultValue: "nei prossimi giorni" }) : null,
-  ].filter(Boolean).join(" · ");
+function formatDateShort(value, locale) {
+  return startOfDay(value).toLocaleDateString(locale, { day: "2-digit", month: "short" });
 }
 
-export default function HomeV2({
-  deadlines,
-  t,
-  locale,
-  formatNumber,
-  onComplete,
-  onPostpone,
-}) {
+function lineCount(overdueCount, todayCount, next7Count, t) {
+  const parts = [];
+  if (overdueCount > 0) {
+    parts.push(
+      t("home.summary.overdue", {
+        count: overdueCount,
+        defaultValue: overdueCount === 1 ? "1 scaduta" : `${overdueCount} scadute`,
+      }),
+    );
+  }
+  if (todayCount > 0) {
+    parts.push(
+      t("home.summary.today", {
+        count: todayCount,
+        defaultValue: todayCount === 1 ? "1 oggi" : `${todayCount} oggi`,
+      }),
+    );
+  }
+  if (next7Count > 0) {
+    parts.push(
+      t("home.summary.next7", {
+        count: next7Count,
+        defaultValue: next7Count === 1 ? "1 nei prossimi giorni" : `${next7Count} nei prossimi giorni`,
+      }),
+    );
+  }
+  return parts.join(" · ");
+}
+
+function SectionTitle({ label }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginBottom: 8,
+      }}
+    >
+      <h3
+        style={{
+          margin: 0,
+          fontFamily: INTER_FONT,
+          fontSize: 14,
+          lineHeight: "20px",
+          letterSpacing: "0.6px",
+          textTransform: "uppercase",
+          color: TOKENS.textSecondary,
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </h3>
+      <span style={{ height: 1, flex: 1, background: TOKENS.borderLight }} />
+    </div>
+  );
+}
+
+function MoreButton({ expanded, onToggle, t }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        marginTop: 4,
+        border: "none",
+        background: "transparent",
+        fontFamily: INTER_FONT,
+        fontSize: 13,
+        lineHeight: "18px",
+        fontWeight: 500,
+        color: TOKENS.textSecondary,
+        cursor: "pointer",
+        padding: 0,
+      }}
+    >
+      {expanded
+        ? t("home.showLess", { defaultValue: "Mostra meno" })
+        : t("home.showMore", { defaultValue: "Mostra altro" })}
+    </button>
+  );
+}
+
+function Amount({ item, formatNumber, t }) {
+  return item.estimateMissing ? t("home.toEstimate", { defaultValue: "Da stimare" }) : `€${formatNumber(item.budget)}`;
+}
+
+function ActionButton({ label, primary, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        border: `1px solid ${primary ? TOKENS.btnPrimaryBg : TOKENS.borderLight}`,
+        borderRadius: 14,
+        background: primary ? TOKENS.btnPrimaryBg : TOKENS.btnSecondaryBg,
+        color: primary ? TOKENS.btnPrimaryText : TOKENS.btnSecondaryText,
+        minWidth: 102,
+        padding: "9px 12px",
+        fontFamily: INTER_FONT,
+        fontSize: 15,
+        lineHeight: "20px",
+        fontWeight: 500,
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, withPostpone = false }) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${TOKENS.borderSoft}`,
+        borderRadius: 14,
+        background: TOKENS.bgElevated,
+        padding: 14,
+        display: "grid",
+        gridTemplateColumns: "1fr auto",
+        gap: 10,
+        alignItems: "center",
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: SERIF_FONT,
+            fontSize: 18,
+            lineHeight: "24px",
+            fontWeight: 500,
+            color: TOKENS.textPrimary,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {formatDateShort(item.date, locale)} · {item.title}
+        </div>
+        {withPostpone && (
+          <div
+            style={{
+              marginTop: 4,
+              fontFamily: INTER_FONT,
+              fontSize: 14,
+              lineHeight: "20px",
+              color: TOKENS.textSecondary,
+            }}
+          >
+            {t("home.hero.oneOverdueAgo", {
+              defaultValue: "Scaduta {{days}} giorni fa",
+              days: Math.abs(item.dayDiff),
+            })}
+          </div>
+        )}
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
+            color: TOKENS.textPrimary,
+          }}
+        >
+          <Amount item={item} formatNumber={formatNumber} t={t} />
+        </div>
+      </div>
+      <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+        <ActionButton
+          label={t("home.markDone", { defaultValue: "Segna fatto" })}
+          primary
+          onClick={() => onComplete(item.id)}
+        />
+        {withPostpone && (
+          <ActionButton
+            label={t("actions.postpone")}
+            onClick={() => onPostpone(item.id)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FutureRow({ item, locale, formatNumber, t, withAction = false, onComplete }) {
+  return (
+    <div
+      style={{
+        borderTop: `1px solid ${TOKENS.borderSoft}`,
+        padding: "12px 0",
+        display: "grid",
+        gridTemplateColumns: withAction ? "1fr auto" : "1fr auto",
+        gap: 10,
+        alignItems: "center",
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: SERIF_FONT,
+            fontSize: 18,
+            lineHeight: "24px",
+            fontWeight: 500,
+            color: TOKENS.textPrimary,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {formatDateShort(item.date, locale)} · {item.title}
+        </div>
+        <div
+          style={{
+            marginTop: 2,
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
+            color: TOKENS.textPrimary,
+          }}
+        >
+          <Amount item={item} formatNumber={formatNumber} t={t} />
+        </div>
+      </div>
+      {withAction ? (
+        <ActionButton
+          label={t("home.markDone", { defaultValue: "Segna fatto" })}
+          primary
+          onClick={() => onComplete(item.id)}
+        />
+      ) : (
+        <div
+          style={{
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
+            color: TOKENS.textSecondary,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Amount item={item} formatNumber={formatNumber} t={t} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete, onPostpone }) {
   const [showAllOverdue, setShowAllOverdue] = useState(false);
   const [showAllToday, setShowAllToday] = useState(false);
   const [showAllNext7, setShowAllNext7] = useState(false);
@@ -50,8 +311,10 @@ export default function HomeV2({
   const overdueCount = data.overdue.length;
   const todayCount = data.todayItems.length;
   const next7Count = data.next7.length;
+  const upcomingCount = todayCount + next7Count;
+
   const hasOverdue = overdueCount > 0;
-  const hasUpcoming = todayCount + next7Count > 0;
+  const hasUpcoming = upcomingCount > 0;
 
   let heroNumber = 0;
   let heroTitle = t("home.hero.calm", { defaultValue: "Puoi stare tranquillo" });
@@ -60,238 +323,288 @@ export default function HomeV2({
 
   if (!hasOverdue && hasUpcoming) {
     heroTone = "upcoming";
-    heroNumber = todayCount + next7Count;
-    heroTitle = t("home.hero.think", { defaultValue: "È il momento di pensarci" });
-    heroSubtitle = t("home.inNext7", { defaultValue: "Nei prossimi 7 giorni" });
-  }
-
-  if (hasOverdue && !hasUpcoming) {
+    heroNumber = upcomingCount;
+    heroTitle = t("home.hero.think", { defaultValue: "E il momento di pensarci" });
+    heroSubtitle = lineCount(0, todayCount, next7Count, t);
+  } else if (hasOverdue && !hasUpcoming) {
     heroTone = "overdue";
     heroNumber = overdueCount;
-    heroTitle = t("home.hero.fix", { defaultValue: "C'è qualcosa da sistemare" });
-    if (overdueCount === 1) {
-      heroSubtitle = t("home.hero.oneOverdueAgo", {
-        defaultValue: "Scaduta {{days}} giorni fa",
-        days: Math.abs(data.overdue[0].dayDiff),
-      });
-    } else {
-      heroSubtitle = t("home.hero.manyOverdue", {
-        defaultValue: "{{count}} scadute recenti",
-        count: overdueCount,
-      });
-    }
-  }
-
-  if (hasOverdue && hasUpcoming) {
+    heroTitle = t("home.hero.fix", { defaultValue: "C'e qualcosa da sistemare" });
+    heroSubtitle = overdueCount === 1
+      ? t("home.hero.oneOverdueAgo", {
+          defaultValue: "Scaduta {{days}} giorni fa",
+          days: Math.abs(data.overdue[0].dayDiff),
+        })
+      : t("home.hero.manyOverdue", {
+          defaultValue: "{{count}} scadute recenti",
+          count: overdueCount,
+        });
+  } else if (hasOverdue && hasUpcoming) {
     heroTone = "attention";
-    heroNumber = overdueCount + todayCount + next7Count;
+    heroNumber = overdueCount + upcomingCount;
     heroTitle = t("home.hero.attention", { defaultValue: "Serve un attimo di attenzione" });
-    heroSubtitle = toLineCount(overdueCount, todayCount, next7Count, t);
+    heroSubtitle = lineCount(overdueCount, todayCount, next7Count, t);
   }
 
   const heroNextLine = !data.nextFuture
     ? t("home.hero.noNext", { defaultValue: "Nessuna prossima scadenza" })
     : data.nextFuture.dayDiff === 0
-    ? t("home.hero.nextToday", { defaultValue: "Prossima oggi" })
-    : t("home.hero.nextInDays", {
-        defaultValue: "Prossima tra {{days}} giorni",
-        days: data.nextFuture.dayDiff,
-      });
+      ? t("home.hero.nextToday", { defaultValue: "Prossima oggi" })
+      : t("home.hero.nextInDays", {
+          defaultValue: "Prossima tra {{days}} giorni",
+          days: data.nextFuture.dayDiff,
+        });
 
-  const toneStyles = {
-    calm: { number: "#7f8792", title: "#4e5258", bg: "#fbf9f5", border: "#e8e3da" },
-    upcoming: { number: "#b98954", title: "#67463a", bg: "#faf3ea", border: "#eadfce" },
-    overdue: { number: "#9c4e4b", title: "#6a3d3c", bg: "#faefef", border: "#ecd8d8" },
-    attention: { number: "#ab6a52", title: "#6b4237", bg: "#f9f2eb", border: "#eadbce" },
+  const heroToneStyles = {
+    calm: {
+      number: TOKENS.statusNeutral,
+      title: TOKENS.textSecondary,
+      card: TOKENS.bgCard,
+      subtitle: TOKENS.textSecondary,
+      line: TOKENS.borderLight,
+    },
+    upcoming: {
+      number: TOKENS.statusUpcoming,
+      title: TOKENS.textIndispensabile,
+      card: "#F8EEE3",
+      subtitle: TOKENS.textSecondary,
+      line: TOKENS.borderLight,
+    },
+    overdue: {
+      number: TOKENS.statusOverdue,
+      title: TOKENS.textAlert,
+      card: TOKENS.bgAlertSoft,
+      subtitle: TOKENS.textSecondary,
+      line: TOKENS.borderLight,
+    },
+    attention: {
+      number: TOKENS.textIndispensabile,
+      title: TOKENS.textIndispensabile,
+      card: "#F8EFE7",
+      subtitle: TOKENS.textSecondary,
+      line: TOKENS.borderLight,
+    },
   }[heroTone];
 
-  const renderRows = (rows, withPostpone = false) => rows.map((item) => (
-    <div
-      key={item.id}
-      style={{
-        display: "grid",
-        gridTemplateColumns: withPostpone ? "1fr auto" : "1fr auto",
-        gap: 8,
-        alignItems: "center",
-        padding: "8px 10px",
-        border: "1px solid #ebe6dc",
-        borderRadius: 12,
-        marginBottom: 8,
-        background: "#fff",
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 17, lineHeight: 1.2, color: "#2f2c28", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {startOfDay(item.date).toLocaleDateString(locale, { day: "2-digit", month: "short" })} · {item.title}
-        </div>
-        {withPostpone && (
-          <div style={{ marginTop: 4, fontSize: 14, color: "#857e73" }}>
-            {t("home.hero.oneOverdueAgo", { defaultValue: "Scaduta {{days}} giorni fa", days: Math.abs(item.dayDiff) })}
-          </div>
-        )}
-        <div style={{ marginTop: 4, fontSize: 16, color: "#403a33" }}>
-          {item.estimateMissing ? t("home.toEstimate", { defaultValue: "Da stimare" }) : `€${formatNumber(item.budget)}`}
-        </div>
-      </div>
-      <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
-        <button
-          onClick={() => onComplete(item.id)}
-          style={{
-            border: "1px solid #88a8c3",
-            borderRadius: 11,
-            background: "#92b4d2",
-            color: "#fff",
-            minWidth: 92,
-            padding: "8px 10px",
-            fontSize: 16,
-            lineHeight: 1,
-            cursor: "pointer",
-          }}
-        >
-          {t("home.markDone", { defaultValue: "Segna fatto" })}
-        </button>
-        {withPostpone && (
-          <button
-            onClick={() => onPostpone(item.id)}
-            style={{
-              border: "1px solid #ddd4c7",
-              borderRadius: 11,
-              background: "#f7f2ea",
-              color: "#5f584f",
-              minWidth: 92,
-              padding: "8px 10px",
-              fontSize: 16,
-              lineHeight: 1,
-              cursor: "pointer",
-            }}
-          >
-            {t("actions.postpone")}
-          </button>
-        )}
-      </div>
-    </div>
-  ));
-
-  const sectionTitleStyle = {
-    fontFamily: "'Cormorant Garamond', Georgia, serif",
-    fontSize: 28,
-    color: "#2f2b27",
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    margin: "0 0 10px",
+  const rootStyle = {
+    flex: 1,
+    overflowY: "auto",
+    padding: "16px 20px 104px",
+    background: TOKENS.bgPrimary,
+    position: "relative",
+    fontFamily: INTER_FONT,
   };
 
   const sectionCardStyle = {
-    border: "1px solid #e6e0d5",
-    borderRadius: 16,
-    background: "rgba(255,255,255,.88)",
-    boxShadow: "0 10px 22px rgba(30,22,16,.08)",
-    padding: 10,
-    marginBottom: 16,
-    backdropFilter: "blur(1px)",
+    border: `1px solid ${TOKENS.borderSoft}`,
+    borderRadius: 20,
+    background: TOKENS.bgCard,
+    boxShadow: SHADOW_CARD,
+    padding: 20,
+    marginBottom: 28,
   };
 
+  const compactRows = { display: "grid", gap: 10 };
+  const todaySlice = showAllToday ? data.todayItems : data.todayItems.slice(0, 3);
+  const next7Slice = showAllNext7 ? data.next7 : data.next7.slice(0, 3);
+  const overdueSlice = showAllOverdue ? data.overdue : data.overdue.slice(0, 3);
+
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 96px", background: "#f7f4ef", fontFamily: "'Source Sans 3', 'Sora', sans-serif", position: "relative" }}>
+    <div style={rootStyle}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap');
+      `}</style>
+
       <div
         style={{
           position: "absolute",
           inset: 0,
           pointerEvents: "none",
-          backgroundImage: "radial-gradient(rgba(88,66,45,.07) .45px, transparent .45px)",
-          backgroundSize: "3px 3px",
-          opacity: 0.35,
+          backgroundImage:
+            "radial-gradient(rgba(120, 98, 76, 0.08) 0.4px, transparent 0.4px), radial-gradient(rgba(120, 98, 76, 0.06) 0.5px, transparent 0.5px)",
+          backgroundSize: "3px 3px, 5px 5px",
+          opacity: 0.42,
         }}
       />
 
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{
-          border: `1px solid ${toneStyles.border}`,
-          borderRadius: 18,
-          background: toneStyles.bg,
-          boxShadow: "0 10px 22px rgba(30,22,16,.08)",
-          marginBottom: 18,
-          overflow: "hidden",
-        }}>
-          <div style={{ padding: "14px 14px 10px" }}>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", textAlign: "center", color: toneStyles.number, fontSize: 74, lineHeight: 0.9 }}>{heroNumber}</div>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", textAlign: "center", color: toneStyles.title, fontSize: 49, lineHeight: 1, marginTop: 8 }}>{heroTitle}</div>
-            <div style={{ marginTop: 8, textAlign: "center", color: "#666156", fontSize: 15 }}>{heroSubtitle}</div>
+      <div style={{ position: "relative", zIndex: 1, display: "grid", gap: 0 }}>
+        <div
+          style={{
+            border: `1px solid ${TOKENS.borderSoft}`,
+            borderRadius: 20,
+            background: heroToneStyles.card,
+            boxShadow: SHADOW_CARD,
+            overflow: "hidden",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ padding: 20 }}>
+            <div
+              style={{
+                textAlign: "center",
+                fontFamily: SERIF_FONT,
+                fontWeight: 600,
+                fontSize: 48,
+                lineHeight: "52px",
+                color: heroToneStyles.number,
+              }}
+            >
+              {heroNumber}
+            </div>
+            <div
+              style={{
+                marginTop: 4,
+                textAlign: "center",
+                fontFamily: SERIF_FONT,
+                fontWeight: 500,
+                fontSize: 22,
+                lineHeight: "28px",
+                color: heroToneStyles.title,
+              }}
+            >
+              {heroTitle}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                textAlign: "center",
+                fontFamily: INTER_FONT,
+                fontWeight: 400,
+                fontSize: 16,
+                lineHeight: "22px",
+                color: heroToneStyles.subtitle,
+              }}
+            >
+              {heroSubtitle}
+            </div>
           </div>
-          <div style={{ borderTop: "1px solid rgba(100,88,76,.18)", textAlign: "center", padding: "10px 8px", fontSize: 16, color: "#5f584f", background: "rgba(255,255,255,.55)" }}>
+
+          <div
+            style={{
+              borderTop: `1px solid ${heroToneStyles.line}`,
+              background: "rgba(255, 255, 255, 0.38)",
+              padding: "12px 8px",
+              textAlign: "center",
+              fontFamily: INTER_FONT,
+              fontWeight: 400,
+              fontSize: 16,
+              lineHeight: "22px",
+              color: TOKENS.textSecondary,
+            }}
+          >
             {heroNextLine}
           </div>
         </div>
 
         {overdueCount > 0 && (
-          <section>
-            <h3 style={sectionTitleStyle}>
-              {t("tabs.overdue").toUpperCase()}
-              <span style={{ height: 1, flex: 1, background: "#ddd5c9" }} />
-            </h3>
-            <div style={sectionCardStyle}>
-              <div style={{ fontSize: 13, color: "#7a7367", textTransform: "uppercase", marginBottom: 8 }}>{t("tabs.overdue").toUpperCase()}</div>
-              {renderRows(showAllOverdue ? data.overdue : data.overdue.slice(0, 3), true)}
-              {data.overdue.length > 3 && (
-                <button onClick={() => setShowAllOverdue(v => !v)} style={{ border: "none", background: "transparent", color: "#6f685d", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "2px 4px" }}>
-                  {showAllOverdue ? t("home.showLess", { defaultValue: "Mostra meno" }) : t("home.showMore", { defaultValue: "Mostra altro" })}
-                </button>
+          <section style={{ marginBottom: 24 }}>
+            <SectionTitle label={t("tabs.overdue")} />
+            <div style={{ ...sectionCardStyle, background: TOKENS.bgAlertSoft }}>
+              <div
+                style={{
+                  fontFamily: INTER_FONT,
+                  fontWeight: 500,
+                  fontSize: 13,
+                  lineHeight: "18px",
+                  color: TOKENS.textSecondary,
+                  textTransform: "uppercase",
+                  marginBottom: 10,
+                }}
+              >
+                {t("tabs.overdue")}
+              </div>
+              <div style={compactRows}>
+                {overdueSlice.map((item) => (
+                  <DeadlineRow
+                    key={item.id}
+                    item={item}
+                    locale={locale}
+                    formatNumber={formatNumber}
+                    onComplete={onComplete}
+                    onPostpone={onPostpone}
+                    withPostpone
+                    t={t}
+                  />
+                ))}
+              </div>
+              {overdueCount > 3 && (
+                <MoreButton expanded={showAllOverdue} onToggle={() => setShowAllOverdue((v) => !v)} t={t} />
               )}
             </div>
           </section>
         )}
 
         {todayCount > 0 && (
-          <section>
-            <h3 style={sectionTitleStyle}>
-              {t("home.todaySection", { defaultValue: "In scadenza oggi" }).toUpperCase()}
-              <span style={{ height: 1, flex: 1, background: "#ddd5c9" }} />
-            </h3>
+          <section style={{ marginBottom: 24 }}>
+            <SectionTitle label={t("home.todaySection", { defaultValue: "In scadenza oggi" })} />
             <div style={sectionCardStyle}>
-              {renderRows(showAllToday ? data.todayItems : data.todayItems.slice(0, 3))}
-              {data.todayItems.length > 3 && (
-                <button onClick={() => setShowAllToday(v => !v)} style={{ border: "none", background: "transparent", color: "#6f685d", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "2px 4px" }}>
-                  {showAllToday ? t("home.showLess", { defaultValue: "Mostra meno" }) : t("home.showMore", { defaultValue: "Mostra altro" })}
-                </button>
+              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 14, background: TOKENS.bgElevated, padding: "0 14px" }}>
+                {todaySlice.map((item, idx) => (
+                  <div key={item.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${TOKENS.borderSoft}` }}>
+                    <FutureRow
+                      item={item}
+                      locale={locale}
+                      formatNumber={formatNumber}
+                      withAction
+                      onComplete={onComplete}
+                      t={t}
+                    />
+                  </div>
+                ))}
+              </div>
+              {todayCount > 3 && (
+                <MoreButton expanded={showAllToday} onToggle={() => setShowAllToday((v) => !v)} t={t} />
               )}
             </div>
           </section>
         )}
 
         {next7Count > 0 && (
-          <section>
-            <h3 style={sectionTitleStyle}>
-              {t("home.next7Section", { defaultValue: "Nei prossimi 7 giorni" }).toUpperCase()}
-              <span style={{ height: 1, flex: 1, background: "#ddd5c9" }} />
-            </h3>
+          <section style={{ marginBottom: 24 }}>
+            <SectionTitle label={t("home.next7Section", { defaultValue: "Nei prossimi 7 giorni" })} />
             <div style={sectionCardStyle}>
-              {renderRows(showAllNext7 ? data.next7 : data.next7.slice(0, 3))}
-              {data.next7.length > 3 && (
-                <button onClick={() => setShowAllNext7(v => !v)} style={{ border: "none", background: "transparent", color: "#6f685d", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "2px 4px" }}>
-                  {showAllNext7 ? t("home.showLess", { defaultValue: "Mostra meno" }) : t("home.showMore", { defaultValue: "Mostra altro" })}
-                </button>
+              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 14, background: TOKENS.bgElevated, padding: "0 14px" }}>
+                {next7Slice.map((item, idx) => (
+                  <div key={item.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${TOKENS.borderSoft}` }}>
+                    <FutureRow
+                      item={item}
+                      locale={locale}
+                      formatNumber={formatNumber}
+                      withAction
+                      onComplete={onComplete}
+                      t={t}
+                    />
+                  </div>
+                ))}
+              </div>
+              {next7Count > 3 && (
+                <MoreButton expanded={showAllNext7} onToggle={() => setShowAllNext7((v) => !v)} t={t} />
               )}
             </div>
           </section>
         )}
 
         {data.incoming.length > 0 && (
-          <section>
-            <h3 style={sectionTitleStyle}>
-              {t("home.incomingSection", { defaultValue: "In arrivo" }).toUpperCase()}
-              <span style={{ height: 1, flex: 1, background: "#ddd5c9" }} />
-            </h3>
+          <section style={{ marginBottom: 12 }}>
+            <SectionTitle label={t("home.incomingSection", { defaultValue: "In arrivo" })} />
             <div style={sectionCardStyle}>
-              <div style={{ border: "1px solid #ebe6dc", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+              <div
+                style={{
+                  border: `1px solid ${TOKENS.borderSoft}`,
+                  borderRadius: 14,
+                  background: TOKENS.bgElevated,
+                  overflow: "hidden",
+                  padding: "0 14px",
+                }}
+              >
                 {data.incoming.map((item, idx) => (
-                  <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, padding: "10px 12px", borderTop: idx === 0 ? "none" : "1px solid #f0ebe2" }}>
-                    <div style={{ minWidth: 0, fontSize: 17, color: "#38332c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {startOfDay(item.date).toLocaleDateString(locale, { day: "2-digit", month: "short" })} · {item.title}
-                    </div>
-                    <div style={{ fontSize: 17, color: "#5a5248" }}>
-                      {item.estimateMissing ? t("home.toEstimate", { defaultValue: "Da stimare" }) : `€${formatNumber(item.budget)}`}
-                    </div>
+                  <div key={item.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${TOKENS.borderSoft}` }}>
+                    <FutureRow
+                      item={item}
+                      locale={locale}
+                      formatNumber={formatNumber}
+                      t={t}
+                    />
                   </div>
                 ))}
               </div>

@@ -169,6 +169,11 @@
     "toEstimate": "Da stimare",
     "showMore": "Mostra altro",
     "showLess": "Mostra meno",
+    "summary": {
+      "overdue": "{{count}} scadute",
+      "today": "{{count}} oggi",
+      "next7": "{{count}} nei prossimi giorni"
+    },
     "today": "oggi",
     "inNextDays": "nei prossimi giorni",
     "inNext7": "Nei prossimi 7 giorni",

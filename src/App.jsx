@@ -94,6 +94,95 @@ const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
 function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months); return d; }
 const PET_CAT = { id:"pet", label:"Pet", icon:"🐾", color:"#7B8BE8", light:"#EEF0FF" };
+const HOME_THEME = {
+  bgPrimary: "#F2EAE3",
+  bgCard: "#F7F0EA",
+  textPrimary: "#3F342C",
+  textMuted: "#9A8F86",
+  borderLight: "#DDD3CA",
+  borderSoft: "#E7DED6",
+  fab: "#6E8C99",
+  shadowFab: "0 8px 22px rgba(90, 70, 50, 0.18)",
+};
+
+function OutlineIcon({ path, size = 22, color = "#3F342C", strokeWidth = 1.5, viewBox = "0 0 24 24" }) {
+  return (
+    <svg width={size} height={size} viewBox={viewBox} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {path}
+    </svg>
+  );
+}
+
+function BellIcon({ size = 22, color = "#3F342C" }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      path={
+        <>
+          <path d="M18 8a6 6 0 10-12 0c0 7-3 8h18c0-7-3-8-6-8" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </>
+      }
+    />
+  );
+}
+
+function NavIcon({ id, active }) {
+  const color = active ? "#3F342C" : "#9A8F86";
+  if (id === "home") {
+    return (
+      <OutlineIcon
+        color={color}
+        path={
+          <>
+            <path d="M3 10l9-7 9 7" />
+            <path d="M9 21V12h6v9" />
+          </>
+        }
+      />
+    );
+  }
+  if (id === "deadlines") {
+    return (
+      <OutlineIcon
+        color={color}
+        path={
+          <>
+            <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+            <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+          </>
+        }
+      />
+    );
+  }
+  if (id === "assets") {
+    return (
+      <OutlineIcon
+        color={color}
+        path={
+          <>
+            <path d="M3.5 7.5h6l2 2h9v10.5a2 2 0 01-2 2h-13a2 2 0 01-2-2z" />
+            <path d="M3.5 7.5v-1a2 2 0 012-2h4l2 2h6.5a2 2 0 012 2v1" />
+          </>
+        }
+      />
+    );
+  }
+  return (
+    <OutlineIcon
+      color={color}
+      path={
+        <>
+          <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" />
+          <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" />
+          <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" />
+          <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" />
+        </>
+      }
+    />
+  );
+}
 
 /* ── DATI FAKE RIMOSSI - App vuota per uso reale ──────────────────────────────────── */
 
@@ -5304,9 +5393,9 @@ export default function App() {
     : t("nav.pet");
 
   return (
-    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:"#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
+    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:isHomeSection ? HOME_THEME.bgPrimary : "#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600&family=Sora:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
         input:focus,select:focus,textarea:focus{border-color:#5B8DD9!important;background:#fff!important;outline:none;}
         input[type="date"]{
@@ -5358,24 +5447,34 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isHomeSection ? "#f7f4ef" : "#1e1c18", borderBottom:isHomeSection ? "1px solid #ece4d7" : "none" }}>
-        <div style={{ 
-          background:isHomeSection ? "#f7f4ef" : "#1e1c18", color:isHomeSection ? "#2f2b27" : "#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
-        }}>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:isHomeSection ? HOME_THEME.bgPrimary : "#1e1c18", borderBottom:isHomeSection ? `1px solid ${HOME_THEME.borderLight}` : "none" }}>
+        <div style={{ background:isHomeSection ? HOME_THEME.bgPrimary : "#1e1c18", color:isHomeSection ? HOME_THEME.textPrimary : "#fff", padding:isHomeSection ? "10px 20px 12px" : "8px 16px", position:"relative", overflow:"hidden" }}>
           {!isHomeSection && <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>}
-          <div style={{ position:"relative", zIndex:1 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <h1 style={{ margin:0, fontSize:isHomeSection ? 24 : 16, fontWeight:isHomeSection ? 600 : 800, letterSpacing:isHomeSection ? "0" : "-.4px", fontFamily:isHomeSection ? "'Cormorant Garamond', serif" : "inherit" }}>
-                  {mainSectionTitle}
-                </h1>
-                {!isHomeSection && <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>}
-              </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isHomeSection ? "#ece6db" : "rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                <span style={{ fontSize:16, color:isHomeSection ? "#4c463f" : "rgba(255,255,255,.7)" }}>☰</span>
+          {isHomeSection ? (
+            <div style={{ display:"grid", gridTemplateColumns:"36px 1fr 36px", alignItems:"center", gap:8 }}>
+              <div />
+              <h1 style={{ margin:0, textAlign:"center", fontFamily:"'Playfair Display', 'Cormorant Garamond', serif", fontWeight:500, fontSize:26, lineHeight:"32px", letterSpacing:"0", color:HOME_THEME.textPrimary }}>
+                {mainSectionTitle}
+              </h1>
+              <button onClick={() => setShowMenu(true)} aria-label={t("menu.title")} style={{ width:32, height:32, borderRadius:"50%", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:`1px solid ${HOME_THEME.borderSoft}` }}>
+                <BellIcon size={20} color={HOME_THEME.textPrimary} />
               </button>
             </div>
-          </div>
+          ) : (
+            <div style={{ position:"relative", zIndex:1 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <div>
+                  <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
+                    {mainSectionTitle}
+                  </h1>
+                  <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
+                </div>
+                <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                  <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Budget bar only in deadlines */}
@@ -6204,21 +6303,26 @@ export default function App() {
       />
 
       {/* Primary navigation - bottom */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#fff", borderTop:"1px solid #edecea", display:"flex", zIndex:120 }}>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:HOME_THEME.bgCard, borderTop:`1px solid ${HOME_THEME.borderLight}`, display:"flex", zIndex:120 }}>
         {[
-          { id:"home", label: t("nav.home", { defaultValue:"Home" }), icon:"🏠" },
-          { id:"deadlines", label: t("nav.deadlines"), icon:"📅" },
-          { id:"assets", label: t("nav.organize", { defaultValue:"Organizza" }), icon:"🗂️" },
-          { id:"documents", label: t("nav.overview", { defaultValue:"Overview" }), icon:"◻︎" }
-        ].map(item => (
-          <button key={item.id} onClick={() => setMainSection(item.id)} style={{
-            flex:1, padding:"10px 0", border:"none", background:"transparent", cursor:"pointer",
-            color: mainSection === item.id ? "#2d2b26" : "#8a877f", fontSize:12, fontWeight:700
-          }}>
-            <div style={{ fontSize:18 }}>{item.icon}</div>
-            {item.label}
-          </button>
-        ))}
+          { id:"home", label: t("nav.home", { defaultValue:"Home" }) },
+          { id:"deadlines", label: t("nav.deadlines") },
+          { id:"assets", label: t("nav.organize", { defaultValue:"Organizza" }) },
+          { id:"documents", label: t("nav.overview", { defaultValue:"Overview" }) }
+        ].map(item => {
+          const active = mainSection === item.id;
+          return (
+            <button key={item.id} onClick={() => setMainSection(item.id)} style={{
+              flex:1, padding:"10px 0 12px", border:"none", background:"transparent", cursor:"pointer",
+              color: active ? HOME_THEME.textPrimary : HOME_THEME.textMuted, fontSize:12, fontWeight:500, fontFamily:"'Inter',sans-serif"
+            }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", marginBottom:3 }}>
+                <NavIcon id={item.id} active={active} />
+              </div>
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Hamburger menu */}
@@ -6266,8 +6370,8 @@ export default function App() {
       {(mainSection === "home" || mainSection === "deadlines") && (
         <button onClick={() => setShowAdd(true)} style={{
           position:"fixed", bottom:88, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
-          background: mainSection === "home" ? "#8FAFCA" : "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
-          cursor:"pointer", boxShadow: mainSection === "home" ? "0 6px 22px rgba(143,175,202,.45)" : "0 6px 24px rgba(232,133,93,.45)",
+          background: mainSection === "home" ? HOME_THEME.fab : "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
+          cursor:"pointer", boxShadow: mainSection === "home" ? HOME_THEME.shadowFab : "0 6px 24px rgba(232,133,93,.45)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:140,
         }}>+</button>
       )}
