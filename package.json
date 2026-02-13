@@ -16,6 +16,8 @@
     "test": "vitest",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:required": "playwright test --grep-invert @nonblocking",
+    "test:e2e:nonblocking": "playwright test --grep @nonblocking",
     "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {

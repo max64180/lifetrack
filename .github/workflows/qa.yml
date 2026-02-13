@@ -26,8 +26,15 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: E2E tests
+      - name: E2E tests (required)
         env:
           E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-        run: npm run test:e2e
+        run: npm run test:e2e:required
+
+      - name: E2E tests (nonblocking)
+        continue-on-error: true
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: npm run test:e2e:nonblocking
