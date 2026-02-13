@@ -159,7 +159,8 @@
     "deadlines": "Scadenze",
     "assets": "Asset",
     "documents": "Documenti",
-    "pet": "Pet"
+    "pet": "Pet",
+    "lab": "Lab"
   },
   "pet": {
     "title": "Pet",

@@ -159,7 +159,8 @@
     "deadlines": "Deadlines",
     "assets": "Assets",
     "documents": "Documents",
-    "pet": "Pet"
+    "pet": "Pet",
+    "lab": "Lab"
   },
   "pet": {
     "title": "Pet",
