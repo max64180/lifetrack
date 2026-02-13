@@ -24,6 +24,7 @@ import {
   dedupeRecurringClonesForItem,
 } from "./utils/seriesEdit";
 import PriorityFilter from "./components/PriorityFilter";
+import HomeV2 from "./components/HomeV2";
 import i18n from "./i18n";
 
 // 🔥 Firebase Configuration
@@ -3891,7 +3892,7 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
+  const [mainSection, setMainSection] = useState("home"); // home | deadlines | assets | documents | pet
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
   const [showPetAdd, setShowPetAdd] = useState(false);
@@ -5291,10 +5292,21 @@ export default function App() {
     );
   }
 
+  const isHomeSection = mainSection === "home";
+  const mainSectionTitle = isHomeSection
+    ? t("nav.deadlines")
+    : mainSection === "deadlines"
+    ? t("nav.deadlines")
+    : mainSection === "assets"
+    ? t("nav.organize", { defaultValue: t("nav.assets") })
+    : mainSection === "documents"
+    ? t("nav.overview", { defaultValue: t("nav.documents") })
+    : t("nav.pet");
+
   return (
     <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:"#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
         input:focus,select:focus,textarea:focus{border-color:#5B8DD9!important;background:#fff!important;outline:none;}
         input[type="date"]{
@@ -5346,21 +5358,21 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18" }}>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:isHomeSection ? "#f7f4ef" : "#1e1c18", borderBottom:isHomeSection ? "1px solid #ece4d7" : "none" }}>
         <div style={{ 
-          background:"#1e1c18", color:"#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
+          background:isHomeSection ? "#f7f4ef" : "#1e1c18", color:isHomeSection ? "#2f2b27" : "#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
         }}>
-          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
+          {!isHomeSection && <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>}
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
-                  {mainSection === "deadlines" ? t("nav.deadlines") : mainSection === "assets" ? t("nav.assets") : t("nav.documents")}
+                <h1 style={{ margin:0, fontSize:isHomeSection ? 24 : 16, fontWeight:isHomeSection ? 600 : 800, letterSpacing:isHomeSection ? "0" : "-.4px", fontFamily:isHomeSection ? "'Cormorant Garamond', serif" : "inherit" }}>
+                  {mainSectionTitle}
                 </h1>
-                <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
+                {!isHomeSection && <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>}
               </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isHomeSection ? "#ece6db" : "rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                <span style={{ fontSize:16, color:isHomeSection ? "#4c463f" : "rgba(255,255,255,.7)" }}>☰</span>
               </button>
             </div>
           </div>
@@ -5373,6 +5385,17 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {mainSection === "home" && (
+        <HomeV2
+          deadlines={allDeadlines}
+          t={t}
+          locale={getLocale()}
+          formatNumber={formatNumber}
+          onComplete={complete}
+          onPostpone={postpone}
+        />
+      )}
 
       {mainSection === "deadlines" && (
         <div
@@ -5759,14 +5782,6 @@ export default function App() {
             cursor:"pointer", boxShadow:"0 6px 20px rgba(0,0,0,.2)",
             display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
           }}>≡</button>
-
-          {/* FAB */}
-          <button onClick={() => setShowAdd(true)} style={{
-            position:"fixed", bottom:88, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
-            background:"#E8855D", border:"none", color:"#fff", fontSize:28, fontWeight:300,
-            cursor:"pointer", boxShadow:"0 6px 24px rgba(232,133,93,.45)",
-            display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
-          }}>+</button>
         </div>
       )}
 
@@ -6191,10 +6206,10 @@ export default function App() {
       {/* Primary navigation - bottom */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#fff", borderTop:"1px solid #edecea", display:"flex", zIndex:120 }}>
         {[
+          { id:"home", label: t("nav.home", { defaultValue:"Home" }), icon:"🏠" },
           { id:"deadlines", label: t("nav.deadlines"), icon:"📅" },
-          { id:"assets", label: t("nav.assets"), icon:"🏷️" },
-          { id:"documents", label: t("nav.documents"), icon:"📎" },
-          { id:"pet", label: t("nav.pet"), icon:"🐾" }
+          { id:"assets", label: t("nav.organize", { defaultValue:"Organizza" }), icon:"🗂️" },
+          { id:"documents", label: t("nav.overview", { defaultValue:"Overview" }), icon:"◻︎" }
         ].map(item => (
           <button key={item.id} onClick={() => setMainSection(item.id)} style={{
             flex:1, padding:"10px 0", border:"none", background:"transparent", cursor:"pointer",
@@ -6216,6 +6231,7 @@ export default function App() {
             <div style={{ marginBottom:10 }}>
               <LanguageToggle size={28} />
             </div>
+            <button onClick={() => { setMainSection("pet"); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>🐾 {t("nav.pet")}</button>
             <div style={{ marginBottom:10, padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#2d2b26" }}>
                 {t("menu.sync")}
@@ -6245,6 +6261,15 @@ export default function App() {
             <button onClick={() => { handleSignOut(); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #ffe1da", background:"#fff5f1", textAlign:"left", color:"#E53935" }}>⎋ {t("menu.logout")}</button>
           </div>
         </div>
+      )}
+
+      {(mainSection === "home" || mainSection === "deadlines") && (
+        <button onClick={() => setShowAdd(true)} style={{
+          position:"fixed", bottom:88, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
+          background: mainSection === "home" ? "#8FAFCA" : "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
+          cursor:"pointer", boxShadow: mainSection === "home" ? "0 6px 22px rgba(143,175,202,.45)" : "0 6px 24px rgba(232,133,93,.45)",
+          display:"flex", alignItems:"center", justifyContent:"center", zIndex:140,
+        }}>+</button>
       )}
 
       {/* Developer panel */}

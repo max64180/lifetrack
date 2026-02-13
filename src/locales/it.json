@@ -156,10 +156,37 @@
     "reset": "Reset filtri"
   },
   "nav": {
+    "home": "Home",
     "deadlines": "Scadenze",
     "assets": "Asset",
+    "organize": "Organizza",
     "documents": "Documenti",
+    "overview": "Overview",
     "pet": "Pet"
+  },
+  "home": {
+    "markDone": "Segna fatto",
+    "toEstimate": "Da stimare",
+    "showMore": "Mostra altro",
+    "showLess": "Mostra meno",
+    "today": "oggi",
+    "inNextDays": "nei prossimi giorni",
+    "inNext7": "Nei prossimi 7 giorni",
+    "todaySection": "In scadenza oggi",
+    "next7Section": "Nei prossimi 7 giorni",
+    "incomingSection": "In arrivo",
+    "hero": {
+      "calm": "Puoi stare tranquillo",
+      "calmHint": "Non hai scadenze nei prossimi 7 giorni",
+      "think": "È il momento di pensarci",
+      "fix": "C'è qualcosa da sistemare",
+      "attention": "Serve un attimo di attenzione",
+      "oneOverdueAgo": "Scaduta {{days}} giorni fa",
+      "manyOverdue": "{{count}} scadute recenti",
+      "nextInDays": "Prossima tra {{days}} giorni",
+      "nextToday": "Prossima oggi",
+      "noNext": "Nessuna prossima scadenza"
+    }
   },
   "pet": {
     "title": "Pet",

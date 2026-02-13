@@ -156,10 +156,37 @@
     "reset": "Reset filters"
   },
   "nav": {
+    "home": "Home",
     "deadlines": "Deadlines",
     "assets": "Assets",
+    "organize": "Organize",
     "documents": "Documents",
+    "overview": "Overview",
     "pet": "Pet"
+  },
+  "home": {
+    "markDone": "Mark done",
+    "toEstimate": "To estimate",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "today": "today",
+    "inNextDays": "in the next days",
+    "inNext7": "In the next 7 days",
+    "todaySection": "Due today",
+    "next7Section": "Next 7 days",
+    "incomingSection": "Upcoming",
+    "hero": {
+      "calm": "You can relax",
+      "calmHint": "You have no deadlines in the next 7 days",
+      "think": "Time to think about it",
+      "fix": "Something needs fixing",
+      "attention": "Needs attention now",
+      "oneOverdueAgo": "Overdue {{days}} days ago",
+      "manyOverdue": "{{count}} recent overdue items",
+      "nextInDays": "Next in {{days}} days",
+      "nextToday": "Next is today",
+      "noNext": "No upcoming deadlines"
+    }
   },
   "pet": {
     "title": "Pet",
