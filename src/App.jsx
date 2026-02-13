@@ -3891,7 +3891,7 @@ export default function App() {
   const [showStats, setShowStats] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents | pet | lab
+  const [mainSection, setMainSection] = useState("deadlines"); // deadlines | assets | documents
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
   const [showPetAdd, setShowPetAdd] = useState(false);
@@ -5291,97 +5291,6 @@ export default function App() {
     );
   }
 
-  const mainSectionTitle = mainSection === "deadlines"
-    ? t("nav.deadlines")
-    : mainSection === "assets"
-    ? t("nav.assets")
-    : mainSection === "documents"
-    ? t("nav.documents")
-    : mainSection === "pet"
-    ? t("nav.pet")
-    : t("nav.lab", { defaultValue: "Lab" });
-
-  const isLabSection = mainSection === "lab";
-  const labData = (() => {
-    const pending = allDeadlines
-      .filter(d => !d.done && !d.deleted && !d.skipped)
-      .sort((a, b) => a.date - b.date);
-    const overdue = pending.filter(d => diffDays(d.date) < 0);
-    const today = pending.filter(d => diffDays(d.date) === 0);
-    const next7 = pending.filter(d => diffDays(d.date) > 0 && diffDays(d.date) <= 7);
-    const incoming = pending.filter(d => diffDays(d.date) > 7).slice(0, 8);
-    return { pending, overdue, today, next7, incoming };
-  })();
-
-  const labAttentionCount = labData.overdue.length + labData.today.length + labData.next7.length;
-  const labNextDue = labData.pending.length ? diffDays(labData.pending[0].date) : null;
-  const formatLabDate = (date) =>
-    capitalize(date.toLocaleDateString(getLocale(), { day: "2-digit", month: "short" }));
-  const formatLabAmount = (item) => (item.estimateMissing ? t("labels.toEstimate", { defaultValue: "Da stimare" }) : `€${formatNumber(item.budget)}`);
-  const renderLabRow = (item, keyPrefix, allowPostpone = false) => (
-    <div
-      key={`${keyPrefix}_${item.id}`}
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "#fff",
-        border: "1px solid #ebe6dc",
-        borderRadius: 14,
-        padding: "10px 12px",
-        marginBottom: 8,
-        boxShadow: "0 4px 14px rgba(34,25,18,.05)"
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#2d2b26", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {formatLabDate(item.date)} · {item.title}
-        </div>
-        <div style={{ fontSize: 12, color: "#8a877f", marginTop: 2 }}>
-          {item.asset || t("labels.withoutAsset", { defaultValue: "Senza asset" })}
-        </div>
-        <div style={{ fontSize: 12, color: "#2d2b26", marginTop: 2 }}>
-          {formatLabAmount(item)}
-        </div>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-        <button
-          onClick={() => complete(item.id)}
-          style={{
-            border: "1px solid #8FB3D6",
-            borderRadius: 10,
-            background: "#A9C6E2",
-            color: "#fff",
-            padding: "6px 10px",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          {t("actions.complete")}
-        </button>
-        {allowPostpone && (
-          <button
-            onClick={() => postpone(item.id)}
-            style={{
-              border: "1px solid #d9d4c8",
-              borderRadius: 10,
-              background: "#f6f2ea",
-              color: "#6d685f",
-              padding: "6px 10px",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer"
-            }}
-          >
-            {t("actions.postpone")}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:"#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
       <style>{`
@@ -5437,21 +5346,21 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isLabSection ? "#f7f4ef" : "#1e1c18", borderBottom:isLabSection ? "1px solid #ece7dd" : "none" }}>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18" }}>
         <div style={{ 
-          background:isLabSection ? "#f7f4ef" : "#1e1c18", color:isLabSection ? "#2d2b26" : "#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
+          background:"#1e1c18", color:"#fff", padding:"8px 16px", position:"relative", overflow:"hidden",
         }}>
-          {!isLabSection && <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>}
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
-                  {mainSectionTitle}
+                  {mainSection === "deadlines" ? t("nav.deadlines") : mainSection === "assets" ? t("nav.assets") : t("nav.documents")}
                 </h1>
-                <span style={{ fontSize:9, opacity:isLabSection ? 0.5 : 0.35 }}>{t("app.tagline")}</span>
+                <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
               </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isLabSection ? "#ece7dd" : "rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                <span style={{ fontSize:16, color:isLabSection ? "#6d685f" : "rgba(255,255,255,.7)" }}>☰</span>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
               </button>
             </div>
           </div>
@@ -5858,116 +5767,6 @@ export default function App() {
             cursor:"pointer", boxShadow:"0 6px 24px rgba(232,133,93,.45)",
             display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
           }}>+</button>
-        </div>
-      )}
-
-      {mainSection === "lab" && (
-        <div style={{ flex:1, overflowY:"auto", padding:"14px 16px 92px", background:"#f7f4ef" }}>
-          <div style={{
-            borderRadius:18,
-            border:"1px solid #e5ddd1",
-            background:"linear-gradient(180deg,#fffdf9,#f6f0e8)",
-            padding:"16px 14px 12px",
-            marginBottom:16,
-            boxShadow:"0 6px 22px rgba(34,25,18,.08)"
-          }}>
-            <div style={{ fontFamily:"Georgia, serif", fontSize:56, lineHeight:1, color:"#A8654C", textAlign:"center" }}>{labAttentionCount}</div>
-            <div style={{ fontFamily:"Georgia, serif", fontSize:22, color:"#6C3F32", textAlign:"center", marginTop:6 }}>
-              {t("lab.summaryTitle", { defaultValue:"Serve un attimo di attenzione" })}
-            </div>
-            <div style={{ textAlign:"center", fontSize:13, color:"#7b756b", marginTop:8 }}>
-              {t("lab.summaryStats", {
-                defaultValue: "{{overdue}} scadute · {{today}} oggi · {{next7}} nei prossimi 7 giorni",
-                overdue: labData.overdue.length,
-                today: labData.today.length,
-                next7: labData.next7.length
-              })}
-            </div>
-            <div style={{ marginTop:12, paddingTop:10, borderTop:"1px solid #e7dfd2", fontSize:13, color:"#6e665b", textAlign:"center" }}>
-              {labNextDue === null
-                ? t("lab.noNext", { defaultValue:"Nessuna scadenza in arrivo" })
-                : labNextDue < 0
-                ? t("lab.nextOverdue", { defaultValue:"Hai già scadenze arretrate" })
-                : t("lab.nextIn", { defaultValue:"Prossima tra {{days}} giorni", days: labNextDue })}
-            </div>
-          </div>
-
-          <div style={{ marginBottom:8, display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ fontSize:11, fontWeight:800, color:"#756f64", letterSpacing:".8px", textTransform:"uppercase" }}>
-              {t("tabs.overdue")}
-            </div>
-            <div style={{ height:1, flex:1, background:"#e2dbcf" }} />
-          </div>
-          <div style={{ marginBottom:14 }}>
-            {labData.overdue.length === 0 ? (
-              <div style={{ fontSize:13, color:"#a29b8e", padding:"6px 2px 2px" }}>
-                {t("lab.emptyOverdue", { defaultValue:"Nessuna scaduta." })}
-              </div>
-            ) : (
-              labData.overdue.slice(0, 3).map(item => renderLabRow(item, "overdue", true))
-            )}
-          </div>
-
-          <div style={{ marginBottom:8, display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ fontSize:11, fontWeight:800, color:"#756f64", letterSpacing:".8px", textTransform:"uppercase" }}>
-              {t("lab.today", { defaultValue:"In scadenza oggi" })}
-            </div>
-            <div style={{ height:1, flex:1, background:"#e2dbcf" }} />
-          </div>
-          <div style={{ marginBottom:14 }}>
-            {labData.today.length === 0 ? (
-              <div style={{ fontSize:13, color:"#a29b8e", padding:"6px 2px 2px" }}>
-                {t("lab.emptyToday", { defaultValue:"Nessuna scadenza oggi." })}
-              </div>
-            ) : (
-              labData.today.slice(0, 3).map(item => renderLabRow(item, "today"))
-            )}
-          </div>
-
-          <div style={{ marginBottom:8, display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ fontSize:11, fontWeight:800, color:"#756f64", letterSpacing:".8px", textTransform:"uppercase" }}>
-              {t("lab.next7", { defaultValue:"Nei prossimi 7 giorni" })}
-            </div>
-            <div style={{ height:1, flex:1, background:"#e2dbcf" }} />
-          </div>
-          <div style={{ marginBottom:14 }}>
-            {labData.next7.length === 0 ? (
-              <div style={{ fontSize:13, color:"#a29b8e", padding:"6px 2px 2px" }}>
-                {t("lab.emptyNext7", { defaultValue:"Nessuna scadenza nei prossimi 7 giorni." })}
-              </div>
-            ) : (
-              labData.next7.slice(0, 4).map(item => renderLabRow(item, "next7"))
-            )}
-          </div>
-
-          <div style={{ marginBottom:8, display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ fontSize:11, fontWeight:800, color:"#756f64", letterSpacing:".8px", textTransform:"uppercase" }}>
-              {t("lab.incoming", { defaultValue:"In arrivo" })}
-            </div>
-            <div style={{ height:1, flex:1, background:"#e2dbcf" }} />
-          </div>
-          <div style={{ background:"#fff", border:"1px solid #ebe6dc", borderRadius:14, padding:"8px 10px", boxShadow:"0 4px 14px rgba(34,25,18,.05)" }}>
-            {labData.incoming.length === 0 ? (
-              <div style={{ fontSize:13, color:"#a29b8e", padding:"4px 2px" }}>
-                {t("lab.emptyIncoming", { defaultValue:"Nessuna scadenza in arrivo." })}
-              </div>
-            ) : (
-              labData.incoming.map(item => (
-                <div key={`incoming_${item.id}`} style={{
-                  display:"grid",
-                  gridTemplateColumns:"auto 1fr auto",
-                  gap:8,
-                  alignItems:"center",
-                  padding:"8px 4px",
-                  borderBottom:"1px solid #f1ece4"
-                }}>
-                  <div style={{ fontSize:12, color:"#7f786c", fontWeight:700 }}>{formatLabDate(item.date)}</div>
-                  <div style={{ fontSize:14, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</div>
-                  <div style={{ fontSize:14, color:"#7a6e60", fontWeight:700 }}>{formatLabAmount(item)}</div>
-                </div>
-              ))
-            )}
-          </div>
         </div>
       )}
 
@@ -6393,7 +6192,6 @@ export default function App() {
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#fff", borderTop:"1px solid #edecea", display:"flex", zIndex:120 }}>
         {[
           { id:"deadlines", label: t("nav.deadlines"), icon:"📅" },
-          { id:"lab", label: t("nav.lab", { defaultValue:"Lab" }), icon:"🧪" },
           { id:"assets", label: t("nav.assets"), icon:"🏷️" },
           { id:"documents", label: t("nav.documents"), icon:"📎" },
           { id:"pet", label: t("nav.pet"), icon:"🐾" }
