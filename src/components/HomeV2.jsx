@@ -138,8 +138,8 @@ function ActionButton({ label, primary, onClick }) {
         borderRadius: 14,
         background: primary ? TOKENS.btnPrimaryBg : TOKENS.btnSecondaryBg,
         color: primary ? TOKENS.btnPrimaryText : TOKENS.btnSecondaryText,
-        minWidth: 102,
-        padding: "9px 12px",
+        minWidth: 96,
+        padding: "8px 12px",
         fontFamily: INTER_FONT,
         fontSize: 15,
         lineHeight: "20px",
@@ -159,19 +159,19 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         border: `1px solid ${TOKENS.borderSoft}`,
         borderRadius: 14,
         background: TOKENS.bgElevated,
-        padding: 14,
+        padding: 12,
         display: "grid",
         gridTemplateColumns: "1fr auto",
-        gap: 10,
+        gap: 12,
         alignItems: "center",
       }}
     >
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontFamily: SERIF_FONT,
-            fontSize: 18,
-            lineHeight: "24px",
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
             fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -199,7 +199,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         )}
         <div
           style={{
-            marginTop: 4,
+            marginTop: 2,
             fontFamily: INTER_FONT,
             fontSize: 16,
             lineHeight: "22px",
@@ -226,7 +226,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
   );
 }
 
-function FutureRow({ item, locale, formatNumber, t, withAction = false, onComplete }) {
+function FutureRow({ item, locale, formatNumber, t, withAction = false, onComplete, compact = false }) {
   return (
     <div
       style={{
@@ -241,9 +241,9 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontFamily: SERIF_FONT,
-            fontSize: 18,
-            lineHeight: "24px",
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
             fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -253,17 +253,19 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         >
           {formatDateShort(item.date, locale)} · {item.title}
         </div>
-        <div
-          style={{
-            marginTop: 2,
-            fontFamily: INTER_FONT,
-            fontSize: 16,
-            lineHeight: "22px",
-            color: TOKENS.textPrimary,
-          }}
-        >
-          <Amount item={item} formatNumber={formatNumber} t={t} />
-        </div>
+        {!compact && (
+          <div
+            style={{
+              marginTop: 2,
+              fontFamily: INTER_FONT,
+              fontSize: 16,
+              lineHeight: "22px",
+              color: TOKENS.textPrimary,
+            }}
+          >
+            <Amount item={item} formatNumber={formatNumber} t={t} />
+          </div>
+        )}
       </div>
       {withAction ? (
         <ActionButton
@@ -400,7 +402,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
     borderRadius: 20,
     background: TOKENS.bgCard,
     boxShadow: SHADOW_CARD,
-    padding: 20,
+    padding: 16,
     marginBottom: 28,
   };
 
@@ -451,17 +453,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
             >
               {heroNumber}
             </div>
-            <div
-              style={{
-                marginTop: 4,
-                textAlign: "center",
-                fontFamily: SERIF_FONT,
-                fontWeight: 500,
-                fontSize: 22,
-                lineHeight: "28px",
-                color: heroToneStyles.title,
-              }}
-            >
+            <div style={{ marginTop: 4, textAlign: "center", fontFamily: SERIF_FONT, fontWeight: 500, fontSize: 22, lineHeight: "28px", color: heroToneStyles.title }}>
               {heroTitle}
             </div>
             <div
@@ -603,6 +595,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       item={item}
                       locale={locale}
                       formatNumber={formatNumber}
+                      compact
                       t={t}
                     />
                   </div>
