@@ -5456,8 +5456,8 @@ export default function App() {
               <h1 style={{ margin:0, textAlign:"center", fontFamily:"'Playfair Display', 'Cormorant Garamond', serif", fontWeight:500, fontSize:26, lineHeight:"32px", letterSpacing:"0", color:HOME_THEME.textPrimary }}>
                 {mainSectionTitle}
               </h1>
-              <button onClick={() => setShowMenu(true)} aria-label={t("menu.title")} style={{ width:32, height:32, borderRadius:"50%", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:`1px solid ${HOME_THEME.borderSoft}` }}>
-                <BellIcon size={20} color={HOME_THEME.textPrimary} />
+              <button onClick={() => setShowMenu(true)} aria-label={t("menu.title")} style={{ width:32, height:32, borderRadius:"50%", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none", padding:0 }}>
+                <BellIcon size={21} color={HOME_THEME.textPrimary} />
               </button>
             </div>
           ) : (
@@ -6369,7 +6369,7 @@ export default function App() {
 
       {(mainSection === "home" || mainSection === "deadlines") && (
         <button onClick={() => setShowAdd(true)} style={{
-          position:"fixed", bottom:88, right: "calc(50% - 195px)", width:58, height:58, borderRadius:"50%",
+          position:"fixed", bottom:mainSection === "home" ? 16 : 88, right: "calc(50% - 197px)", width:mainSection === "home" ? 62 : 58, height:mainSection === "home" ? 62 : 58, borderRadius:"50%",
           background: mainSection === "home" ? HOME_THEME.fab : "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
           cursor:"pointer", boxShadow: mainSection === "home" ? HOME_THEME.shadowFab : "0 6px 24px rgba(232,133,93,.45)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:140,

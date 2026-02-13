@@ -138,7 +138,7 @@ function ActionButton({ label, primary, onClick }) {
         borderRadius: 14,
         background: primary ? TOKENS.btnPrimaryBg : TOKENS.btnSecondaryBg,
         color: primary ? TOKENS.btnPrimaryText : TOKENS.btnSecondaryText,
-        minWidth: 96,
+        minWidth: primary ? 116 : 108,
         padding: "8px 12px",
         fontFamily: INTER_FONT,
         fontSize: 15,
@@ -162,7 +162,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         padding: 12,
         display: "grid",
         gridTemplateColumns: "1fr auto",
-        gap: 12,
+        gap: 14,
         alignItems: "center",
       }}
     >
@@ -170,8 +170,8 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         <div
           style={{
             fontFamily: INTER_FONT,
-            fontSize: 16,
-            lineHeight: "22px",
+            fontSize: 18,
+            lineHeight: "24px",
             fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -186,8 +186,8 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
             style={{
               marginTop: 4,
               fontFamily: INTER_FONT,
-              fontSize: 14,
-              lineHeight: "20px",
+              fontSize: 13,
+              lineHeight: "18px",
               color: TOKENS.textSecondary,
             }}
           >
@@ -201,7 +201,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
           style={{
             marginTop: 2,
             fontFamily: INTER_FONT,
-            fontSize: 16,
+            fontSize: 15,
             lineHeight: "22px",
             color: TOKENS.textPrimary,
           }}
@@ -231,7 +231,7 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
     <div
       style={{
         borderTop: `1px solid ${TOKENS.borderSoft}`,
-        padding: "12px 0",
+        padding: compact ? "10px 0" : "12px 0",
         display: "grid",
         gridTemplateColumns: withAction ? "1fr auto" : "1fr auto",
         gap: 10,
@@ -242,8 +242,8 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         <div
           style={{
             fontFamily: INTER_FONT,
-            fontSize: 16,
-            lineHeight: "22px",
+            fontSize: 18,
+            lineHeight: "24px",
             fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -277,8 +277,8 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         <div
           style={{
             fontFamily: INTER_FONT,
-            fontSize: 16,
-            lineHeight: "22px",
+            fontSize: 15,
+            lineHeight: "20px",
             color: TOKENS.textSecondary,
             whiteSpace: "nowrap",
           }}
@@ -402,7 +402,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
     borderRadius: 20,
     background: TOKENS.bgCard,
     boxShadow: SHADOW_CARD,
-    padding: 16,
+    padding: 20,
     marginBottom: 28,
   };
 
@@ -423,9 +423,9 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
           inset: 0,
           pointerEvents: "none",
           backgroundImage:
-            "radial-gradient(rgba(120, 98, 76, 0.08) 0.4px, transparent 0.4px), radial-gradient(rgba(120, 98, 76, 0.06) 0.5px, transparent 0.5px)",
-          backgroundSize: "3px 3px, 5px 5px",
-          opacity: 0.42,
+            "radial-gradient(rgba(120, 98, 76, 0.06) 0.35px, transparent 0.35px), radial-gradient(rgba(120, 98, 76, 0.045) 0.4px, transparent 0.4px)",
+          backgroundSize: "3px 3px, 6px 6px",
+          opacity: 0.28,
         }}
       />
 
@@ -453,7 +453,17 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
             >
               {heroNumber}
             </div>
-            <div style={{ marginTop: 4, textAlign: "center", fontFamily: SERIF_FONT, fontWeight: 500, fontSize: 22, lineHeight: "28px", color: heroToneStyles.title }}>
+            <div
+              style={{
+                marginTop: 4,
+                textAlign: "center",
+                fontFamily: SERIF_FONT,
+                fontWeight: 500,
+                fontSize: 22,
+                lineHeight: "28px",
+                color: heroToneStyles.title,
+              }}
+            >
               {heroTitle}
             </div>
             <div
