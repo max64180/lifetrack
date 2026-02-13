@@ -52,6 +52,39 @@ async function bootstrapDeterministicData(page) {
   });
 }
 
+async function enforceAssetFixture(page) {
+  await page.evaluate(() => {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, 20, 12, 0, 0, 0);
+    const categories = [
+      { id: "casa", label: "Casa", icon: "🏠", color: "#E8855D", light: "#E8855D22", assets: ["E2E_ASSET"] },
+      { id: "auto", label: "Auto", icon: "🚗", color: "#5B8DD9", light: "#5B8DD922", assets: [] },
+    ];
+    const deadlines = [
+      {
+        id: `e2e_asset_${d.getTime()}`,
+        title: "E2E_TIMELINE",
+        cat: "casa",
+        asset: "E2E_ASSET",
+        date: d.toISOString(),
+        budget: 42,
+        notes: "",
+        done: false,
+        mandatory: false,
+        essential: true,
+        autoPay: false,
+        estimateMissing: false,
+        documents: [],
+        recurring: null,
+      },
+    ];
+    localStorage.setItem("lifetrack_sync_enabled", "false");
+    localStorage.setItem("lifetrack_categories", JSON.stringify(categories));
+    localStorage.setItem("lifetrack_deadlines", JSON.stringify(deadlines));
+  });
+  await page.reload();
+}
+
 async function loginIfNeeded(page) {
   if (!HAS_CREDS && E2E_STRICT) {
     throw new Error("Missing E2E_EMAIL/E2E_PASSWORD for strict E2E run");
@@ -94,6 +127,8 @@ test("asset add-work modal opens without runtime crash", async ({ page }) => {
   skipIfNoCredsInLocal();
   await bootstrapDeterministicData(page);
   await loginIfNeeded(page);
+  await enforceAssetFixture(page);
+  await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 20000 });
 
   await page.getByRole("button", { name: /asset/i }).click();
   await page.getByRole("button", { name: /e2e_asset/i }).first().click();
