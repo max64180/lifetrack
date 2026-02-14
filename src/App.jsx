@@ -5470,7 +5470,7 @@ export default function App() {
 
         {/* Budget bar only in deadlines */}
         {mainSection === "deadlines" && (
-          <div style={{ background:warmTopGradient }}>
+          <div style={{ background:warmTopGradient, paddingBottom:10 }}>
             <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats} activeTab={activeTab}/>
           </div>
         )}
