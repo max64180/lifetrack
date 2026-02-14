@@ -5393,7 +5393,7 @@ export default function App() {
     : t("nav.pet");
 
   return (
-    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:isHomeSection ? HOME_THEME.bgPrimary : "#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
+    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:isHomeSection ? "#ECE9E6" : "#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600&family=Sora:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -5447,34 +5447,22 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isHomeSection ? HOME_THEME.bgPrimary : "#1e1c18", borderBottom:isHomeSection ? `1px solid ${HOME_THEME.borderLight}` : "none" }}>
-        <div style={{ background:isHomeSection ? HOME_THEME.bgPrimary : "#1e1c18", color:isHomeSection ? HOME_THEME.textPrimary : "#fff", padding:isHomeSection ? "10px 20px 12px" : "8px 16px", position:"relative", overflow:"hidden" }}>
-          {!isHomeSection && <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>}
-          {isHomeSection ? (
-            <div style={{ display:"grid", gridTemplateColumns:"36px 1fr 36px", alignItems:"center", gap:8 }}>
-              <div />
-              <h1 style={{ margin:0, textAlign:"center", fontFamily:"'Playfair Display', 'Cormorant Garamond', serif", fontWeight:500, fontSize:26, lineHeight:"32px", letterSpacing:"0", color:HOME_THEME.textPrimary }}>
-                {mainSectionTitle}
-              </h1>
-              <button onClick={() => setShowMenu(true)} aria-label={t("menu.title")} style={{ width:32, height:32, borderRadius:"50%", background:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none", padding:0 }}>
-                <BellIcon size={21} color={HOME_THEME.textPrimary} />
+      <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18", borderBottom:"none" }}>
+        <div style={{ background:"#1e1c18", color:"#fff", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
+          <div style={{ position:"relative", zIndex:1 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
+                  {mainSectionTitle}
+                </h1>
+                <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
+              </div>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
               </button>
             </div>
-          ) : (
-            <div style={{ position:"relative", zIndex:1 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div>
-                  <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
-                    {mainSectionTitle}
-                  </h1>
-                  <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
-                </div>
-                <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                  <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Budget bar only in deadlines */}
@@ -6369,9 +6357,9 @@ export default function App() {
 
       {(mainSection === "home" || mainSection === "deadlines") && (
         <button onClick={() => setShowAdd(true)} style={{
-          position:"fixed", bottom:mainSection === "home" ? 16 : 88, right: "calc(50% - 197px)", width:mainSection === "home" ? 62 : 58, height:mainSection === "home" ? 62 : 58, borderRadius:"50%",
-          background: mainSection === "home" ? HOME_THEME.fab : "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
-          cursor:"pointer", boxShadow: mainSection === "home" ? HOME_THEME.shadowFab : "0 6px 24px rgba(232,133,93,.45)",
+          position:"fixed", bottom:mainSection === "home" ? 58 : 88, right: "calc(50% - 197px)", width:mainSection === "home" ? 64 : 58, height:mainSection === "home" ? 64 : 58, borderRadius:"50%",
+          background: "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
+          cursor:"pointer", boxShadow:"0 8px 24px rgba(232,133,93,.45)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:140,
         }}>+</button>
       )}
