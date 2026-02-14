@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 
 const DAY_MS = 86400000;
-const INTER_FONT = "'Inter', 'Sora', system-ui, -apple-system, sans-serif";
-const TITLE_FONT = "'Sora', 'Inter', system-ui, -apple-system, sans-serif";
+const INTER_FONT = "'Inter', system-ui, -apple-system, sans-serif";
+const TITLE_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
+const DISPLAY_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 
 const TOKENS = {
   bgRoot: "#ECE9E6",
@@ -86,12 +87,12 @@ function SectionTitle({ label }) {
       <h3
         style={{
           margin: 0,
-          fontFamily: TITLE_FONT,
-          fontSize: 17,
-          lineHeight: "22px",
-          letterSpacing: "0.2px",
+          fontFamily: DISPLAY_FONT,
+          fontSize: 18,
+          lineHeight: "23px",
+          letterSpacing: "0.4px",
           color: TOKENS.textPrimary,
-          fontWeight: 700,
+          fontWeight: 500,
           whiteSpace: "nowrap",
         }}
       >
@@ -146,10 +147,10 @@ function ActionButton({ label, primary, onClick, overdueTone = false }) {
         color,
         minWidth: isPrimary ? 96 : 88,
         padding: "7px 11px",
-        fontFamily: TITLE_FONT,
-        fontSize: 13,
-        lineHeight: "16px",
-        fontWeight: 700,
+        fontFamily: INTER_FONT,
+        fontSize: 15,
+        lineHeight: "20px",
+        fontWeight: 500,
         cursor: "pointer",
       }}
     >
@@ -175,10 +176,10 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontFamily: TITLE_FONT,
-            fontSize: 16,
-            lineHeight: "21px",
-            fontWeight: 700,
+            fontFamily: DISPLAY_FONT,
+            fontSize: 17,
+            lineHeight: "23px",
+            fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -206,11 +207,11 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         <div
           style={{
             marginTop: 3,
-            fontFamily: TITLE_FONT,
-            fontSize: 15,
-            lineHeight: "19px",
+            fontFamily: INTER_FONT,
+            fontSize: 16,
+            lineHeight: "22px",
             color: TOKENS.textPrimary,
-            fontWeight: 700,
+            fontWeight: 500,
           }}
         >
           <Amount item={item} formatNumber={formatNumber} t={t} />
@@ -249,10 +250,10 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontFamily: TITLE_FONT,
-            fontSize: 16,
-            lineHeight: "21px",
-            fontWeight: 700,
+            fontFamily: DISPLAY_FONT,
+            fontSize: 17,
+            lineHeight: "23px",
+            fontWeight: 500,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -434,12 +435,11 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
             <div
               style={{
                 fontFamily: INTER_FONT,
-                fontSize: 13,
-                lineHeight: "18px",
-                fontWeight: 700,
-                letterSpacing: "0.9px",
+                fontSize: 15,
+                lineHeight: "21px",
+                fontWeight: 400,
+                letterSpacing: "0.2px",
                 color: TOKENS.textOnDarkMuted,
-                textTransform: "uppercase",
               }}
             >
               {heroTitle}
@@ -448,12 +448,12 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
             <div style={{ marginTop: 8, display: "flex", alignItems: "baseline", gap: 8 }}>
               <div
                 style={{
-                  fontFamily: TITLE_FONT,
-                  fontSize: 48,
-                  lineHeight: "50px",
+                  fontFamily: DISPLAY_FONT,
+                  fontSize: 62,
+                  lineHeight: "60px",
                   color: heroToneStyles.number,
-                  fontWeight: 800,
-                  letterSpacing: "-1px",
+                  fontWeight: 500,
+                  letterSpacing: "-0.3px",
                 }}
               >
                 {heroNumber}
@@ -461,8 +461,8 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               <div
                 style={{
                   fontFamily: INTER_FONT,
-                  fontSize: 14,
-                  lineHeight: "19px",
+                  fontSize: 13,
+                  lineHeight: "18px",
                   color: heroToneStyles.subtitle,
                 }}
               >
@@ -474,8 +474,8 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               style={{
                 marginTop: 6,
                 fontFamily: INTER_FONT,
-                fontSize: 14,
-                lineHeight: "19px",
+                fontSize: 17,
+                lineHeight: "24px",
                 color: heroToneStyles.subtitle,
               }}
             >
@@ -494,10 +494,10 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               borderTop: `1px solid ${heroToneStyles.line}`,
               padding: "10px 10px",
               textAlign: "center",
-              fontFamily: INTER_FONT,
-              fontWeight: 700,
-              fontSize: 15,
-              lineHeight: "19px",
+              fontFamily: DISPLAY_FONT,
+              fontWeight: 500,
+              fontSize: 18,
+              lineHeight: "24px",
               color: heroToneStyles.next,
             }}
           >
