@@ -82,7 +82,7 @@ function lineCount(overdueCount, todayCount, next7Count, t) {
 
 function SectionTitle({ label }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
       <h3
         style={{
           margin: 0,
@@ -107,7 +107,7 @@ function MoreButton({ expanded, onToggle, t }) {
     <button
       onClick={onToggle}
       style={{
-        marginTop: 8,
+        marginTop: 6,
         border: "none",
         background: "transparent",
         fontFamily: INTER_FONT,
@@ -144,8 +144,8 @@ function ActionButton({ label, primary, onClick, overdueTone = false }) {
         borderRadius: 14,
         background: bg,
         color,
-        minWidth: isPrimary ? 102 : 90,
-        padding: "8px 12px",
+        minWidth: isPrimary ? 96 : 88,
+        padding: "7px 11px",
         fontFamily: TITLE_FONT,
         fontSize: 13,
         lineHeight: "16px",
@@ -165,10 +165,10 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         border: `1px solid ${TOKENS.borderSoft}`,
         borderRadius: 14,
         background: TOKENS.bgCard,
-        padding: 12,
+        padding: 10,
         display: "grid",
         gridTemplateColumns: "1fr auto",
-        gap: 10,
+        gap: 8,
         alignItems: "center",
       }}
     >
@@ -176,8 +176,8 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         <div
           style={{
             fontFamily: TITLE_FONT,
-            fontSize: 17,
-            lineHeight: "22px",
+            fontSize: 16,
+            lineHeight: "21px",
             fontWeight: 700,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -190,10 +190,10 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         {withPostpone && (
           <div
             style={{
-              marginTop: 4,
+              marginTop: 3,
               fontFamily: INTER_FONT,
               fontSize: 14,
-              lineHeight: "19px",
+              lineHeight: "18px",
               color: "#8A6255",
             }}
           >
@@ -205,10 +205,10 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         )}
         <div
           style={{
-            marginTop: 4,
+            marginTop: 3,
             fontFamily: TITLE_FONT,
-            fontSize: 16,
-            lineHeight: "20px",
+            fontSize: 15,
+            lineHeight: "19px",
             color: TOKENS.textPrimary,
             fontWeight: 700,
           }}
@@ -216,7 +216,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
           <Amount item={item} formatNumber={formatNumber} t={t} />
         </div>
       </div>
-      <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+      <div style={{ display: "grid", gap: 7, justifyItems: "end" }}>
         <ActionButton
           label={t("home.markDone", { defaultValue: "Segna fatto" })}
           primary
@@ -239,7 +239,7 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
     <div
       style={{
         borderTop: `1px solid ${TOKENS.borderSoft}`,
-        padding: compact ? "10px 0" : "12px 0",
+        padding: compact ? "8px 0" : "10px 0",
         display: "grid",
         gridTemplateColumns: "1fr auto",
         gap: 10,
@@ -250,8 +250,8 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         <div
           style={{
             fontFamily: TITLE_FONT,
-            fontSize: 17,
-            lineHeight: "22px",
+            fontSize: 16,
+            lineHeight: "21px",
             fontWeight: 700,
             color: TOKENS.textPrimary,
             whiteSpace: "nowrap",
@@ -264,10 +264,10 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         {!compact && (
           <div
             style={{
-              marginTop: 4,
+              marginTop: 3,
               fontFamily: INTER_FONT,
-              fontSize: 15,
-              lineHeight: "20px",
+              fontSize: 14,
+              lineHeight: "18px",
               color: TOKENS.textSecondary,
             }}
           >
@@ -285,8 +285,8 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         <div
           style={{
             fontFamily: INTER_FONT,
-            fontSize: 15,
-            lineHeight: "20px",
+            fontSize: 14,
+            lineHeight: "18px",
             color: TOKENS.textSecondary,
             whiteSpace: "nowrap",
             fontWeight: 600,
@@ -418,19 +418,19 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
       <div
         style={{
           background: `linear-gradient(180deg, ${TOKENS.topBg2} 0%, ${TOKENS.topBg} 100%)`,
-          padding: "6px 16px 18px",
+          padding: "6px 16px 14px",
         }}
       >
         <div
           style={{
             border: `1px solid ${TOKENS.borderDark}`,
-            borderRadius: 24,
+            borderRadius: 22,
             background: `linear-gradient(180deg, ${TOKENS.heroBg} 0%, ${TOKENS.heroBg2} 100%)`,
             boxShadow: SHADOW_HERO,
             overflow: "hidden",
           }}
         >
-          <div style={{ padding: "14px 16px 12px" }}>
+          <div style={{ padding: "12px 14px 10px" }}>
             <div
               style={{
                 fontFamily: INTER_FONT,
@@ -445,12 +445,12 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               {heroTitle}
             </div>
 
-            <div style={{ marginTop: 10, display: "flex", alignItems: "baseline", gap: 8 }}>
+            <div style={{ marginTop: 8, display: "flex", alignItems: "baseline", gap: 8 }}>
               <div
                 style={{
                   fontFamily: TITLE_FONT,
-                  fontSize: 52,
-                  lineHeight: "56px",
+                  fontSize: 48,
+                  lineHeight: "50px",
                   color: heroToneStyles.number,
                   fontWeight: 800,
                   letterSpacing: "-1px",
@@ -461,8 +461,8 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               <div
                 style={{
                   fontFamily: INTER_FONT,
-                  fontSize: 15,
-                  lineHeight: "22px",
+                  fontSize: 14,
+                  lineHeight: "19px",
                   color: heroToneStyles.subtitle,
                 }}
               >
@@ -472,32 +472,32 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
 
             <div
               style={{
-                marginTop: 8,
+                marginTop: 6,
                 fontFamily: INTER_FONT,
-                fontSize: 15,
-                lineHeight: "20px",
+                fontSize: 14,
+                lineHeight: "19px",
                 color: heroToneStyles.subtitle,
               }}
             >
               {heroSubtitle}
             </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentA, width: 64 }} />
-              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentB, width: 64 }} />
-              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentC, width: 64 }} />
+            <div style={{ marginTop: 10, display: "flex", gap: 7 }}>
+              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentA, width: 56 }} />
+              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentB, width: 56 }} />
+              <span style={{ height: 6, borderRadius: 999, background: heroToneStyles.accentC, width: 56 }} />
             </div>
           </div>
 
           <div
             style={{
               borderTop: `1px solid ${heroToneStyles.line}`,
-              padding: "12px 10px",
+              padding: "10px 10px",
               textAlign: "center",
               fontFamily: INTER_FONT,
               fontWeight: 700,
-              fontSize: 16,
-              lineHeight: "20px",
+              fontSize: 15,
+              lineHeight: "19px",
               color: heroToneStyles.next,
             }}
           >
@@ -506,17 +506,17 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
         </div>
       </div>
 
-      <div style={{ padding: "14px 16px 116px" }}>
+      <div style={{ padding: "12px 16px 112px" }}>
         {overdueCount > 0 && (
-          <section style={{ marginBottom: 20 }}>
+          <section style={{ marginBottom: 16 }}>
             <SectionTitle label={t("home.overdueRecent", { defaultValue: "Scadute (ultimi 7 giorni)" })} />
             <div
               style={{
                 border: `1px solid ${TOKENS.border}`,
-                borderRadius: 20,
+                borderRadius: 18,
                 background: TOKENS.bgOverdueCard,
                 boxShadow: SHADOW_CARD,
-                padding: 12,
+                padding: 10,
               }}
             >
               <div style={{ display: "grid", gap: 10 }}>
@@ -541,18 +541,18 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
         )}
 
         {todayCount > 0 && (
-          <section style={{ marginBottom: 20 }}>
+          <section style={{ marginBottom: 16 }}>
             <SectionTitle label={t("home.todaySection", { defaultValue: "In scadenza oggi" })} />
             <div
               style={{
                 border: `1px solid ${TOKENS.border}`,
-                borderRadius: 20,
+                borderRadius: 18,
                 background: TOKENS.bgCard,
                 boxShadow: SHADOW_CARD,
-                padding: 12,
+                padding: 10,
               }}
             >
-              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 14, background: TOKENS.bgInner, padding: "0 12px" }}>
+              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 12, background: TOKENS.bgInner, padding: "0 10px" }}>
                 {todaySlice.map((item, idx) => (
                   <div key={item.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${TOKENS.borderSoft}` }}>
                     <FutureRow
@@ -574,18 +574,18 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
         )}
 
         {next7Count > 0 && (
-          <section style={{ marginBottom: 20 }}>
+          <section style={{ marginBottom: 16 }}>
             <SectionTitle label={t("home.next7Section", { defaultValue: "Nei prossimi 7 giorni" })} />
             <div
               style={{
                 border: `1px solid ${TOKENS.border}`,
-                borderRadius: 20,
+                borderRadius: 18,
                 background: TOKENS.bgCard,
                 boxShadow: SHADOW_CARD,
-                padding: 12,
+                padding: 10,
               }}
             >
-              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 14, background: TOKENS.bgInner, padding: "0 12px" }}>
+              <div style={{ border: `1px solid ${TOKENS.borderSoft}`, borderRadius: 12, background: TOKENS.bgInner, padding: "0 10px" }}>
                 {next7Slice.map((item, idx) => (
                   <div key={item.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${TOKENS.borderSoft}` }}>
                     <FutureRow
@@ -612,19 +612,19 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
             <div
               style={{
                 border: `1px solid ${TOKENS.border}`,
-                borderRadius: 20,
+                borderRadius: 18,
                 background: TOKENS.bgCard,
                 boxShadow: SHADOW_CARD,
-                padding: 12,
+                padding: 10,
               }}
             >
               <div
                 style={{
                   border: `1px solid ${TOKENS.borderSoft}`,
-                  borderRadius: 14,
+                  borderRadius: 12,
                   background: TOKENS.bgInner,
                   overflow: "hidden",
-                  padding: "0 12px",
+                  padding: "0 10px",
                 }}
               >
                 {data.incoming.map((item, idx) => (
