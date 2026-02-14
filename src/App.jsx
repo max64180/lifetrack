@@ -523,58 +523,58 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats, activeTab }) {
 
   return (
     <div style={{ padding:"8px 14px 0" }}>
-      <div style={{ background:"rgba(255,255,255,.08)", borderRadius:16, padding:"10px 12px" }}>
+      <div style={{ background:HOME_THEME.bgCard, borderRadius:18, padding:"12px 14px", border:`1px solid ${HOME_THEME.borderLight}`, boxShadow:"0 6px 18px rgba(90, 70, 50, 0.08)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:12 }}>
           <div>
-            <div style={{ fontSize:9, color:"rgba(255,255,255,.45)", fontWeight:800, textTransform:"uppercase", letterSpacing:".6px" }}>
+            <div style={{ fontSize:10, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
               {t("budgetBar.periodSelected", { defaultValue: "Periodo selezionato" })}
             </div>
-            <div style={{ fontSize:28, fontWeight:900, color:"#fff", letterSpacing:"-1px", marginTop:2, fontFamily:"'Sora',sans-serif" }}>
+            <div style={{ fontSize:30, fontWeight:600, color:HOME_THEME.textPrimary, letterSpacing:"-.6px", marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
               {formatCurrency(total)}
-              <span style={{ fontSize:13, fontWeight:800, color:"rgba(255,255,255,.7)", marginLeft:8 }}>
+              <span style={{ fontSize:13, fontWeight:600, color:HOME_THEME.textSecondary, marginLeft:8, fontFamily:"'Inter',sans-serif" }}>
                 · {t("budgetBar.deadlinesCount", { count, defaultValue: `${count} scadenze` })}
               </span>
             </div>
           </div>
           <div style={{ textAlign:"right" }}>
-            <div style={{ fontSize:9, color:"rgba(255,255,255,.35)", fontWeight:800, textTransform:"uppercase", letterSpacing:".6px" }}>
+            <div style={{ fontSize:10, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
               {t("budgetBar.yearTotal", { year: currentYear, defaultValue: `Budget previsto ${currentYear}` })}
             </div>
-            <div style={{ fontSize:17, fontWeight:600, color:"rgba(255,255,255,.75)", marginTop:2 }}>
+            <div style={{ fontSize:22, fontWeight:500, color:HOME_THEME.textPrimary, marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
               {formatCurrency(yearTotal)}
             </div>
-            <div style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,.45)", marginTop:2 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:HOME_THEME.textSecondary, marginTop:2 }}>
               {t("budgetBar.deadlinesCount", { count: yearCount, defaultValue: `${yearCount} scadenze` })}
             </div>
           </div>
         </div>
 
-        <div style={{ height:1, background:"rgba(255,255,255,.08)", margin:"8px 0 10px" }} />
+        <div style={{ height:1, background:HOME_THEME.borderSoft, margin:"10px 0 10px" }} />
 
-        <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"rgba(255,255,255,.08)" }}>
-          <div style={{ width:"100%", background:"#E8855D" }}/>
+        <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"#E7DED6" }}>
+          <div style={{ width:"100%", background:"#C6A14A" }}/>
         </div>
         <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap", minHeight:20, alignItems:"center" }}>
           {urgent > 0 && (
-            <div style={{ background:"rgba(232,133,93,.25)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"#F0E7DF", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>⚡</span>
-              <span style={{ fontSize:10, fontWeight:800, color:"#E8855D" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#A5542A" }}>
                 {t("budgetBar.urgent", { count: urgent, defaultValue: `Urgenti ${urgent}` })}
               </span>
             </div>
           )}
           {mandatoryCount > 0 && (
-            <div style={{ background:"rgba(229,57,53,.12)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"#F6E9E7", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>⚠️</span>
-              <span style={{ fontSize:10, fontWeight:800, color:"#E53935" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#B3473A" }}>
                 {t("budgetBar.mandatory", { count: mandatoryCount, defaultValue: `Inderogabili ${mandatoryCount}` })}
               </span>
             </div>
           )}
           {missingCount > 0 && (
-            <div style={{ background:"rgba(255,248,237,.2)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"#F0E7DF", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>❔</span>
-              <span style={{ fontSize:10, fontWeight:800, color:"#E6C97A" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#8A6D1F" }}>
                 {t("budgetBar.missing", { count: missingCount, defaultValue: `Da stimare ${missingCount}` })}
               </span>
             </div>
@@ -675,10 +675,10 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         onClick={() => onToggle(item.id)}
         style={{
           display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
-          background:"#fff", borderRadius: expanded ? "14px 14px 0 0" : 14,
-          border:`1px solid ${expanded ? cat.color : "#edecea"}`,
+          background:HOME_THEME.bgCard, borderRadius: expanded ? "14px 14px 0 0" : 14,
+          border:`1px solid ${expanded ? cat.color : HOME_THEME.borderLight}`,
           borderBottom: expanded ? "none" : undefined,
-          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:52,
+          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:52, boxShadow:"0 3px 10px rgba(90, 70, 50, 0.06)"
         }}
       >
         <div style={{
@@ -692,7 +692,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         </div>
 
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:14, fontWeight:700, color: item.done ? "#999" : "#2d2b26", textDecoration: item.done ? "line-through" : "none", fontFamily:"'Sora',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:15, fontWeight:600, color: item.done ? "#999" : HOME_THEME.textPrimary, textDecoration: item.done ? "line-through" : "none", fontFamily:"'Playfair Display','Cormorant Garamond',serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
             {statusBadge === "mandatory" && <span style={{ fontSize:13, marginRight:2 }}>⚠️</span>}
             {statusBadge === "essential" && (
               <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block", marginRight:4 }} />
@@ -702,7 +702,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           {(item.asset || rightTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
               {item.asset && (
-                <span style={{ fontSize:11, color:"#8a877f", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
+                <span style={{ fontSize:11, color:HOME_THEME.textMuted, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
                   {item.asset}
                 </span>
               )}
@@ -736,13 +736,13 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               ? <span style={{ fontSize:12, fontWeight:800, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
               : item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>
           )}
-          <span style={{ fontSize:12, color:"#b5b2a8", transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+          <span style={{ fontSize:12, color:HOME_THEME.textMuted, transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
       </div>
 
       {expanded && (
         <div style={{
-          background:"#fff", borderRadius:"0 0 14px 14px",
+          background:HOME_THEME.bgCard, borderRadius:"0 0 14px 14px",
           border:`2px solid ${cat.color}`, borderTop:"none",
           padding:"12px 14px 14px",
           animation:"expandDown .22s ease both",
@@ -750,19 +750,19 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <style>{`@keyframes expandDown{from{opacity:0;max-height:0;padding-top:0;padding-bottom:0}to{opacity:1;max-height:1000px;padding-top:12px;padding-bottom:14px}}`}</style>
 
           <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
-            <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.dueDate")}</div>
-              <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginTop:2 }}>{fmtDate(item.date)}</div>
+            <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
+              <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.dueDate")}</div>
+              <div style={{ fontSize:14, fontWeight:600, color:HOME_THEME.textPrimary, marginTop:2 }}>{fmtDate(item.date)}</div>
             </div>
-            <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.budget")}</div>
+            <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
+              <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.budget")}</div>
               <div style={{ fontSize:14, fontWeight:700, color: item.estimateMissing ? "#8a6d1f" : (item.budget > 0 ? "#4CAF6E" : "#aaa"), marginTop:2 }}>
                 {item.estimateMissing ? t("card.estimateMissing") : (item.budget > 0 ? `€${item.budget}` : "—")}
               </div>
             </div>
-            <div style={{ flex:1, minWidth:80, background:"#faf9f7", borderRadius:10, padding:"8px 10px" }}>
-              <div style={{ fontSize:9, color:"#8a877f", fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.repeats")}</div>
-              <div style={{ fontSize:13, fontWeight:600, color:"#2d2b26", marginTop:2 }}>
+            <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
+              <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.repeats")}</div>
+              <div style={{ fontSize:13, fontWeight:600, color:HOME_THEME.textPrimary, marginTop:2 }}>
                 {recurringSummary}
               </div>
             </div>
@@ -848,8 +848,8 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 
           <div style={{ display:"flex", gap:8, marginBottom:8 }}>
             <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
-              flex:1, padding:"11px", borderRadius:10, border:"2px solid #5B8DD9",
-              background:"#EBF2FC", color:"#5B8DD9", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+              flex:1, padding:"11px", borderRadius:10, border:`1px solid ${HOME_THEME.fab}`,
+              background:"#EEF3F5", color:HOME_THEME.fab, fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>✏️ {t("actions.edit")}</button>
           </div>
 
@@ -902,11 +902,11 @@ function GroupHeader({ group, cats }) {
     <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0 6px", position:"relative" }}>
       <div style={{
         position:"absolute", left:-20, top:18, width:10, height:10, borderRadius:"50%",
-        background:"#E8855D", boxShadow:"0 0 0 3px #f5f4f0"
+        background:"#C6A14A", boxShadow:`0 0 0 3px ${HOME_THEME.bgPrimary}`
       }}/>
       <div style={{ flex:1 }}>
-        <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{group.label}</div>
-        <div style={{ fontSize:11, color:"#8a877f", marginTop:1 }}>
+        <div style={{ fontSize:17, fontWeight:500, color:HOME_THEME.textPrimary, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{group.label}</div>
+        <div style={{ fontSize:12, color:HOME_THEME.textMuted, marginTop:1 }}>
           {activeCount} attiv{activeCount !== 1 ? "e" : "a"}{doneCount > 0 ? ` · ${doneCount} completat${doneCount !== 1 ? "e" : "a"}` : ""}
         </div>
       </div>
@@ -5392,8 +5392,10 @@ export default function App() {
     ? t("nav.overview", { defaultValue: t("nav.documents") })
     : t("nav.pet");
 
+  const isDeadlinesSection = mainSection === "deadlines";
+
   return (
-    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:isHomeSection ? "#ECE9E6" : "#f5f4f0", fontFamily:"'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
+    <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:(isHomeSection || isDeadlinesSection) ? HOME_THEME.bgPrimary : "#f5f4f0", fontFamily:(isHomeSection || isDeadlinesSection) ? "'Inter',sans-serif" : "'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@500;600&family=Sora:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
         *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -5447,19 +5449,19 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:"#1e1c18", borderBottom:"none" }}>
-        <div style={{ background:"#1e1c18", color:"#fff", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:isDeadlinesSection ? HOME_THEME.bgPrimary : "#1e1c18", borderBottom:isDeadlinesSection ? `1px solid ${HOME_THEME.borderSoft}` : "none" }}>
+        <div style={{ background:isDeadlinesSection ? HOME_THEME.bgPrimary : "#1e1c18", color:isDeadlinesSection ? HOME_THEME.textPrimary : "#fff", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:isDeadlinesSection ? "rgba(110,140,153,.12)" : "rgba(232,133,93,.15)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:"-.4px" }}>
+                <h1 style={{ margin:0, fontSize:16, fontWeight:isDeadlinesSection ? 500 : 800, letterSpacing:isDeadlinesSection ? ".1px" : "-.4px", fontFamily:isDeadlinesSection ? "'Playfair Display','Cormorant Garamond',serif" : "'Sora',sans-serif" }}>
                   {mainSectionTitle}
                 </h1>
-                <span style={{ fontSize:9, opacity:.35 }}>{t("app.tagline")}</span>
+                <span style={{ fontSize:9, opacity:isDeadlinesSection ? .55 : .35, color:isDeadlinesSection ? HOME_THEME.textMuted : "inherit" }}>{t("app.tagline")}</span>
               </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isDeadlinesSection ? "#E9E1DA" : "rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:isDeadlinesSection ? `1px solid ${HOME_THEME.borderLight}` : "none" }}>
+                <span style={{ fontSize:16, color:isDeadlinesSection ? HOME_THEME.textPrimary : "rgba(255,255,255,.7)" }}>☰</span>
               </button>
             </div>
           </div>
@@ -5492,7 +5494,7 @@ export default function App() {
           style={{ display:"flex", flexDirection:"column", flex:1 }}
         >
           {/* TAB: Timeline / Scadute / Completate */}
-          <div style={{ display:"flex", gap:0, background:"#fff", borderBottom:"1px solid #edecea", position:"sticky", top:0, zIndex:50 }}>
+          <div style={{ display:"flex", gap:0, background:HOME_THEME.bgPrimary, borderBottom:`1px solid ${HOME_THEME.borderSoft}`, position:"sticky", top:0, zIndex:50 }}>
             {[
               { id:"timeline", labelKey:"tabs.timeline" }, 
               { id:"overdue", labelKey:"tabs.overdue" },
@@ -5503,20 +5505,20 @@ export default function App() {
                 if (tab.id === "overdue") setPeriodOffset(0);
               }} style={{
                 flex:1, padding:"8px 0", border:"none", background:"transparent", cursor:"pointer",
-                fontSize:13, fontWeight: activeTab === tab.id ? 700 : 500,
-                color: activeTab === tab.id ? (tab.id === "overdue" ? "#E53935" : "#2d2b26") : "#8a877f",
-                borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#E53935" : "#2d2b26"}` : "2.5px solid transparent",
+                fontSize:13, fontWeight: activeTab === tab.id ? 600 : 500,
+                color: activeTab === tab.id ? (tab.id === "overdue" ? "#B3473A" : HOME_THEME.textPrimary) : HOME_THEME.textMuted,
+                borderBottom: activeTab === tab.id ? `2.5px solid ${tab.id === "overdue" ? "#B3473A" : HOME_THEME.textPrimary}` : "2.5px solid transparent",
                 transition:"all .2s", minHeight:40,
               }}>{t(tab.labelKey)}</button>
             ))}
           </div>
 
           {/* Period navigator (above list) */}
-          <div style={{ padding:"6px 14px 4px", background:"#f5f4f0" }}>
+          <div style={{ padding:"6px 14px 4px", background:HOME_THEME.bgPrimary }}>
             <div style={{
-              background:"#fff", borderRadius:16, border:"1px solid #edecea",
+              background:HOME_THEME.bgCard, borderRadius:16, border:`1px solid ${HOME_THEME.borderLight}`,
               padding:"8px 10px", display:"flex", flexDirection:"column", gap:6,
-              boxShadow:"0 3px 10px rgba(0,0,0,.05)"
+              boxShadow:"0 6px 18px rgba(90, 70, 50, 0.08)"
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button
@@ -5533,9 +5535,9 @@ export default function App() {
                   }}
                   disabled={(isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth)}
                   style={{
-                    width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
+                    width:32, height:32, borderRadius:"50%", border:`1px solid ${HOME_THEME.borderLight}`,
                     cursor: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? "not-allowed" : "pointer",
-                    background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
+                    background:"#FFFDFB", color:HOME_THEME.textPrimary, fontSize:16, fontWeight:700,
                     opacity: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? 0.35 : 1
                   }}
                 >‹</button>
@@ -5544,24 +5546,24 @@ export default function App() {
                     onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
                     style={{
                       background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "mese" ? 800 : 600,
-                      color: range === "mese" ? "#2d2b26" : "#b2afa7",
-                      padding:"2px 4px", borderBottom: range === "mese" ? "2px solid #2d2b26" : "2px solid transparent",
+                      fontSize:10, fontWeight: range === "mese" ? 700 : 600,
+                      color: range === "mese" ? HOME_THEME.textPrimary : HOME_THEME.textMuted,
+                      padding:"2px 4px", borderBottom: range === "mese" ? `2px solid ${HOME_THEME.textPrimary}` : "2px solid transparent",
                       letterSpacing:".2px", textTransform:"uppercase"
                     }}
                   >
                     {t("range.month", { defaultValue:"Mese" })}
                   </button>
                   <div style={{ flex:1, textAlign:"center" }}>
-                    <div style={{ fontSize:16, fontWeight:800, color:"#2d2b26", letterSpacing:"-.2px" }}>{periodLabel}</div>
+                    <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textPrimary, letterSpacing:"-.1px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{periodLabel}</div>
                   </div>
                   <button
                     onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
                     style={{
                       background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "anno" ? 800 : 600,
-                      color: range === "anno" ? "#2d2b26" : "#b2afa7",
-                      padding:"2px 4px", borderBottom: range === "anno" ? "2px solid #2d2b26" : "2px solid transparent",
+                      fontSize:10, fontWeight: range === "anno" ? 700 : 600,
+                      color: range === "anno" ? HOME_THEME.textPrimary : HOME_THEME.textMuted,
+                      padding:"2px 4px", borderBottom: range === "anno" ? `2px solid ${HOME_THEME.textPrimary}` : "2px solid transparent",
                       letterSpacing:".2px", textTransform:"uppercase"
                     }}
                   >
@@ -5582,9 +5584,9 @@ export default function App() {
                   }}
                   disabled={(isYearCompact && !canNextYear) || (isMonthView && !canNextMonth)}
                   style={{
-                    width:32, height:32, borderRadius:"50%", border:"1px solid #e8e6e0",
+                    width:32, height:32, borderRadius:"50%", border:`1px solid ${HOME_THEME.borderLight}`,
                     cursor: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? "not-allowed" : "pointer",
-                    background:"#faf9f7", color:"#2d2b26", fontSize:16, fontWeight:800,
+                    background:"#FFFDFB", color:HOME_THEME.textPrimary, fontSize:16, fontWeight:700,
                     opacity: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? 0.35 : 1
                   }}
                 >›</button>
@@ -5595,7 +5597,7 @@ export default function App() {
           {/* LISTA */}
           <div
             ref={listRef}
-            style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90 }}
+            style={{ flex:1, overflowY:"auto", padding:"0 18px", paddingBottom:90, background:HOME_THEME.bgPrimary }}
           >
             <div
               style={{
