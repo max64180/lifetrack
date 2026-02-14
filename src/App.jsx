@@ -5709,7 +5709,7 @@ export default function App() {
                       ))}
                       {oneOffItems.length > yearDetailLimit && !showAllOneOff && (
                         <button onClick={() => setShowAllOneOff(true)} style={{
-                          background:"transparent", border:"none", cursor:"pointer", color:"#6b6961",
+                          background:"transparent", border:"none", cursor:"pointer", color:HOME_THEME.textSecondary,
                           fontSize:12, fontWeight:700, padding:"6px 0"
                         }}>
                           {t("year.showMore", { defaultValue:`Mostra altre ${oneOffItems.length - yearDetailLimit}` })}
@@ -5728,38 +5728,38 @@ export default function App() {
                   ) : (
                     <>
                       {recurringAuto.length > 0 && recurringManual.length > 0 && (
-                        <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", letterSpacing:".4px", marginBottom:6 }}>
+                        <div style={{ fontSize:12, fontWeight:500, color:HOME_THEME.textMuted, textTransform:"uppercase", letterSpacing:".5px", marginBottom:6, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                           {t("year.recurringManual", { defaultValue:"Da pagare" })}
                         </div>
                       )}
                       {recurringManual.map(item => (
                         <div key={item.id} style={{
-                          background:"#fff", borderRadius:16, border:"1px solid #edecea",
-                          padding:"12px 14px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,.03)"
+                          background:HOME_THEME.bgCard, borderRadius:16, border:`1px solid ${HOME_THEME.borderLight}`,
+                          padding:"12px 14px", marginBottom:10, boxShadow:"0 4px 12px rgba(90, 70, 50, 0.07)"
                         }}>
                           <div style={{ display:"flex", justifyContent:"space-between", gap:12 }}>
                             <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                              <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textPrimary, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                                 {item.title}
                               </div>
-                              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                              <div style={{ fontSize:12, color:HOME_THEME.textMuted, marginTop:2 }}>
                                 {item.frequency} · {t("year.occurrences", { count: item.count, defaultValue: `${item.count} occ.` })}
                               </div>
                               {item.nextDate && (
-                                <div style={{ fontSize:11, color:"#b2afa7", marginTop:2 }}>
+                                <div style={{ fontSize:11, color:HOME_THEME.textMuted, marginTop:2 }}>
                                   {t("year.next", { defaultValue:"Prossima" })}: {fmtDate(item.nextDate)}
                                 </div>
                               )}
                             </div>
                             <div style={{ textAlign:"right" }}>
-                              <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26" }}>
+                              <div style={{ fontSize:18, fontWeight:500, color:HOME_THEME.textPrimary, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                                 {formatCurrency(item.knownTotal)}
                               </div>
-                              <div style={{ fontSize:10, color:"#b2afa7", textTransform:"uppercase", letterSpacing:".4px" }}>
+                              <div style={{ fontSize:10, color:HOME_THEME.textMuted, textTransform:"uppercase", letterSpacing:".4px" }}>
                                 {t("year.perYear", { defaultValue:"anno" })}
                               </div>
                               {item.missingCount > 0 && (
-                                <div style={{ fontSize:10, color:"#d08b6a", marginTop:2 }}>
+                                <div style={{ fontSize:10, color:"#A5542A", marginTop:2 }}>
                                   {t("year.missing", { count: item.missingCount, defaultValue: "stima mancante" })}
                                 </div>
                               )}
@@ -5769,38 +5769,38 @@ export default function App() {
                       ))}
 
                       {recurringAuto.length > 0 && recurringManual.length > 0 && (
-                        <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", letterSpacing:".4px", margin:"6px 0" }}>
+                        <div style={{ fontSize:12, fontWeight:500, color:HOME_THEME.textMuted, textTransform:"uppercase", letterSpacing:".5px", margin:"6px 0", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                           {t("year.recurringAuto", { defaultValue:"Automatiche" })}
                         </div>
                       )}
                       {recurringAuto.map(item => (
                         <div key={item.id} style={{
-                          background:"#fff", borderRadius:16, border:"1px solid #edecea",
-                          padding:"12px 14px", marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,.03)"
+                          background:HOME_THEME.bgCard, borderRadius:16, border:`1px solid ${HOME_THEME.borderLight}`,
+                          padding:"12px 14px", marginBottom:10, boxShadow:"0 4px 12px rgba(90, 70, 50, 0.07)"
                         }}>
                           <div style={{ display:"flex", justifyContent:"space-between", gap:12 }}>
                             <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontSize:14, fontWeight:800, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                              <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textPrimary, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                                 {item.title}
                               </div>
-                              <div style={{ fontSize:11, color:"#8a877f", marginTop:2 }}>
+                              <div style={{ fontSize:12, color:HOME_THEME.textMuted, marginTop:2 }}>
                                 {item.frequency} · {t("year.occurrences", { count: item.count, defaultValue: `${item.count} occ.` })}
                               </div>
                               {item.nextDate && (
-                                <div style={{ fontSize:11, color:"#b2afa7", marginTop:2 }}>
+                                <div style={{ fontSize:11, color:HOME_THEME.textMuted, marginTop:2 }}>
                                   {t("year.next", { defaultValue:"Prossima" })}: {fmtDate(item.nextDate)}
                                 </div>
                               )}
                             </div>
                             <div style={{ textAlign:"right" }}>
-                              <div style={{ fontSize:15, fontWeight:800, color:"#2d2b26" }}>
+                              <div style={{ fontSize:18, fontWeight:500, color:HOME_THEME.textPrimary, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                                 {formatCurrency(item.knownTotal)}
                               </div>
-                              <div style={{ fontSize:10, color:"#b2afa7", textTransform:"uppercase", letterSpacing:".4px" }}>
+                              <div style={{ fontSize:10, color:HOME_THEME.textMuted, textTransform:"uppercase", letterSpacing:".4px" }}>
                                 {t("year.perYear", { defaultValue:"anno" })}
                               </div>
                               {item.missingCount > 0 && (
-                                <div style={{ fontSize:10, color:"#d08b6a", marginTop:2 }}>
+                                <div style={{ fontSize:10, color:"#A5542A", marginTop:2 }}>
                                   {t("year.missing", { count: item.missingCount, defaultValue: "stima mancante" })}
                                 </div>
                               )}
@@ -5813,9 +5813,9 @@ export default function App() {
                 </div>
               )
             ) : groups.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"60px 20px", color:"#b5b2a8" }}>
+              <div style={{ textAlign:"center", padding:"60px 20px", color:HOME_THEME.textMuted }}>
                 <div style={{ fontSize:36, marginBottom:10 }}>{activeTab === "done" ? "🎉" : "📅"}</div>
-                <div style={{ fontSize:15, fontWeight:600, color:"#8a877f" }}>
+                <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textSecondary, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                   {activeTab === "done" ? t("empty.doneTitle") : t("empty.timelineTitle")}
                 </div>
                 <div style={{ fontSize:13, marginTop:4 }}>
