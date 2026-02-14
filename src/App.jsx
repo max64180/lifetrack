@@ -670,29 +670,29 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
   const statusBadge = item.mandatory ? "mandatory" : (item.essential ? "essential" : "");
 
   return (
-    <div style={{ marginBottom:8 }}>
+    <div style={{ marginBottom:10 }}>
       <div
         onClick={() => onToggle(item.id)}
         style={{
-          display:"flex", alignItems:"center", gap:8, padding:"8px 10px",
+          display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
           background:HOME_THEME.bgCard, borderRadius: expanded ? "14px 14px 0 0" : 14,
           border:`1px solid ${expanded ? cat.color : HOME_THEME.borderLight}`,
           borderBottom: expanded ? "none" : undefined,
-          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:52, boxShadow:"0 3px 10px rgba(90, 70, 50, 0.06)"
+          cursor:"pointer", transition:"border-color .2s", WebkitTapHighlightColor:"transparent", minHeight:56, boxShadow:"0 4px 12px rgba(90, 70, 50, 0.07)"
         }}
       >
         <div style={{
-          width:26, height:26, borderRadius:8, flexShrink:0,
+          width:30, height:30, borderRadius:10, flexShrink:0,
           background: item.done ? "#f0efe8" : cat.light,
           display:"flex", alignItems:"center", justifyContent:"center",
-          fontSize:14,
+          fontSize:15,
           border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "33"}`,
         }}>
           {item.done ? "✓" : cat.icon}
         </div>
 
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:15, fontWeight:600, color: item.done ? "#999" : HOME_THEME.textPrimary, textDecoration: item.done ? "line-through" : "none", fontFamily:"'Playfair Display','Cormorant Garamond',serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:17, fontWeight:500, color: item.done ? "#999" : HOME_THEME.textPrimary, textDecoration: item.done ? "line-through" : "none", fontFamily:"'Playfair Display','Cormorant Garamond',serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", lineHeight:"22px" }}>
             {statusBadge === "mandatory" && <span style={{ fontSize:13, marginRight:2 }}>⚠️</span>}
             {statusBadge === "essential" && (
               <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block", marginRight:4 }} />
@@ -702,7 +702,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           {(item.asset || rightTags.length > 0) && (
             <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:2, minWidth:0 }}>
               {item.asset && (
-                <span style={{ fontSize:11, color:HOME_THEME.textMuted, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
+                <span style={{ fontSize:12, color:HOME_THEME.textMuted, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:"1 1 auto" }}>
                   {item.asset}
                 </span>
               )}
@@ -733,8 +733,8 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             <span style={{ fontSize:11, fontWeight:700, color:"#8a6d1f" }}>{t("card.estimateMissing")}</span>
           ) : (
             item.skipped
-              ? <span style={{ fontSize:12, fontWeight:800, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
-              : item.budget > 0 && <span style={{ fontSize:12, fontWeight:800, color:cat.color }}>{formatCurrency(item.budget)}</span>
+              ? <span style={{ fontSize:13, fontWeight:700, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
+              : item.budget > 0 && <span style={{ fontSize:15, fontWeight:500, color:cat.color, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{formatCurrency(item.budget)}</span>
           )}
           <span style={{ fontSize:12, color:HOME_THEME.textMuted, transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
         </div>
@@ -744,7 +744,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         <div style={{
           background:HOME_THEME.bgCard, borderRadius:"0 0 14px 14px",
           border:`2px solid ${cat.color}`, borderTop:"none",
-          padding:"12px 14px 14px",
+          padding:"12px 14px 16px",
           animation:"expandDown .22s ease both",
         }}>
           <style>{`@keyframes expandDown{from{opacity:0;max-height:0;padding-top:0;padding-bottom:0}to{opacity:1;max-height:1000px;padding-top:12px;padding-bottom:14px}}`}</style>
@@ -752,7 +752,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
             <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
               <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.dueDate")}</div>
-              <div style={{ fontSize:14, fontWeight:600, color:HOME_THEME.textPrimary, marginTop:2 }}>{fmtDate(item.date)}</div>
+              <div style={{ fontSize:15, fontWeight:500, color:HOME_THEME.textPrimary, marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{fmtDate(item.date)}</div>
             </div>
             <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
               <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.budget")}</div>
@@ -762,7 +762,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             </div>
             <div style={{ flex:1, minWidth:80, background:"#FFFDFB", borderRadius:10, padding:"8px 10px", border:`1px solid ${HOME_THEME.borderSoft}` }}>
               <div style={{ fontSize:9, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".4px" }}>{t("card.repeats")}</div>
-              <div style={{ fontSize:13, fontWeight:600, color:HOME_THEME.textPrimary, marginTop:2 }}>
+              <div style={{ fontSize:13, fontWeight:500, color:HOME_THEME.textPrimary, marginTop:2 }}>
                 {recurringSummary}
               </div>
             </div>
@@ -848,7 +848,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 
           <div style={{ display:"flex", gap:8, marginBottom:8 }}>
             <button onClick={(e) => { e.stopPropagation(); onEdit(item); }} style={{
-              flex:1, padding:"11px", borderRadius:10, border:`1px solid ${HOME_THEME.fab}`,
+              flex:1, padding:"11px", borderRadius:12, border:`1px solid ${HOME_THEME.fab}`,
               background:"#EEF3F5", color:HOME_THEME.fab, fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>✏️ {t("actions.edit")}</button>
           </div>
@@ -857,28 +857,28 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
             {/* Se è scaduta, offri "Posticipa" */}
             {days < 0 && !item.done && (
               <button onClick={(e) => { e.stopPropagation(); onPostpone(item.id); }} style={{
-                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
-                background:"#FB8C00", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:12, border:`1px solid ${HOME_THEME.borderLight}`,
+                background:"#E9E1DA", color:"#5C5148", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
               }}>↻ {t("actions.postpone")}</button>
             )}
 
             {item.recurring && item.recurring.enabled && !item.done && (
               <button onClick={(e) => { e.stopPropagation(); onSkip(item.id); }} style={{
-                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
-                background:"#edecea", color:"#6b6961", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+                flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:12, border:"none",
+                background:"#E9E1DA", color:"#6b6961", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
               }}>⏭ {t("actions.skip")}</button>
             )}
             
             <button onClick={(e) => { e.stopPropagation(); onComplete(item.id); }} style={{
-              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
+              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:12, border:"none",
               background: item.done ? "#edecea" : cat.color,
               color: item.done ? "#6b6961" : "#fff",
               fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>{item.done ? `↩ ${t("actions.reactivate")}` : `✓ ${t("actions.complete")}`}</button>
             
             <button onClick={(e) => { e.stopPropagation(); onDelete(item.id); }} style={{
-              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:10, border:"none",
-              background:"#FFF0EC", color:"#E53935", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
+              flex:"1 1 48%", minWidth:0, padding:"11px", borderRadius:12, border:"none",
+              background:"#F6E9E7", color:"#B3473A", fontSize:14, fontWeight:700, cursor:"pointer", minHeight:44,
             }}>{t("actions.delete")}</button>
           </div>
         </div>
@@ -5642,7 +5642,7 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ paddingTop:8 }}>
-                  <div style={{ marginBottom:10, color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                  <div style={{ marginBottom:10, color:HOME_THEME.textMuted, fontSize:13, fontWeight:500, textTransform:"uppercase", letterSpacing:".7px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                     {t("year.mandatoryTitle", { defaultValue:"Inderogabili" })}
                   </div>
                   {mandatoryItems.length === 0 ? (
@@ -5680,7 +5680,7 @@ export default function App() {
                     </>
                   )}
 
-                  <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                  <div style={{ margin:"18px 0 10px", color:HOME_THEME.textMuted, fontSize:13, fontWeight:500, textTransform:"uppercase", letterSpacing:".7px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                     {t("year.oneOffTitle", { defaultValue:"Una‑tantum" })}
                   </div>
                   {oneOffItems.length === 0 ? (
@@ -5718,7 +5718,7 @@ export default function App() {
                     </>
                   )}
 
-                  <div style={{ margin:"18px 0 10px", color:"#8a877f", fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+                  <div style={{ margin:"18px 0 10px", color:HOME_THEME.textMuted, fontSize:13, fontWeight:500, textTransform:"uppercase", letterSpacing:".7px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
                     {t("year.recurringTitle", { defaultValue:"Ricorrenti" })}
                   </div>
                   {recurringSummary.length === 0 ? (
