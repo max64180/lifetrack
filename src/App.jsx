@@ -5495,7 +5495,7 @@ export default function App() {
           style={{ display:"flex", flexDirection:"column", flex:1 }}
         >
           {/* TAB: Timeline / Scadute / Completate */}
-          <div style={{ display:"flex", gap:0, background:HOME_THEME.bgPrimary, borderBottom:`1px solid ${HOME_THEME.borderSoft}`, position:"sticky", top:0, zIndex:50 }}>
+          <div style={{ display:"flex", gap:0, background:HOME_THEME.bgPrimary, borderBottom:`1px solid ${HOME_THEME.borderSoft}`, position:"sticky", top:0, zIndex:50, marginTop:8 }}>
             {[
               { id:"timeline", labelKey:"tabs.timeline" }, 
               { id:"overdue", labelKey:"tabs.overdue" },
