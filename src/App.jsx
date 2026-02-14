@@ -5393,6 +5393,7 @@ export default function App() {
     : t("nav.pet");
 
   const isDeadlinesSection = mainSection === "deadlines";
+  const warmTopGradient = "linear-gradient(180deg, #151411 0%, #1B1712 100%)";
 
   return (
     <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:(isHomeSection || isDeadlinesSection) ? HOME_THEME.bgPrimary : "#f5f4f0", fontFamily:(isHomeSection || isDeadlinesSection) ? "'Inter',sans-serif" : "'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
@@ -5449,19 +5450,19 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isDeadlinesSection ? HOME_THEME.bgPrimary : "#1e1c18", borderBottom:isDeadlinesSection ? `1px solid ${HOME_THEME.borderSoft}` : "none" }}>
-        <div style={{ background:isDeadlinesSection ? HOME_THEME.bgPrimary : "#1e1c18", color:isDeadlinesSection ? HOME_THEME.textPrimary : "#fff", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:isDeadlinesSection ? "rgba(110,140,153,.12)" : "rgba(232,133,93,.15)" }}/>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:isDeadlinesSection ? warmTopGradient : "#1e1c18", borderBottom:"none" }}>
+        <div style={{ background:isDeadlinesSection ? warmTopGradient : "#1e1c18", color:"#F6EFE8", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:16, fontWeight:isDeadlinesSection ? 500 : 800, letterSpacing:isDeadlinesSection ? ".1px" : "-.4px", fontFamily:isDeadlinesSection ? "'Playfair Display','Cormorant Garamond',serif" : "'Sora',sans-serif" }}>
+                <h1 style={{ margin:0, fontSize:16, fontWeight:isDeadlinesSection ? 500 : 800, letterSpacing:isDeadlinesSection ? ".1px" : "-.4px", fontFamily:isDeadlinesSection ? "'Playfair Display','Cormorant Garamond',serif" : "'Sora',sans-serif", color:"#F6EFE8" }}>
                   {mainSectionTitle}
                 </h1>
-                <span style={{ fontSize:9, opacity:isDeadlinesSection ? .55 : .35, color:isDeadlinesSection ? HOME_THEME.textMuted : "inherit" }}>{t("app.tagline")}</span>
+                <span style={{ fontSize:9, opacity:isDeadlinesSection ? .45 : .35, color:"#D5C8BB" }}>{t("app.tagline")}</span>
               </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isDeadlinesSection ? "#E9E1DA" : "rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:isDeadlinesSection ? `1px solid ${HOME_THEME.borderLight}` : "none" }}>
-                <span style={{ fontSize:16, color:isDeadlinesSection ? HOME_THEME.textPrimary : "rgba(255,255,255,.7)" }}>☰</span>
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
+                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
               </button>
             </div>
           </div>
@@ -5469,7 +5470,7 @@ export default function App() {
 
         {/* Budget bar only in deadlines */}
         {mainSection === "deadlines" && (
-          <div style={{ background:"#1e1c18" }}>
+          <div style={{ background:warmTopGradient }}>
             <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats} activeTab={activeTab}/>
           </div>
         )}
