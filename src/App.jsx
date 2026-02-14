@@ -523,58 +523,58 @@ function BudgetBar({ deadlines, periodStart, periodEnd, cats, activeTab }) {
 
   return (
     <div style={{ padding:"8px 14px 0" }}>
-      <div style={{ background:HOME_THEME.bgCard, borderRadius:18, padding:"12px 14px", border:`1px solid ${HOME_THEME.borderLight}`, boxShadow:"0 6px 18px rgba(90, 70, 50, 0.08)" }}>
+      <div style={{ background:"linear-gradient(180deg, #4A3A2F 0%, #403229 100%)", borderRadius:22, padding:"12px 14px", border:"1px solid #5A493D", boxShadow:"0 10px 24px rgba(66, 48, 34, 0.20)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:12 }}>
           <div>
-            <div style={{ fontSize:10, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+            <div style={{ fontSize:10, color:"#D5C8BB", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
               {t("budgetBar.periodSelected", { defaultValue: "Periodo selezionato" })}
             </div>
-            <div style={{ fontSize:30, fontWeight:600, color:HOME_THEME.textPrimary, letterSpacing:"-.6px", marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
+            <div style={{ fontSize:30, fontWeight:600, color:"#F6EFE8", letterSpacing:"-.6px", marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
               {formatCurrency(total)}
-              <span style={{ fontSize:13, fontWeight:600, color:HOME_THEME.textSecondary, marginLeft:8, fontFamily:"'Inter',sans-serif" }}>
+              <span style={{ fontSize:13, fontWeight:600, color:"#D5C8BB", marginLeft:8, fontFamily:"'Inter',sans-serif" }}>
                 · {t("budgetBar.deadlinesCount", { count, defaultValue: `${count} scadenze` })}
               </span>
             </div>
           </div>
           <div style={{ textAlign:"right" }}>
-            <div style={{ fontSize:10, color:HOME_THEME.textMuted, fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
+            <div style={{ fontSize:10, color:"#D5C8BB", fontWeight:700, textTransform:"uppercase", letterSpacing:".6px" }}>
               {t("budgetBar.yearTotal", { year: currentYear, defaultValue: `Budget previsto ${currentYear}` })}
             </div>
-            <div style={{ fontSize:22, fontWeight:500, color:HOME_THEME.textPrimary, marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
+            <div style={{ fontSize:22, fontWeight:500, color:"#F6EFE8", marginTop:2, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
               {formatCurrency(yearTotal)}
             </div>
-            <div style={{ fontSize:12, fontWeight:600, color:HOME_THEME.textSecondary, marginTop:2 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:"#D5C8BB", marginTop:2 }}>
               {t("budgetBar.deadlinesCount", { count: yearCount, defaultValue: `${yearCount} scadenze` })}
             </div>
           </div>
         </div>
 
-        <div style={{ height:1, background:HOME_THEME.borderSoft, margin:"10px 0 10px" }} />
+        <div style={{ height:1, background:"#5A493D", margin:"10px 0 10px" }} />
 
-        <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"#E7DED6" }}>
+        <div style={{ display:"flex", height:4, borderRadius:3, overflow:"hidden", background:"#5A493D" }}>
           <div style={{ width:"100%", background:"#C6A14A" }}/>
         </div>
         <div style={{ display:"flex", gap:6, marginTop:6, flexWrap:"wrap", minHeight:20, alignItems:"center" }}>
           {urgent > 0 && (
-            <div style={{ background:"#F0E7DF", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"rgba(198,161,74,.20)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>⚡</span>
-              <span style={{ fontSize:10, fontWeight:700, color:"#A5542A" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#E4C06B" }}>
                 {t("budgetBar.urgent", { count: urgent, defaultValue: `Urgenti ${urgent}` })}
               </span>
             </div>
           )}
           {mandatoryCount > 0 && (
-            <div style={{ background:"#F6E9E7", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"rgba(179,71,58,.20)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>⚠️</span>
-              <span style={{ fontSize:10, fontWeight:700, color:"#B3473A" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#F2CEC6" }}>
                 {t("budgetBar.mandatory", { count: mandatoryCount, defaultValue: `Inderogabili ${mandatoryCount}` })}
               </span>
             </div>
           )}
           {missingCount > 0 && (
-            <div style={{ background:"#F0E7DF", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
+            <div style={{ background:"rgba(228,184,141,.20)", borderRadius:999, padding:"3px 6px", display:"flex", alignItems:"center", gap:4 }}>
               <span style={{ fontSize:10 }}>❔</span>
-              <span style={{ fontSize:10, fontWeight:700, color:"#8A6D1F" }}>
+              <span style={{ fontSize:10, fontWeight:700, color:"#F3DEC2" }}>
                 {t("budgetBar.missing", { count: missingCount, defaultValue: `Da stimare ${missingCount}` })}
               </span>
             </div>
