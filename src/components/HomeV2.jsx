@@ -6,8 +6,8 @@ const TITLE_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 const DISPLAY_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 
 const TOKENS = {
-  bgRoot: "#F2EAE3",
-  bgRootWarm: "#F4ECE5",
+  bgRoot: "#E6DBCF",
+  bgRootWarm: "#DCCFC1",
   topBg: "#3A2D24",
   topBg2: "#30251E",
   heroBg: "#4A3A2F",
@@ -419,7 +419,12 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
     <div style={{
       flex: 1,
       overflowY: "auto",
-      background: `linear-gradient(180deg, ${TOKENS.topBg2} 0px, ${TOKENS.topBg} 110px, ${TOKENS.bgRootWarm} 210px, ${TOKENS.bgRoot} 100%)`
+      backgroundColor: TOKENS.bgRoot,
+      backgroundImage: `
+        radial-gradient(120% 90% at 50% -10%, rgba(42,31,24,0.55) 0%, rgba(42,31,24,0) 46%),
+        radial-gradient(70% 40% at 20% 25%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%),
+        radial-gradient(80% 45% at 85% 30%, rgba(120,95,74,0.09) 0%, rgba(120,95,74,0) 72%),
+        linear-gradient(180deg, ${TOKENS.bgRootWarm} 0%, ${TOKENS.bgRoot} 100%)`
     }}>
       <div
         style={{
@@ -515,7 +520,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
         padding: "18px 16px 112px",
         borderTopLeftRadius: 22,
         borderTopRightRadius: 22,
-        background: TOKENS.bgRoot,
+        background: "rgba(230,219,207,0.92)",
       }}>
         {overdueCount > 0 && (
           <section style={{ marginBottom: 16 }}>
