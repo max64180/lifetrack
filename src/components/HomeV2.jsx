@@ -134,25 +134,33 @@ function Amount({ item, formatNumber, t }) {
 
 function ActionButton({ label, primary, onClick, overdueTone = false }) {
   const isPrimary = !!primary;
-  const bg = isPrimary ? (overdueTone ? TOKENS.btnOverdueBg : TOKENS.btnPrimaryBg) : TOKENS.btnSecondaryBg;
-  const border = isPrimary ? bg : TOKENS.border;
-  const color = isPrimary ? TOKENS.btnPrimaryText : TOKENS.btnSecondaryText;
+  const bg = isPrimary
+    ? (overdueTone ? "rgba(179,71,58,0.14)" : "rgba(110,140,153,0.16)")
+    : "rgba(255,255,255,0.52)";
+  const border = isPrimary
+    ? (overdueTone ? "#C88E84" : "#95AFBB")
+    : "#CFC6BE";
+  const color = isPrimary
+    ? (overdueTone ? "#8B3E34" : "#4F6B76")
+    : TOKENS.btnSecondaryText;
 
   return (
     <button
       onClick={onClick}
       style={{
         border: `1px solid ${border}`,
-        borderRadius: 14,
+        borderRadius: 12,
         background: bg,
         color,
-        minWidth: isPrimary ? 96 : 88,
-        padding: "7px 11px",
+        minWidth: isPrimary ? 92 : 84,
+        padding: "6px 12px",
         fontFamily: INTER_FONT,
-        fontSize: 15,
-        lineHeight: "20px",
+        fontSize: 14,
+        lineHeight: "19px",
         fontWeight: 500,
+        letterSpacing: "0.1px",
         cursor: "pointer",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.45) inset",
       }}
     >
       {label}
