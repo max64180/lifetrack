@@ -7,6 +7,7 @@ const DISPLAY_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 
 const TOKENS = {
   bgRoot: "#F2EAE3",
+  bgRootWarm: "#F4ECE5",
   topBg: "#3A2D24",
   topBg2: "#30251E",
   heroBg: "#4A3A2F",
@@ -165,7 +166,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
       style={{
         border: `1px solid ${TOKENS.borderSoft}`,
         borderRadius: 14,
-        background: TOKENS.bgCard,
+        background: TOKENS.bgInner,
         padding: 10,
         display: "grid",
         gridTemplateColumns: "1fr auto",
@@ -415,11 +416,14 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
   const overdueSlice = showAllOverdue ? data.overdue : data.overdue.slice(0, 3);
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: TOKENS.bgRoot }}>
+    <div style={{
+      flex: 1,
+      overflowY: "auto",
+      background: `linear-gradient(180deg, ${TOKENS.topBg2} 0px, ${TOKENS.topBg} 110px, ${TOKENS.bgRootWarm} 210px, ${TOKENS.bgRoot} 100%)`
+    }}>
       <div
         style={{
-          background: `linear-gradient(180deg, ${TOKENS.topBg2} 0%, ${TOKENS.topBg} 100%)`,
-          padding: "6px 16px 14px",
+          padding: "6px 16px 18px",
         }}
       >
         <div
@@ -506,7 +510,13 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px 112px" }}>
+      <div style={{
+        marginTop: -6,
+        padding: "18px 16px 112px",
+        borderTopLeftRadius: 22,
+        borderTopRightRadius: 22,
+        background: TOKENS.bgRoot,
+      }}>
         {overdueCount > 0 && (
           <section style={{ marginBottom: 16 }}>
             <SectionTitle label={t("home.overdueRecent", { defaultValue: "Scadute (ultimi 7 giorni)" })} />
@@ -514,7 +524,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               style={{
                 border: `1px solid ${TOKENS.border}`,
                 borderRadius: 18,
-                background: TOKENS.bgOverdueCard,
+                background: "rgba(246, 233, 231, 0.52)",
                 boxShadow: SHADOW_CARD,
                 padding: 10,
               }}
@@ -547,7 +557,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               style={{
                 border: `1px solid ${TOKENS.border}`,
                 borderRadius: 18,
-                background: TOKENS.bgCard,
+                background: TOKENS.bgInner,
                 boxShadow: SHADOW_CARD,
                 padding: 10,
               }}
@@ -580,7 +590,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               style={{
                 border: `1px solid ${TOKENS.border}`,
                 borderRadius: 18,
-                background: TOKENS.bgCard,
+                background: TOKENS.bgInner,
                 boxShadow: SHADOW_CARD,
                 padding: 10,
               }}
@@ -613,7 +623,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
               style={{
                 border: `1px solid ${TOKENS.border}`,
                 borderRadius: 18,
-                background: TOKENS.bgCard,
+                background: TOKENS.bgInner,
                 boxShadow: SHADOW_CARD,
                 padding: 10,
               }}
