@@ -98,11 +98,16 @@ const HOME_THEME = {
   bgPrimary: "#F2EAE3",
   bgCard: "#F7F0EA",
   textPrimary: "#3F342C",
+  textSecondary: "#6F6258",
   textMuted: "#9A8F86",
   borderLight: "#DDD3CA",
   borderSoft: "#E7DED6",
   fab: "#6E8C99",
   shadowFab: "0 8px 22px rgba(90, 70, 50, 0.18)",
+  statusOverdue: "#B3473A",
+  statusToday: "#6E8C99",
+  statusUpcoming: "#C6A14A",
+  statusNeutral: "#CFC6BE",
 };
 
 function OutlineIcon({ path, size = 22, color = "#3F342C", strokeWidth = 1.5, viewBox = "0 0 24 24" }) {
@@ -210,6 +215,24 @@ function groupItems(items, range) {
     map[g.key].items.push(item);
   });
   return Object.values(map).sort((a, b) => a.order - b.order);
+}
+
+function dayStart(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getGroupStatusColor(group, activeTab) {
+  if (activeTab === "done") return HOME_THEME.statusNeutral;
+  if (activeTab === "overdue") return HOME_THEME.statusOverdue;
+  const firstDate = group?.items?.[0]?.date;
+  if (!(firstDate instanceof Date) || Number.isNaN(firstDate.getTime())) return HOME_THEME.statusNeutral;
+  const cmp = dayStart(firstDate).getTime();
+  const today = TODAY.getTime();
+  if (cmp < today) return HOME_THEME.statusOverdue;
+  if (cmp === today) return HOME_THEME.statusToday;
+  return HOME_THEME.statusUpcoming;
 }
 
 /* ── PERIOD RANGE ───────────────────────────────────────── */
@@ -667,7 +690,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
     item.autoPay ? { icon:"↺", label:"Auto", bg:"#EBF2FC", color:"#5B8DD9", key:"auto" } : null,
     item.recurring?.enabled ? { icon:"🔁", label:"Ric", bg:"#EBF2FC", color:"#5B8DD9", key:"ric" } : null,
   ].filter(Boolean);
-  const statusBadge = item.mandatory ? "mandatory" : (item.essential ? "essential" : "");
+  const statusBadge = item.mandatory ? "mandatory" : "";
 
   return (
     <div style={{ marginBottom:10 }}>
@@ -694,9 +717,6 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:17, fontWeight:500, color: item.done ? "#999" : HOME_THEME.textPrimary, textDecoration: item.done ? "line-through" : "none", fontFamily:"'Playfair Display','Cormorant Garamond',serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", lineHeight:"22px" }}>
             {statusBadge === "mandatory" && <span style={{ fontSize:13, marginRight:2 }}>⚠️</span>}
-            {statusBadge === "essential" && (
-              <span style={{ width:8, height:8, borderRadius:"50%", background:"#4CAF6E", display:"inline-block", marginRight:4 }} />
-            )}
             <span style={{ overflow:"hidden", textOverflow:"ellipsis" }}>{item.title}</span>
           </div>
           {(item.asset || rightTags.length > 0) && (
@@ -889,10 +909,11 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
 
 /* Smart Category Filter with asset sub-filters */
 /* Group header */
-function GroupHeader({ group, cats }) {
+function GroupHeader({ group, cats, activeTab }) {
   const total = group.items.filter(d => !d.done && !d.estimateMissing).reduce((s, d) => s + d.budget, 0);
   const activeCount = group.items.filter(d => !d.done).length;
   const doneCount = group.items.filter(d => d.done).length;
+  const dotColor = getGroupStatusColor(group, activeTab);
 
   const catMap = {};
   group.items.filter(d => !d.done && !d.estimateMissing).forEach(d => { catMap[d.cat] = (catMap[d.cat] || 0) + d.budget; });
@@ -902,7 +923,7 @@ function GroupHeader({ group, cats }) {
     <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 0 6px", position:"relative" }}>
       <div style={{
         position:"absolute", left:-20, top:18, width:10, height:10, borderRadius:"50%",
-        background:"#C6A14A", boxShadow:`0 0 0 3px ${HOME_THEME.bgPrimary}`
+        background:dotColor, boxShadow:`0 0 0 3px ${HOME_THEME.bgPrimary}`
       }}/>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:17, fontWeight:500, color:HOME_THEME.textPrimary, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{group.label}</div>
@@ -5515,83 +5536,81 @@ export default function App() {
             ))}
           </div>
 
-          {/* Period navigator (above list) */}
+          {/* Period navigator + inline automatiche filter */}
           <div style={{ padding:"6px 14px 4px", background:HOME_THEME.bgPrimary }}>
             <div style={{
               background:HOME_THEME.bgCard, borderRadius:16, border:`1px solid ${HOME_THEME.borderLight}`,
-              padding:"8px 10px", display:"flex", flexDirection:"column", gap:6,
+              padding:"8px 10px", display:"flex", flexDirection:"column", gap:10,
               boxShadow:"0 6px 18px rgba(90, 70, 50, 0.08)"
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button
-                  onClick={() => {
-                    if (isYearCompact) {
-                      if (canPrevYear) setPeriodOffset(prevYear - baseYear);
-                      return;
-                    }
-                    if (isMonthView) {
-                      if (canPrevMonth) setPeriodOffset(prevMonth - baseMonthIndex);
-                      return;
-                    }
-                    setPeriodOffset(o => o - 1);
-                  }}
-                  disabled={(isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth)}
+                  onClick={() => { if (canPrevMonth) setPeriodOffset(prevMonth - baseMonthIndex); }}
+                  disabled={!canPrevMonth}
                   style={{
                     width:32, height:32, borderRadius:"50%", border:`1px solid ${HOME_THEME.borderLight}`,
-                    cursor: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? "not-allowed" : "pointer",
+                    cursor: canPrevMonth ? "pointer" : "not-allowed",
                     background:"#FFFDFB", color:HOME_THEME.textPrimary, fontSize:16, fontWeight:700,
-                    opacity: (isYearCompact && !canPrevYear) || (isMonthView && !canPrevMonth) ? 0.35 : 1
+                    opacity: canPrevMonth ? 1 : 0.35
                   }}
                 >‹</button>
-                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"space-between", gap:6 }}>
-                  <button
-                    onClick={() => { setRange("mese"); setPeriodOffset(0); setExpandedId(null); }}
-                    style={{
-                      background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "mese" ? 700 : 600,
-                      color: range === "mese" ? HOME_THEME.textPrimary : HOME_THEME.textMuted,
-                      padding:"2px 4px", borderBottom: range === "mese" ? `2px solid ${HOME_THEME.textPrimary}` : "2px solid transparent",
-                      letterSpacing:".2px", textTransform:"uppercase"
-                    }}
-                  >
-                    {t("range.month", { defaultValue:"Mese" })}
-                  </button>
-                  <div style={{ flex:1, textAlign:"center" }}>
-                    <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textPrimary, letterSpacing:"-.1px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{periodLabel}</div>
+                <div style={{ flex:1, textAlign:"center" }}>
+                  <div style={{ fontSize:16, fontWeight:500, color:HOME_THEME.textPrimary, letterSpacing:"-.1px", fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>
+                    {periodLabel}
                   </div>
+                </div>
+                <button
+                  onClick={() => { if (canNextMonth) setPeriodOffset(nextMonth - baseMonthIndex); }}
+                  disabled={!canNextMonth}
+                  style={{
+                    width:32, height:32, borderRadius:"50%", border:`1px solid ${HOME_THEME.borderLight}`,
+                    cursor: canNextMonth ? "pointer" : "not-allowed",
+                    background:"#FFFDFB", color:HOME_THEME.textPrimary, fontSize:16, fontWeight:700,
+                    opacity: canNextMonth ? 1 : 0.35
+                  }}
+                >›</button>
+              </div>
+              <div style={{
+                borderTop:`1px solid ${HOME_THEME.borderSoft}`, paddingTop:8,
+                display:"flex", alignItems:"center", justifyContent:"space-between", gap:10
+              }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+                  <span style={{ fontSize:13, color:HOME_THEME.textPrimary, fontWeight:500 }}>
+                    {t("filters.showAutomatic", { defaultValue:"Mostra automatiche" })}
+                  </span>
                   <button
-                    onClick={() => { setRange("anno"); setPeriodOffset(0); setExpandedId(null); }}
+                    type="button"
+                    role="switch"
+                    aria-checked={filterAutoPay}
+                    onClick={() => {
+                      setFilterAutoPay(prev => {
+                        const next = !prev;
+                        if (next) setFilterManual(false);
+                        return next;
+                      });
+                    }}
                     style={{
-                      background:"transparent", border:"none", cursor:"pointer",
-                      fontSize:10, fontWeight: range === "anno" ? 700 : 600,
-                      color: range === "anno" ? HOME_THEME.textPrimary : HOME_THEME.textMuted,
-                      padding:"2px 4px", borderBottom: range === "anno" ? `2px solid ${HOME_THEME.textPrimary}` : "2px solid transparent",
-                      letterSpacing:".2px", textTransform:"uppercase"
+                      width:44, height:26, borderRadius:999, border:`1px solid ${filterAutoPay ? HOME_THEME.fab : HOME_THEME.borderLight}`,
+                      background: filterAutoPay ? HOME_THEME.fab : "#F4EFE9",
+                      cursor:"pointer", position:"relative", transition:"all .2s", flexShrink:0
                     }}
                   >
-                    {t("range.year", { defaultValue:"Anno" })}
+                    <span style={{
+                      position:"absolute", top:2, left:filterAutoPay ? 20 : 2, width:20, height:20, borderRadius:"50%",
+                      background:"#fff", boxShadow:"0 1px 4px rgba(0,0,0,.18)", transition:"left .2s"
+                    }} />
                   </button>
                 </div>
                 <button
-                  onClick={() => {
-                    if (isYearCompact) {
-                      if (canNextYear) setPeriodOffset(nextYear - baseYear);
-                      return;
-                    }
-                    if (isMonthView) {
-                      if (canNextMonth) setPeriodOffset(nextMonth - baseMonthIndex);
-                      return;
-                    }
-                    setPeriodOffset(o => o + 1);
-                  }}
-                  disabled={(isYearCompact && !canNextYear) || (isMonthView && !canNextMonth)}
+                  type="button"
+                  onClick={() => setShowFilters(true)}
                   style={{
-                    width:32, height:32, borderRadius:"50%", border:`1px solid ${HOME_THEME.borderLight}`,
-                    cursor: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? "not-allowed" : "pointer",
-                    background:"#FFFDFB", color:HOME_THEME.textPrimary, fontSize:16, fontWeight:700,
-                    opacity: (isYearCompact && !canNextYear) || (isMonthView && !canNextMonth) ? 0.35 : 1
+                    border:"none", background:"transparent", padding:0, cursor:"pointer",
+                    fontSize:13, fontWeight:700, color:HOME_THEME.textSecondary
                   }}
-                >›</button>
+                >
+                  {t("filters.title", { defaultValue:"Filtri" })}
+                </button>
               </div>
             </div>
           </div>
@@ -5836,7 +5855,7 @@ export default function App() {
                 <div style={{ position:"absolute", left:10, top:0, bottom:0, width:2, background:"#e2e0da" }}/>
                 {groups.map(g => (
                   <div key={g.key}>
-                    <GroupHeader group={g} cats={cats}/>
+                    <GroupHeader group={g} cats={cats} activeTab={activeTab}/>
                     {g.items.map(item => (
                       <DeadlineCard
                         key={item.id}
@@ -5867,12 +5886,6 @@ export default function App() {
             </div>
           </div>
 
-          <button onClick={() => setShowFilters(true)} style={{
-            position:"fixed", bottom:88, right: "calc(50% - 195px + 72px)", width:48, height:48, borderRadius:"50%",
-            background:"#2d2b26", border:"none", color:"#fff", fontSize:20, fontWeight:700,
-            cursor:"pointer", boxShadow:"0 6px 20px rgba(0,0,0,.2)",
-            display:"flex", alignItems:"center", justifyContent:"center", zIndex:60,
-          }}>≡</button>
         </div>
       )}
 
