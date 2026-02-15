@@ -243,6 +243,76 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, onOpe
           />
         )}
       </div>
+      {activeItem && (
+        <div
+          onClick={() => setActiveItem(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(28,22,18,0.45)",
+            zIndex: 240,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: "16px",
+            backdropFilter: "blur(3px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              borderRadius: 18,
+              border: `1px solid ${TOKENS.border}`,
+              background: TOKENS.bgCard,
+              boxShadow: SHADOW_CARD,
+              padding: 14,
+            }}
+          >
+            <div style={{ fontFamily: DISPLAY_FONT, fontSize: 22, lineHeight: "28px", color: TOKENS.textPrimary, fontWeight: 500 }}>
+              {activeItem.title}
+            </div>
+            <div style={{ marginTop: 4, fontFamily: INTER_FONT, fontSize: 14, color: TOKENS.textSecondary }}>
+              {startOfDay(activeItem.date).toLocaleDateString(locale, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+              {activeItem.asset ? ` · ${activeItem.asset}` : ""}
+            </div>
+            <div style={{ marginTop: 8, fontFamily: INTER_FONT, fontSize: 22, fontWeight: 600, color: TOKENS.textPrimary }}>
+              <Amount item={activeItem} formatNumber={formatNumber} t={t} />
+            </div>
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <ActionButton
+                label={t("home.markDone", { defaultValue: "Segna fatto" })}
+                primary
+                overdueTone={activeItem.dayDiff < 0}
+                onClick={() => { onComplete(activeItem.id); setActiveItem(null); }}
+              />
+              <ActionButton
+                label={t("actions.postpone", { defaultValue: "Posticipa" })}
+                onClick={() => { onPostpone(activeItem.id); setActiveItem(null); }}
+              />
+            </div>
+            <button
+              onClick={() => setActiveItem(null)}
+              style={{
+                marginTop: 10,
+                width: "100%",
+                border: `1px solid ${TOKENS.border}`,
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.45)",
+                color: TOKENS.textSecondary,
+                fontFamily: INTER_FONT,
+                fontSize: 14,
+                fontWeight: 500,
+                padding: "8px 10px",
+                cursor: "pointer",
+              }}
+            >
+              {t("actions.close", { defaultValue: "Chiudi" })}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -314,10 +384,11 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
   );
 }
 
-export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete, onPostpone, onOpenItem }) {
+export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete, onPostpone }) {
   const [showAllOverdue, setShowAllOverdue] = useState(false);
   const [showAllToday, setShowAllToday] = useState(false);
   const [showAllNext7, setShowAllNext7] = useState(false);
+  const [activeItem, setActiveItem] = useState(null);
 
   const data = useMemo(() => {
     const today = startOfDay(new Date());
@@ -427,6 +498,8 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
   const todaySlice = showAllToday ? data.todayItems : data.todayItems.slice(0, 3);
   const next7Slice = showAllNext7 ? data.next7 : data.next7.slice(0, 3);
   const overdueSlice = showAllOverdue ? data.overdue : data.overdue.slice(0, 3);
+
+  const openInHome = (item) => setActiveItem(item || null);
 
   return (
     <div style={{
@@ -557,7 +630,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                     onComplete={onComplete}
                     onPostpone={onPostpone}
                     withPostpone
-                    onOpenItem={onOpenItem}
+                    onOpenItem={openInHome}
                     t={t}
                   />
                 ))}
@@ -590,7 +663,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       formatNumber={formatNumber}
                       withAction
                       onComplete={onComplete}
-                      onOpenItem={onOpenItem}
+                      onOpenItem={openInHome}
                       t={t}
                     />
                   </div>
@@ -624,7 +697,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       formatNumber={formatNumber}
                       withAction
                       onComplete={onComplete}
-                      onOpenItem={onOpenItem}
+                      onOpenItem={openInHome}
                       t={t}
                     />
                   </div>
@@ -665,7 +738,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       locale={locale}
                       formatNumber={formatNumber}
                       compact
-                      onOpenItem={onOpenItem}
+                      onOpenItem={openInHome}
                       t={t}
                     />
                   </div>
@@ -675,6 +748,76 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
           </section>
         )}
       </div>
+      {activeItem && (
+        <div
+          onClick={() => setActiveItem(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(28,22,18,0.45)",
+            zIndex: 240,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            padding: "16px",
+            backdropFilter: "blur(3px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              borderRadius: 18,
+              border: `1px solid ${TOKENS.border}`,
+              background: TOKENS.bgCard,
+              boxShadow: SHADOW_CARD,
+              padding: 14,
+            }}
+          >
+            <div style={{ fontFamily: DISPLAY_FONT, fontSize: 22, lineHeight: "28px", color: TOKENS.textPrimary, fontWeight: 500 }}>
+              {activeItem.title}
+            </div>
+            <div style={{ marginTop: 4, fontFamily: INTER_FONT, fontSize: 14, color: TOKENS.textSecondary }}>
+              {startOfDay(activeItem.date).toLocaleDateString(locale, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+              {activeItem.asset ? ` · ${activeItem.asset}` : ""}
+            </div>
+            <div style={{ marginTop: 8, fontFamily: INTER_FONT, fontSize: 22, fontWeight: 600, color: TOKENS.textPrimary }}>
+              <Amount item={activeItem} formatNumber={formatNumber} t={t} />
+            </div>
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <ActionButton
+                label={t("home.markDone", { defaultValue: "Segna fatto" })}
+                primary
+                overdueTone={activeItem.dayDiff < 0}
+                onClick={() => { onComplete(activeItem.id); setActiveItem(null); }}
+              />
+              <ActionButton
+                label={t("actions.postpone", { defaultValue: "Posticipa" })}
+                onClick={() => { onPostpone(activeItem.id); setActiveItem(null); }}
+              />
+            </div>
+            <button
+              onClick={() => setActiveItem(null)}
+              style={{
+                marginTop: 10,
+                width: "100%",
+                border: `1px solid ${TOKENS.border}`,
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.45)",
+                color: TOKENS.textSecondary,
+                fontFamily: INTER_FONT,
+                fontSize: 14,
+                fontWeight: 500,
+                padding: "8px 10px",
+                cursor: "pointer",
+              }}
+            >
+              {t("actions.close", { defaultValue: "Chiudi" })}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

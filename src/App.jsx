@@ -4718,17 +4718,6 @@ export default function App() {
   }, [isYearCompact]);
 
   const toggle   = id => setExpandedId(prev => prev === id ? null : id);
-  const openDeadlineFromHome = (item) => {
-    if (!item?.date) return;
-    const itemDate = item.date instanceof Date ? item.date : new Date(item.date);
-    const tab = item.done ? "done" : (itemDate < TODAY ? "overdue" : "timeline");
-    const monthOffset = itemDate.getFullYear() * 12 + itemDate.getMonth() - baseMonthIndex;
-    setMainSection("deadlines");
-    setRange("mese");
-    setActiveTab(tab);
-    setExpandedId(item.id);
-    setPeriodOffset(monthOffset);
-  };
   const handleEditItem = (item) => {
     if (petDeadlineIds.has(String(item.id))) {
       startEditPetDeadline(item);
@@ -5520,7 +5509,6 @@ export default function App() {
           formatNumber={formatNumber}
           onComplete={complete}
           onPostpone={postpone}
-          onOpenItem={openDeadlineFromHome}
         />
       )}
 
