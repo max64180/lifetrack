@@ -5482,9 +5482,9 @@ export default function App() {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <h1 style={{ margin:0, fontSize:16, fontWeight:isDeadlinesSection ? 500 : 800, letterSpacing:isDeadlinesSection ? ".1px" : "-.4px", fontFamily:isDeadlinesSection ? "'Playfair Display','Cormorant Garamond',serif" : "'Sora',sans-serif", color:"#F6EFE8" }}>
-                  {mainSectionTitle}
+                  LifeTrack
                 </h1>
-                <span style={{ fontSize:9, opacity:isDeadlinesSection ? .45 : .35, color:"#D5C8BB" }}>{t("app.tagline")}</span>
+                
               </div>
               <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
                 <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
