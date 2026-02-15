@@ -3989,6 +3989,7 @@ export default function App() {
   const [filterRecurring, setFilterRecurring] = useState(false);
   const [filterAutoPay, setFilterAutoPay] = useState(false);
   const [filterManual, setFilterManual] = useState(false);
+  const [showAutoPay, setShowAutoPay] = useState(false);
   const [filterEssential, setFilterEssential] = useState(false);
   const [filterEstimateMissing, setFilterEstimateMissing] = useState(false);
   const [filterPet, setFilterPet] = useState(false);
@@ -4573,6 +4574,9 @@ export default function App() {
   const activeDeadlines = useMemo(() => deadlines.filter(d => !d?.deleted), [deadlines]);
   const allDeadlines = useMemo(() => [...activeDeadlines, ...petDeadlineItems], [activeDeadlines, petDeadlineItems]);
 
+  const effectiveFilterAutoPay = showAutoPay ? filterAutoPay : false;
+  const effectiveFilterManual = filterManual || !showAutoPay;
+
   const filtered = useMemo(() => {
     const list = filterByTabAndPeriod(allDeadlines, {
       activeTab,
@@ -4584,8 +4588,8 @@ export default function App() {
         filterAsset,
         filterMandatory,
         filterRecurring,
-        filterAutoPay,
-        filterManual,
+        filterAutoPay: effectiveFilterAutoPay,
+        filterManual: effectiveFilterManual,
         filterEssential,
         filterEstimateMissing,
         filterPet,
@@ -4593,7 +4597,7 @@ export default function App() {
     });
     list.sort((a, b) => a.date - b.date);
     return list;
-  }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
+  }, [allDeadlines, range, filterCat, filterAsset, filterMandatory, filterRecurring, effectiveFilterAutoPay, effectiveFilterManual, filterEssential, filterEstimateMissing, filterPet, activeTab, periodStart, periodEnd]);
 
   const groups = useMemo(() => groupItems(filtered, range), [filtered, range]);
   const baseYear = TODAY.getFullYear();
@@ -4607,14 +4611,14 @@ export default function App() {
         filterAsset,
         filterMandatory,
         filterRecurring,
-        filterAutoPay,
-        filterManual,
+        filterAutoPay: effectiveFilterAutoPay,
+        filterManual: effectiveFilterManual,
         filterEssential,
         filterEstimateMissing,
         filterPet,
       },
     });
-  }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, filterAutoPay, filterManual, filterEssential, filterEstimateMissing, filterPet]);
+  }, [allDeadlines, activeTab, filterCat, filterAsset, filterMandatory, filterRecurring, effectiveFilterAutoPay, effectiveFilterManual, filterEssential, filterEstimateMissing, filterPet]);
   const availableYears = useMemo(() => {
     return collectAvailableYears(navCandidates);
   }, [navCandidates]);
@@ -5581,22 +5585,16 @@ export default function App() {
                   <button
                     type="button"
                     role="switch"
-                    aria-checked={filterAutoPay}
-                    onClick={() => {
-                      setFilterAutoPay(prev => {
-                        const next = !prev;
-                        if (next) setFilterManual(false);
-                        return next;
-                      });
-                    }}
+                    aria-checked={showAutoPay}
+                    onClick={() => setShowAutoPay(prev => !prev)}
                     style={{
-                      width:44, height:26, borderRadius:999, border:`1px solid ${filterAutoPay ? HOME_THEME.fab : HOME_THEME.borderLight}`,
-                      background: filterAutoPay ? HOME_THEME.fab : "#F4EFE9",
+                      width:44, height:26, borderRadius:999, border:`1px solid ${showAutoPay ? HOME_THEME.fab : HOME_THEME.borderLight}`,
+                      background: showAutoPay ? HOME_THEME.fab : "#F4EFE9",
                       cursor:"pointer", position:"relative", transition:"all .2s", flexShrink:0
                     }}
                   >
                     <span style={{
-                      position:"absolute", top:2, left:filterAutoPay ? 20 : 2, width:20, height:20, borderRadius:"50%",
+                      position:"absolute", top:2, left:showAutoPay ? 20 : 2, width:20, height:20, borderRadius:"50%",
                       background:"#fff", boxShadow:"0 1px 4px rgba(0,0,0,.18)", transition:"left .2s"
                     }} />
                   </button>
