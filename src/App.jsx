@@ -5481,7 +5481,7 @@ export default function App() {
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <h1 style={{ margin:0, fontSize:16, fontWeight:isDeadlinesSection ? 500 : 800, letterSpacing:isDeadlinesSection ? ".1px" : "-.4px", fontFamily:isDeadlinesSection ? "'Playfair Display','Cormorant Garamond',serif" : "'Sora',sans-serif", color:"#F6EFE8" }}>
+                <h1 style={{ margin:0, fontSize:16, fontWeight:500, letterSpacing:".1px", fontFamily:"'Playfair Display','Cormorant Garamond',serif", color:"#F6EFE8" }}>
                   LifeTrack
                 </h1>
                 
