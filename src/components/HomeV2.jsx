@@ -135,14 +135,14 @@ function Amount({ item, formatNumber, t }) {
 function ActionButton({ label, primary, onClick, overdueTone = false }) {
   const isPrimary = !!primary;
   const bg = isPrimary
-    ? (overdueTone ? "rgba(179,71,58,0.14)" : "rgba(110,140,153,0.16)")
-    : "rgba(255,255,255,0.52)";
+    ? (overdueTone ? "rgba(179,71,58,0.06)" : "rgba(110,140,153,0.08)")
+    : "rgba(255,255,255,0.32)";
   const border = isPrimary
-    ? (overdueTone ? "#C88E84" : "#95AFBB")
-    : "#CFC6BE";
+    ? (overdueTone ? "rgba(139,62,52,0.35)" : "rgba(79,107,118,0.32)")
+    : "rgba(111,98,88,0.22)";
   const color = isPrimary
-    ? (overdueTone ? "#8B3E34" : "#4F6B76")
-    : TOKENS.btnSecondaryText;
+    ? (overdueTone ? "#7B3A31" : "#47626C")
+    : "#64594F";
 
   return (
     <button
@@ -152,15 +152,16 @@ function ActionButton({ label, primary, onClick, overdueTone = false }) {
         borderRadius: 12,
         background: bg,
         color,
-        minWidth: isPrimary ? 92 : 84,
-        padding: "6px 12px",
+        minWidth: isPrimary ? 90 : 82,
+        padding: "6px 11px",
         fontFamily: INTER_FONT,
         fontSize: 14,
         lineHeight: "19px",
         fontWeight: 500,
         letterSpacing: "0.1px",
         cursor: "pointer",
-        boxShadow: "0 1px 0 rgba(255,255,255,0.45) inset",
+        boxShadow: "none",
+        backdropFilter: "blur(1.5px)",
       }}
     >
       {label}
