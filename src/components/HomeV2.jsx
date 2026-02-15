@@ -146,7 +146,7 @@ function ActionButton({ label, primary, onClick, overdueTone = false }) {
 
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{
         border: `1px solid ${border}`,
         borderRadius: 12,
@@ -169,9 +169,10 @@ function ActionButton({ label, primary, onClick, overdueTone = false }) {
   );
 }
 
-function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, withPostpone = false }) {
+function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, onOpenItem, t, withPostpone = false }) {
   return (
     <div
+      onClick={() => onOpenItem && onOpenItem(item)}
       style={{
         border: `1px solid ${TOKENS.borderSoft}`,
         borderRadius: 14,
@@ -181,6 +182,7 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
         gridTemplateColumns: "1fr auto",
         gap: 8,
         alignItems: "center",
+        cursor: "pointer",
       }}
     >
       <div style={{ minWidth: 0 }}>
@@ -245,9 +247,10 @@ function DeadlineRow({ item, locale, formatNumber, onComplete, onPostpone, t, wi
   );
 }
 
-function FutureRow({ item, locale, formatNumber, t, withAction = false, onComplete, compact = false }) {
+function FutureRow({ item, locale, formatNumber, t, withAction = false, onComplete, onOpenItem, compact = false }) {
   return (
     <div
+      onClick={() => onOpenItem && onOpenItem(item)}
       style={{
         borderTop: `1px solid ${TOKENS.borderSoft}`,
         padding: compact ? "8px 0" : "10px 0",
@@ -255,6 +258,7 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
         gridTemplateColumns: "1fr auto",
         gap: 10,
         alignItems: "center",
+        cursor: "pointer",
       }}
     >
       <div style={{ minWidth: 0 }}>
@@ -310,7 +314,7 @@ function FutureRow({ item, locale, formatNumber, t, withAction = false, onComple
   );
 }
 
-export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete, onPostpone }) {
+export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete, onPostpone, onOpenItem }) {
   const [showAllOverdue, setShowAllOverdue] = useState(false);
   const [showAllToday, setShowAllToday] = useState(false);
   const [showAllNext7, setShowAllNext7] = useState(false);
@@ -553,6 +557,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                     onComplete={onComplete}
                     onPostpone={onPostpone}
                     withPostpone
+                    onOpenItem={onOpenItem}
                     t={t}
                   />
                 ))}
@@ -585,6 +590,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       formatNumber={formatNumber}
                       withAction
                       onComplete={onComplete}
+                      onOpenItem={onOpenItem}
                       t={t}
                     />
                   </div>
@@ -618,6 +624,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       formatNumber={formatNumber}
                       withAction
                       onComplete={onComplete}
+                      onOpenItem={onOpenItem}
                       t={t}
                     />
                   </div>
@@ -658,6 +665,7 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
                       locale={locale}
                       formatNumber={formatNumber}
                       compact
+                      onOpenItem={onOpenItem}
                       t={t}
                     />
                   </div>
