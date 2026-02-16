@@ -5441,7 +5441,7 @@ export default function App() {
     : t("nav.pet");
 
   const isDeadlinesSection = mainSection === "deadlines";
-  const isWarmHeaderSection = isHomeSection || isDeadlinesSection;
+  const isWarmHeaderSection = isDeadlinesSection;
   const warmTopGradient = "linear-gradient(180deg, #151411 0%, #1B1712 100%)";
 
   return (
