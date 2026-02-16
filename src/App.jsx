@@ -95,7 +95,7 @@ function addDays(n) { const d = new Date(TODAY); d.setDate(d.getDate() + n); ret
 function addMonths(date, months) { const d = new Date(date); d.setMonth(d.getMonth() + months); return d; }
 const PET_CAT = { id:"pet", label:"Pet", icon:"🐾", color:"#7B8BE8", light:"#EEF0FF" };
 const HOME_THEME = {
-  bgPrimary: "#F2EAE3",
+  bgPrimary: "#E6DBCF",
   bgCard: "#F7F0EA",
   textPrimary: "#3F342C",
   textSecondary: "#6F6258",
@@ -5441,8 +5441,6 @@ export default function App() {
     : t("nav.pet");
 
   const isDeadlinesSection = mainSection === "deadlines";
-  const isWarmHeaderSection = isDeadlinesSection;
-  const warmTopGradient = "linear-gradient(180deg, #151411 0%, #1B1712 100%)";
 
   return (
     <div style={{ minHeight:"100vh", maxWidth:430, margin:"0 auto", background:(isHomeSection || isDeadlinesSection) ? HOME_THEME.bgPrimary : "#f5f4f0", fontFamily:(isHomeSection || isDeadlinesSection) ? "'Inter',sans-serif" : "'Sora',sans-serif", display:"flex", flexDirection:"column", position:"relative" }}>
@@ -5499,14 +5497,14 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isWarmHeaderSection ? warmTopGradient : HOME_THEME.bgPrimary, borderBottom:"none" }}>
-        <div style={{ background:isWarmHeaderSection ? warmTopGradient : HOME_THEME.bgPrimary, color:isWarmHeaderSection ? "#F6EFE8" : HOME_THEME.textPrimary, padding:"8px 16px", position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:isWarmHeaderSection ? "rgba(232,133,93,.15)" : "rgba(90,70,50,.06)" }}/>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:HOME_THEME.bgPrimary, borderBottom:"none" }}>
+        <div style={{ background:HOME_THEME.bgPrimary, color:HOME_THEME.textPrimary, padding:"8px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(90,70,50,.06)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <BrandMark dark={isWarmHeaderSection} size={28} textSize={18} />
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isWarmHeaderSection ? "rgba(255,255,255,.08)" : "#E9E1DA", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:isWarmHeaderSection ? "none" : `1px solid ${HOME_THEME.borderLight}` }}>
-                <span style={{ fontSize:16, color:isWarmHeaderSection ? "rgba(255,255,255,.7)" : HOME_THEME.textPrimary }}>☰</span>
+              <BrandMark dark={false} size={28} textSize={18} />
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"#E9E1DA", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:`1px solid ${HOME_THEME.borderLight}` }}>
+                <span style={{ fontSize:16, color:HOME_THEME.textPrimary }}>☰</span>
               </button>
             </div>
           </div>
@@ -5514,7 +5512,7 @@ export default function App() {
 
         {/* Budget bar only in deadlines */}
         {mainSection === "deadlines" && (
-          <div style={{ background:warmTopGradient, paddingBottom:10 }}>
+          <div style={{ background:HOME_THEME.bgPrimary, paddingBottom:10 }}>
             <BudgetBar deadlines={allDeadlines} periodStart={periodStart} periodEnd={periodEnd} cats={cats} activeTab={activeTab}/>
           </div>
         )}

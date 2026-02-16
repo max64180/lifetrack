@@ -8,7 +8,7 @@ const DISPLAY_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 
 const TOKENS = {
   bgRoot: "#E6DBCF",
-  bgRootWarm: "#DCCFC1",
+  bgRootWarm: "#E6DBCF",
   topBg: "#3A2D24",
   topBg2: "#30251E",
   heroBg: "#4A3A2F",
@@ -508,14 +508,13 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
       overflowY: "auto",
       backgroundColor: TOKENS.bgRoot,
       backgroundImage: `
-        radial-gradient(120% 90% at 50% -10%, rgba(42,31,24,0.5) 0%, rgba(42,31,24,0) 48%),
-        radial-gradient(70% 40% at 20% 25%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 70%),
-        radial-gradient(80% 45% at 85% 30%, rgba(120,95,74,0.1) 0%, rgba(120,95,74,0) 72%),
+        radial-gradient(85% 45% at 18% 24%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 74%),
+        radial-gradient(90% 50% at 82% 30%, rgba(126,101,78,0.10) 0%, rgba(126,101,78,0) 78%),
         linear-gradient(180deg, ${TOKENS.bgRootWarm} 0%, ${TOKENS.bgRoot} 100%),
         url(${paperNoiseTexture})`,
-      backgroundBlendMode: "normal, normal, normal, normal, soft-light",
-      backgroundSize: "100% 100%, 100% 100%, 100% 100%, 100% 100%, 180px 180px",
-      backgroundRepeat: "no-repeat, no-repeat, no-repeat, no-repeat, repeat"
+      backgroundBlendMode: "normal, normal, normal, soft-light",
+      backgroundSize: "100% 100%, 100% 100%, 100% 100%, 180px 180px",
+      backgroundRepeat: "no-repeat, no-repeat, no-repeat, repeat"
     }}>
       <div
         style={{
