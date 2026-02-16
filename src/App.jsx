@@ -133,6 +133,27 @@ function BellIcon({ size = 22, color = "#3F342C" }) {
   );
 }
 
+function BrandMark({ dark = false, size = 30, textSize = 30 }) {
+  const textColor = dark ? "#F6EFE8" : HOME_THEME.textPrimary;
+  const circleBg = dark ? "rgba(233,225,218,.14)" : "#E9E1DA";
+  const circleBorder = dark ? "1px solid rgba(233,225,218,.28)" : `1px solid ${HOME_THEME.borderLight}`;
+  const iconStroke = dark ? "#F6EFE8" : HOME_THEME.textPrimary;
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+      <div style={{ width:size, height:size, borderRadius:"50%", background:circleBg, border:circleBorder, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={iconStroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 10l8-6 8 6" />
+          <path d="M7 10v9h10v-9" />
+          <path d="M10 19v-5h4v5" />
+        </svg>
+      </div>
+      <span style={{ fontFamily:"'Playfair Display','Cormorant Garamond',serif", fontWeight:600, fontSize:textSize, lineHeight:1, letterSpacing:".2px", color:textColor }}>
+        LifeTrack
+      </span>
+    </div>
+  );
+}
+
 function NavIcon({ id, active }) {
   const color = active ? "#3F342C" : "#9A8F86";
   if (id === "home") {
@@ -5333,8 +5354,9 @@ export default function App() {
     return (
       <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#1e1c18", color:"#fff" }}>
         <div style={{ textAlign:"center" }}>
-          <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
-          <div style={{ fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>LifeTrack</div>
+          <div style={{ marginBottom:16, display:"flex", justifyContent:"center" }}>
+            <BrandMark dark size={36} textSize={28} />
+          </div>
           <div style={{ fontSize:13, opacity:.5, marginTop:8 }}>{t("app.loading")}</div>
         </div>
       </div>
@@ -5354,8 +5376,9 @@ export default function App() {
           </div>
           <div style={{ background:"#2d2b26", borderRadius:18, padding:"22px 20px", boxShadow:"0 10px 30px rgba(0,0,0,.35)" }}>
           <div style={{ textAlign:"center", marginBottom:16 }}>
-            <div style={{ fontSize:40, marginBottom:6 }}>📅</div>
-            <div style={{ fontSize:18, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{t("app.name")}</div>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
+              <BrandMark dark size={30} textSize={24} />
+            </div>
             <div style={{ fontSize:12, opacity:.6, marginTop:4 }}>{t("auth.subtitle")}</div>
           </div>
 
@@ -5418,6 +5441,7 @@ export default function App() {
     : t("nav.pet");
 
   const isDeadlinesSection = mainSection === "deadlines";
+  const isWarmHeaderSection = isHomeSection || isDeadlinesSection;
   const warmTopGradient = "linear-gradient(180deg, #151411 0%, #1B1712 100%)";
 
   return (
@@ -5475,19 +5499,14 @@ export default function App() {
       )}
 
       {/* HEADER - primary section */}
-      <div style={{ position:"sticky", top:0, zIndex:100, background:isDeadlinesSection ? warmTopGradient : "#1e1c18", borderBottom:"none" }}>
-        <div style={{ background:isDeadlinesSection ? warmTopGradient : "#1e1c18", color:"#F6EFE8", padding:"8px 16px", position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:"rgba(232,133,93,.15)" }}/>
+      <div style={{ position:"sticky", top:0, zIndex:100, background:isWarmHeaderSection ? warmTopGradient : HOME_THEME.bgPrimary, borderBottom:"none" }}>
+        <div style={{ background:isWarmHeaderSection ? warmTopGradient : HOME_THEME.bgPrimary, color:isWarmHeaderSection ? "#F6EFE8" : HOME_THEME.textPrimary, padding:"8px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-24, right:-16, width:70, height:70, borderRadius:"50%", background:isWarmHeaderSection ? "rgba(232,133,93,.15)" : "rgba(90,70,50,.06)" }}/>
           <div style={{ position:"relative", zIndex:1 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <h1 style={{ margin:0, fontSize:16, fontWeight:500, letterSpacing:".1px", fontFamily:"'Playfair Display','Cormorant Garamond',serif", color:"#F6EFE8" }}>
-                  LifeTrack
-                </h1>
-                
-              </div>
-              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,.08)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:"none" }}>
-                <span style={{ fontSize:16, color:"rgba(255,255,255,.7)" }}>☰</span>
+              <BrandMark dark={isWarmHeaderSection} size={28} textSize={18} />
+              <button onClick={() => setShowMenu(true)} style={{ width:36, height:36, borderRadius:"50%", background:isWarmHeaderSection ? "rgba(255,255,255,.08)" : "#E9E1DA", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", border:isWarmHeaderSection ? "none" : `1px solid ${HOME_THEME.borderLight}` }}>
+                <span style={{ fontSize:16, color:isWarmHeaderSection ? "rgba(255,255,255,.7)" : HOME_THEME.textPrimary }}>☰</span>
               </button>
             </div>
           </div>

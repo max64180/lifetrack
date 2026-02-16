@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import paperNoiseTexture from "../assets/paper-noise.svg";
 
 const DAY_MS = 86400000;
 const INTER_FONT = "'Inter', system-ui, -apple-system, sans-serif";
@@ -507,10 +508,14 @@ export default function HomeV2({ deadlines, t, locale, formatNumber, onComplete,
       overflowY: "auto",
       backgroundColor: TOKENS.bgRoot,
       backgroundImage: `
-        radial-gradient(120% 90% at 50% -10%, rgba(42,31,24,0.55) 0%, rgba(42,31,24,0) 46%),
-        radial-gradient(70% 40% at 20% 25%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 70%),
-        radial-gradient(80% 45% at 85% 30%, rgba(120,95,74,0.09) 0%, rgba(120,95,74,0) 72%),
-        linear-gradient(180deg, ${TOKENS.bgRootWarm} 0%, ${TOKENS.bgRoot} 100%)`
+        radial-gradient(120% 90% at 50% -10%, rgba(42,31,24,0.5) 0%, rgba(42,31,24,0) 48%),
+        radial-gradient(70% 40% at 20% 25%, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0) 70%),
+        radial-gradient(80% 45% at 85% 30%, rgba(120,95,74,0.1) 0%, rgba(120,95,74,0) 72%),
+        linear-gradient(180deg, ${TOKENS.bgRootWarm} 0%, ${TOKENS.bgRoot} 100%),
+        url(${paperNoiseTexture})`,
+      backgroundBlendMode: "normal, normal, normal, normal, soft-light",
+      backgroundSize: "100% 100%, 100% 100%, 100% 100%, 100% 100%, 180px 180px",
+      backgroundRepeat: "no-repeat, no-repeat, no-repeat, no-repeat, repeat"
     }}>
       <div
         style={{
