@@ -6584,8 +6584,8 @@ export default function App() {
       {(mainSection === "home" || mainSection === "deadlines") && (
         <button onClick={() => setShowAdd(true)} style={{
           position:"fixed", bottom:mainSection === "home" ? 58 : 88, right: "calc(50% - 197px)", width:mainSection === "home" ? 64 : 58, height:mainSection === "home" ? 64 : 58, borderRadius:"50%",
-          background: "#E8855D", border:"none", color:"#fff", fontSize:30, fontWeight:300,
-          cursor:"pointer", boxShadow:"0 8px 24px rgba(232,133,93,.45)",
+          background: HOME_THEME.statusUpcoming, border:"none", color:HOME_THEME.textPrimary, fontSize:30, fontWeight:400,
+          cursor:"pointer", boxShadow:"0 8px 24px rgba(198,161,74,.42)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:140,
         }}>+</button>
       )}
