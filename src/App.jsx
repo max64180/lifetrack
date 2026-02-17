@@ -210,6 +210,34 @@ function NavIcon({ id, active }) {
   );
 }
 
+function SteeringWheelIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M3.8 13.2h5.8" />
+          <path d="M14.4 13.2h5.8" />
+          <path d="M10.8 10.5l-1.7-4.2" />
+          <path d="M13.2 10.5l1.7-4.2" />
+        </>
+      }
+    />
+  );
+}
+
+function CategoryIcon({ cat, size = 18, color, fallback = "📌" }) {
+  if (!cat) return fallback;
+  if (cat.id === "auto") {
+    return <SteeringWheelIcon size={size} color={color || HOME_THEME.textPrimary} />;
+  }
+  return cat.icon || fallback;
+}
+
 /* ── DATI FAKE RIMOSSI - App vuota per uso reale ──────────────────────────────────── */
 
 
@@ -647,7 +675,7 @@ function YearDetailRow({ item, cats }) {
           background: cat.light || "#f5f4f0", display:"flex", alignItems:"center", justifyContent:"center",
           fontSize:18
         }}>
-          {cat.icon || "📌"}
+          <CategoryIcon cat={cat} size={18} color={HOME_THEME.textPrimary} />
         </div>
         <div style={{ minWidth:0 }}>
           <div style={{ fontSize:13, fontWeight:800, color:"#2d2b26", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
@@ -732,7 +760,7 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
           fontSize:15,
           border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "33"}`,
         }}>
-          {item.done ? "✓" : cat.icon}
+          {item.done ? "✓" : <CategoryIcon cat={cat} size={15} color={HOME_THEME.textPrimary} />}
         </div>
 
         <div style={{ flex:1, minWidth:0 }}>
