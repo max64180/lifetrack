@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { getCat } from "../utils/cats";
 
 const PAGE_BG = "#E6DBCF";
@@ -8,6 +9,9 @@ const TEXT_SECONDARY = "#6F6258";
 const TEXT_MUTED = "#9A8F86";
 const BORDER = "#DDD3CA";
 const BORDER_SOFT = "#E7DED6";
+const BRAND = "#E8855D";
+const DANGER_BG = "#F4E8E6";
+const DANGER_TEXT = "#B3473A";
 
 const TITLE_FONT = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 const BODY_FONT = "'Inter', system-ui, -apple-system, sans-serif";
@@ -129,6 +133,12 @@ export default function DeadlineDetailPage({
   onUploadDoc,
   onDeleteDoc,
 }) {
+  const [showMoreActions, setShowMoreActions] = useState(false);
+
+  useEffect(() => {
+    if (!open) setShowMoreActions(false);
+  }, [open]);
+
   if (!open || !item) return null;
 
   const cat = item.petId
@@ -153,27 +163,28 @@ export default function DeadlineDetailPage({
       }}
     >
       <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", fontFamily: BODY_FONT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 2, background: PAGE_BG, padding: "10px 16px 8px" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 2, background: PAGE_BG, padding: "10px 16px 8px", display: "flex", justifyContent: "flex-end" }}>
           <button
             onClick={onClose}
+            aria-label={t("actions.close", { defaultValue: "Chiudi" })}
             style={{
+              width: 36,
+              height: 36,
               border: `1px solid ${BORDER}`,
               background: CARD_BG,
-              color: TEXT_PRIMARY,
-              borderRadius: 999,
-              padding: "8px 12px",
-              fontSize: 13,
-              fontWeight: 600,
+              color: TEXT_SECONDARY,
+              borderRadius: "50%",
+              fontSize: 22,
+              fontWeight: 500,
+              lineHeight: 1,
               cursor: "pointer",
             }}
           >
-            {source === "home"
-              ? t("actions.back", { defaultValue: "Torna a Home" })
-              : t("actions.back", { defaultValue: "Torna a Scadenze" })}
+            ×
           </button>
         </div>
 
-        <div style={{ padding: "4px 16px 20px" }}>
+        <div style={{ padding: "4px 16px 138px" }}>
           <div
             style={{
               border: `1px solid ${BORDER}`,
@@ -338,95 +349,194 @@ export default function DeadlineDetailPage({
                 )}
               </div>
 
-              <div style={{ display: "grid", gap: 8 }}>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 260,
+            display: "flex",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 430,
+              padding: "10px 16px 12px",
+              background: PAGE_BG,
+              borderTop: `1px solid ${BORDER_SOFT}`,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr auto",
+              gap: 10,
+              boxShadow: "0 -8px 20px rgba(90, 70, 50, 0.10)",
+              pointerEvents: "auto",
+            }}
+          >
+            <button
+              onClick={() => onEdit && onEdit(item)}
+              style={{
+                border: `1px solid ${BORDER}`,
+                background: "#E9E1DA",
+                color: TEXT_SECONDARY,
+                borderRadius: 14,
+                minHeight: 44,
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t("actions.edit", { defaultValue: "Modifica" })}
+            </button>
+            <button
+              onClick={() => onComplete && onComplete(item.id)}
+              style={{
+                border: "none",
+                background: BRAND,
+                color: "#fff",
+                borderRadius: 14,
+                minHeight: 44,
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {item.done
+                ? t("actions.reactivate", { defaultValue: "Riattiva" })
+                : t("actions.complete", { defaultValue: "Completa" })}
+            </button>
+            <button
+              onClick={() => setShowMoreActions(true)}
+              style={{
+                border: `1px solid ${BORDER}`,
+                background: "#F4EFE9",
+                color: TEXT_SECONDARY,
+                borderRadius: 14,
+                minHeight: 44,
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                minWidth: 82,
+              }}
+            >
+              {t("actions.more", { defaultValue: "Altro" })}
+            </button>
+          </div>
+        </div>
+
+        {showMoreActions && (
+          <div
+            onClick={() => setShowMoreActions(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(24,20,16,0.42)",
+              zIndex: 300,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "center",
+              padding: "12px 16px",
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 430,
+                borderRadius: 18,
+                border: `1px solid ${BORDER}`,
+                background: CARD_BG,
+                boxShadow: "0 14px 30px rgba(0,0,0,.18)",
+                padding: 10,
+                display: "grid",
+                gap: 8,
+              }}
+            >
+              {!item.done && (
                 <button
-                  onClick={() => onEdit && onEdit(item)}
+                  onClick={() => {
+                    setShowMoreActions(false);
+                    onPostpone && onPostpone(item.id);
+                  }}
                   style={{
                     border: `1px solid ${BORDER}`,
-                    background: "#EEF3F5",
-                    color: "#4C6470",
+                    background: "#E9E1DA",
+                    color: TEXT_SECONDARY,
                     borderRadius: 12,
-                    padding: "10px 12px",
+                    padding: "11px 12px",
                     fontSize: 14,
                     fontWeight: 700,
                     cursor: "pointer",
                   }}
                 >
-                  {t("actions.edit", { defaultValue: "Modifica" })}
+                  {t("actions.postpone", { defaultValue: "Posticipa" })}
                 </button>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {!item.done && (
-                    <button
-                      onClick={() => onPostpone && onPostpone(item.id)}
-                      style={{
-                        border: `1px solid ${BORDER}`,
-                        background: "#E9E1DA",
-                        color: TEXT_SECONDARY,
-                        borderRadius: 12,
-                        padding: "10px 12px",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {t("actions.postpone", { defaultValue: "Posticipa" })}
-                    </button>
-                  )}
-                  {item.recurring?.enabled && !item.done && (
-                    <button
-                      onClick={() => onSkip && onSkip(item.id)}
-                      style={{
-                        border: "none",
-                        background: "#E9E1DA",
-                        color: TEXT_SECONDARY,
-                        borderRadius: 12,
-                        padding: "10px 12px",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                    {t("actions.skip", { defaultValue: "Non dovuta" })}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onComplete && onComplete(item.id)}
-                    style={{
-                      border: "none",
-                      background: item.done ? "#edecea" : (cat.color || "#6E8C99"),
-                      color: item.done ? TEXT_SECONDARY : "#fff",
-                      borderRadius: 12,
-                      padding: "10px 12px",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {item.done
-                      ? t("actions.reactivate", { defaultValue: "Riattiva" })
-                      : t("actions.complete", { defaultValue: "Segna come completata" })}
-                  </button>
-                  <button
-                    onClick={() => onDelete && onDelete(item.id)}
-                    style={{
-                      border: "none",
-                      background: "#F6E9E7",
-                      color: "#B3473A",
-                      borderRadius: 12,
-                      padding: "10px 12px",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {t("actions.delete", { defaultValue: "Elimina" })}
-                  </button>
-                </div>
-              </div>
+              )}
+              {item.recurring?.enabled && !item.done && (
+                <button
+                  onClick={() => {
+                    setShowMoreActions(false);
+                    onSkip && onSkip(item.id);
+                  }}
+                  style={{
+                    border: `1px solid ${BORDER}`,
+                    background: "#E9E1DA",
+                    color: TEXT_SECONDARY,
+                    borderRadius: 12,
+                    padding: "11px 12px",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("actions.skip", { defaultValue: "Salta" })}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowMoreActions(false);
+                  onDelete && onDelete(item.id);
+                }}
+                style={{
+                  border: "none",
+                  background: DANGER_BG,
+                  color: DANGER_TEXT,
+                  borderRadius: 12,
+                  padding: "11px 12px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {t("actions.delete", { defaultValue: "Elimina" })}
+              </button>
+              <button
+                onClick={() => setShowMoreActions(false)}
+                style={{
+                  border: `1px solid ${BORDER}`,
+                  background: "#fff",
+                  color: TEXT_SECONDARY,
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {t("actions.close", { defaultValue: "Chiudi" })}
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
