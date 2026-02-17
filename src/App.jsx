@@ -25,6 +25,7 @@ import {
 } from "./utils/seriesEdit";
 import PriorityFilter from "./components/PriorityFilter";
 import HomeV2 from "./components/HomeV2";
+import DeadlineDetailPage from "./components/DeadlineDetailPage";
 import i18n from "./i18n";
 
 // 🔥 Firebase Configuration
@@ -829,7 +830,7 @@ function YearDetailRow({ item, cats }) {
 }
 
 /* Carta scadenza – ICONE PIÙ GRANDI E VISIVE */
-function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, cats }) {
+function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpone, onEdit, onSkip, onUploadDoc, onDeleteDoc, onViewDoc, onAssetClick, onOpenDetail, cats }) {
   const { t } = useTranslation();
   const cat = item.petId ? PET_CAT : getCat(cats, item.cat);
   const days = diffDays(item.date);
@@ -864,7 +865,13 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
   return (
     <div style={{ marginBottom:10 }}>
       <div
-        onClick={() => onToggle(item.id)}
+        onClick={() => {
+          if (onOpenDetail) {
+            onOpenDetail(item);
+            return;
+          }
+          onToggle(item.id);
+        }}
         style={{
           display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
           background:HOME_THEME.bgCard, borderRadius: expanded ? "14px 14px 0 0" : 14,
@@ -925,7 +932,29 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               ? <span style={{ fontSize:13, fontWeight:700, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
               : item.budget > 0 && <span style={{ fontSize:15, fontWeight:500, color:cat.color, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{formatCurrency(item.budget)}</span>
           )}
-          <span style={{ fontSize:12, color:HOME_THEME.textMuted, transition:"transform .25s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggle(item.id); }}
+            style={{
+              marginTop:2,
+              border:`1px solid ${HOME_THEME.borderLight}`,
+              background:"#FFFDFB",
+              color:HOME_THEME.textSecondary,
+              borderRadius:8,
+              width:24,
+              height:22,
+              padding:0,
+              fontSize:12,
+              fontWeight:700,
+              lineHeight:1,
+              cursor:"pointer",
+              transform: expanded ? "rotate(180deg)" : "rotate(0)",
+              transition:"transform .25s"
+            }}
+            aria-label={expanded ? t("actions.close", { defaultValue:"Chiudi" }) : t("actions.expand", { defaultValue:"Espandi" })}
+          >
+            ▾
+          </button>
         </div>
       </div>
 
@@ -4173,6 +4202,7 @@ export default function App() {
   const [showMenu, setShowMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [mainSection, setMainSection] = useState("home"); // home | deadlines | assets | documents | pet
+  const [deadlineDetail, setDeadlineDetail] = useState(null); // { id, source }
   const [showAsset, setShowAsset] = useState(null); // { cat, asset }
   const [showAssetList, setShowAssetList] = useState(false);
   const [showPetAdd, setShowPetAdd] = useState(false);
@@ -4742,6 +4772,18 @@ export default function App() {
   }, [petDeadlines, pets, t]);
   const activeDeadlines = useMemo(() => deadlines.filter(d => !d?.deleted), [deadlines]);
   const allDeadlines = useMemo(() => [...activeDeadlines, ...petDeadlineItems], [activeDeadlines, petDeadlineItems]);
+
+  const detailItem = useMemo(() => {
+    if (!deadlineDetail?.id) return null;
+    return allDeadlines.find((d) => String(d.id) === String(deadlineDetail.id)) || null;
+  }, [allDeadlines, deadlineDetail]);
+
+  const openDeadlineDetail = (item, source = "deadlines") => {
+    if (!item?.id) return;
+    setDeadlineDetail({ id: String(item.id), source });
+  };
+
+  const closeDeadlineDetail = () => setDeadlineDetail(null);
 
   const effectiveFilterAutoPay = showAutoPay ? filterAutoPay : false;
   const effectiveFilterManual = filterManual || !showAutoPay;
@@ -5674,6 +5716,7 @@ export default function App() {
           formatNumber={formatNumber}
           onComplete={complete}
           onPostpone={postpone}
+          onOpenDetail={(item) => openDeadlineDetail(item, "home")}
         />
       )}
 
@@ -5850,6 +5893,7 @@ export default function App() {
                           onDeleteDoc={deleteDocument}
                           onViewDoc={setViewingDoc}
                           onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                          onOpenDetail={() => openDeadlineDetail(item, "deadlines")}
                           cats={cats}
                         />
                       ))}
@@ -5888,6 +5932,7 @@ export default function App() {
                           onDeleteDoc={deleteDocument}
                           onViewDoc={setViewingDoc}
                           onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                          onOpenDetail={() => openDeadlineDetail(item, "deadlines")}
                           cats={cats}
                         />
                       ))}
@@ -6034,6 +6079,7 @@ export default function App() {
                         onDeleteDoc={deleteDocument}
                         onViewDoc={setViewingDoc}
                         onAssetClick={(cat, asset) => setShowAsset({ cat, asset })}
+                        onOpenDetail={() => openDeadlineDetail(item, "deadlines")}
                         cats={cats}
                       />
                     ))}
@@ -7011,6 +7057,40 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <DeadlineDetailPage
+        open={!!deadlineDetail && !!detailItem}
+        item={detailItem}
+        t={t}
+        locale={getLocale()}
+        cats={cats}
+        formatNumber={formatNumber}
+        source={deadlineDetail?.source || "deadlines"}
+        onClose={closeDeadlineDetail}
+        onViewDoc={setViewingDoc}
+        onEdit={(item) => {
+          closeDeadlineDetail();
+          handleEditItem(item);
+        }}
+        onComplete={(id) => {
+          closeDeadlineDetail();
+          complete(id);
+        }}
+        onPostpone={(id) => {
+          closeDeadlineDetail();
+          postpone(id);
+        }}
+        onSkip={(id) => {
+          closeDeadlineDetail();
+          skip(id);
+        }}
+        onDelete={(id) => {
+          closeDeadlineDetail();
+          del(id);
+        }}
+        onUploadDoc={handleDocumentUpload}
+        onDeleteDoc={deleteDocument}
+      />
 
       {/* Document Lightbox */}
       {viewingDoc && (
