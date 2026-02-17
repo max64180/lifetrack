@@ -230,10 +230,130 @@ function SteeringWheelIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) 
   );
 }
 
+function HomeCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <path d="M4 10l8-6 8 6" />
+          <path d="M7 10v9h10v-9" />
+          <path d="M10 19v-5h4v5" />
+        </>
+      }
+    />
+  );
+}
+
+function FamilyCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <circle cx="8" cy="8" r="2.2" />
+          <circle cx="16" cy="8" r="2.2" />
+          <path d="M4.8 16a3.2 3.2 0 0 1 6.4 0" />
+          <path d="M12.8 16a3.2 3.2 0 0 1 6.4 0" />
+        </>
+      }
+    />
+  );
+}
+
+function FinanceCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <path d="M12 3.5v17" />
+          <path d="M16 7.5a4 2.6 0 0 0-4-2.2 4 2.6 0 0 0 0 5.2 4 2.6 0 0 1 0 5.2 4 2.6 0 0 1-4-2.2" />
+        </>
+      }
+    />
+  );
+}
+
+function HealthCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <rect x="4" y="4" width="16" height="16" rx="3" />
+          <path d="M12 8v8M8 12h8" />
+        </>
+      }
+    />
+  );
+}
+
+function SchoolCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <path d="M3 7l9-4 9 4-9 4-9-4z" />
+          <path d="M5.5 10.5V15c0 1.6 3 3 6.5 3s6.5-1.4 6.5-3v-4.5" />
+        </>
+      }
+    />
+  );
+}
+
+function PetCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <circle cx="8" cy="8" r="1.5" />
+          <circle cx="12" cy="6.8" r="1.5" />
+          <circle cx="16" cy="8" r="1.5" />
+          <path d="M8 15.5c0-2.2 1.8-3.8 4-3.8s4 1.6 4 3.8c0 1.2-.9 2-2.1 2H10.1c-1.2 0-2.1-.8-2.1-2z" />
+        </>
+      }
+    />
+  );
+}
+
 function CategoryIcon({ cat, size = 18, color, fallback = "📌" }) {
   if (!cat) return fallback;
+  const stroke = color || HOME_THEME.textPrimary;
+  if (cat.id === "casa") {
+    return <HomeCategoryIcon size={size} color={stroke} />;
+  }
   if (cat.id === "auto") {
-    return <SteeringWheelIcon size={size} color={color || HOME_THEME.textPrimary} />;
+    return <SteeringWheelIcon size={size} color={stroke} />;
+  }
+  if (cat.id === "famiglia") {
+    return <FamilyCategoryIcon size={size} color={stroke} />;
+  }
+  if (cat.id === "finanze") {
+    return <FinanceCategoryIcon size={size} color={stroke} />;
+  }
+  if (cat.id === "salute") {
+    return <HealthCategoryIcon size={size} color={stroke} />;
+  }
+  if (cat.id === "scuola") {
+    return <SchoolCategoryIcon size={size} color={stroke} />;
+  }
+  if (cat.id === "pet") {
+    return <PetCategoryIcon size={size} color={stroke} />;
   }
   return cat.icon || fallback;
 }
