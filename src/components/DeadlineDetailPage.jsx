@@ -9,7 +9,7 @@ const TEXT_SECONDARY = "#6F6258";
 const TEXT_MUTED = "#9A8F86";
 const BORDER = "#DDD3CA";
 const BORDER_SOFT = "#E7DED6";
-const BRAND = "#C6A14A";
+const BRAND = "#E8855D";
 const DANGER_BG = "#F4E8E6";
 const DANGER_TEXT = "#B3473A";
 
@@ -400,7 +400,7 @@ export default function DeadlineDetailPage({
               style={{
                 border: "none",
                 background: BRAND,
-                color: TEXT_PRIMARY,
+                color: "#fff",
                 borderRadius: 14,
                 minHeight: 44,
                 padding: "10px 12px",
