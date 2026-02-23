@@ -5515,6 +5515,11 @@ export default function App() {
     }
   };
 
+  const getDocumentSource = (doc) => {
+    if (!doc) return "";
+    return doc.url || doc.base64 || doc.data || doc.src || "";
+  };
+
   const shareDocument = async (doc) => {
     if (!doc) return;
     const defaultFilename = t("docs.defaultFilename");
@@ -5524,7 +5529,11 @@ export default function App() {
       return;
     }
     try {
-      const source = doc.url || doc.base64;
+      const source = getDocumentSource(doc);
+      if (!source) {
+        showToast(t("docs.previewUnavailable"));
+        return;
+      }
       const response = await fetch(source);
       const blob = await response.blob();
       const file = new File([blob], doc.filename || defaultFilename, { type: blob.type || "image/jpeg" });
@@ -7099,12 +7108,13 @@ export default function App() {
           display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20,
         }}>
           {(() => {
-            const docSrc = viewingDoc.url || viewingDoc.base64;
+            const docSrc = getDocumentSource(viewingDoc);
             const isImage = viewingDoc.isImage ?? (viewingDoc.contentType?.startsWith("image/") || (docSrc || "").startsWith("data:image/"));
+            const hasSource = !!docSrc;
             return (
               <>
                 <div style={{ fontSize:14, fontWeight:600, color:"#fff", marginBottom:16, maxWidth:"90%", textAlign:"center" }}>{viewingDoc.filename}</div>
-                {isImage ? (
+                {hasSource && isImage ? (
                   <img src={docSrc} style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }} alt="Document" />
                 ) : (
                   <div style={{ padding:"30px 40px", borderRadius:14, background:"rgba(255,255,255,.08)", color:"#fff", fontSize:14, fontWeight:700 }}>
@@ -7116,25 +7126,37 @@ export default function App() {
           })()}
           <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap", justifyContent:"center" }}>
             <a
-              href={viewingDoc.url || viewingDoc.base64}
+              href={getDocumentSource(viewingDoc) || "#"}
               target="_blank"
               rel="noreferrer"
-              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
-              onClick={e => e.stopPropagation()}
+              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
+              onClick={e => {
+                e.stopPropagation();
+                if (!getDocumentSource(viewingDoc)) {
+                  e.preventDefault();
+                  showToast(t("docs.previewUnavailable"));
+                }
+              }}
             >
               {t("actions.open")}
             </a>
             <a
-              href={viewingDoc.url || viewingDoc.base64}
+              href={getDocumentSource(viewingDoc) || "#"}
               download={viewingDoc.filename || "documento"}
-              style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer" }}
-              onClick={e => e.stopPropagation()}
+              style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
+              onClick={e => {
+                e.stopPropagation();
+                if (!getDocumentSource(viewingDoc)) {
+                  e.preventDefault();
+                  showToast(t("docs.previewUnavailable"));
+                }
+              }}
             >
               {t("actions.download")}
             </a>
             <button
               onClick={(e) => { e.stopPropagation(); shareDocument(viewingDoc); }}
-              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}
+              style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
             >
               {t("actions.share")}
             </button>
