@@ -5517,7 +5517,23 @@ export default function App() {
 
   const getDocumentSource = (doc) => {
     if (!doc) return "";
-    return doc.url || doc.base64 || doc.data || doc.src || "";
+    const rawSource = doc.url || doc.base64 || doc.data || doc.src || "";
+    if (!rawSource) return "";
+    const source = String(rawSource).trim();
+    if (/^(https?:|data:|blob:|\/)/i.test(source)) return source;
+    const looksLikeBase64 = /^[A-Za-z0-9+/=\s]+$/.test(source) && source.length > 64;
+    if (looksLikeBase64) {
+      const contentType = doc.contentType || (doc.isImage ? "image/jpeg" : "application/octet-stream");
+      return `data:${contentType};base64,${source.replace(/\s+/g, "")}`;
+    }
+    return source;
+  };
+
+  const isPreviewableDocument = (doc, source = "") => {
+    const type = (doc?.contentType || "").toLowerCase();
+    if (doc?.isImage || type.startsWith("image/") || source.startsWith("data:image/")) return true;
+    if (type === "application/pdf" || source.startsWith("data:application/pdf")) return true;
+    return false;
   };
 
   const shareDocument = async (doc) => {
@@ -7110,12 +7126,19 @@ export default function App() {
           {(() => {
             const docSrc = getDocumentSource(viewingDoc);
             const isImage = viewingDoc.isImage ?? (viewingDoc.contentType?.startsWith("image/") || (docSrc || "").startsWith("data:image/"));
+            const isPdf = (viewingDoc.contentType || "").toLowerCase() === "application/pdf" || (docSrc || "").startsWith("data:application/pdf");
             const hasSource = !!docSrc;
             return (
               <>
                 <div style={{ fontSize:14, fontWeight:600, color:"#fff", marginBottom:16, maxWidth:"90%", textAlign:"center" }}>{viewingDoc.filename}</div>
                 {hasSource && isImage ? (
                   <img src={docSrc} style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:12, boxShadow:"0 8px 32px rgba(0,0,0,.5)" }} alt="Document" />
+                ) : hasSource && isPdf ? (
+                  <iframe
+                    src={docSrc}
+                    title={viewingDoc.filename || "Document"}
+                    style={{ width:"100%", maxWidth:840, height:"70vh", border:"none", borderRadius:12, background:"#fff", boxShadow:"0 8px 32px rgba(0,0,0,.5)" }}
+                  />
                 ) : (
                   <div style={{ padding:"30px 40px", borderRadius:14, background:"rgba(255,255,255,.08)", color:"#fff", fontSize:14, fontWeight:700 }}>
                     {t("docs.previewUnavailable")}
@@ -7125,35 +7148,48 @@ export default function App() {
             );
           })()}
           <div style={{ display:"flex", gap:10, marginTop:18, flexWrap:"wrap", justifyContent:"center" }}>
-            <a
-              href={getDocumentSource(viewingDoc) || "#"}
-              target="_blank"
-              rel="noreferrer"
+            <button
               style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#2d2b26", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
               onClick={e => {
                 e.stopPropagation();
-                if (!getDocumentSource(viewingDoc)) {
-                  e.preventDefault();
+                const source = getDocumentSource(viewingDoc);
+                if (!source) {
                   showToast(t("docs.previewUnavailable"));
+                  return;
                 }
+                if (!isPreviewableDocument(viewingDoc, source)) {
+                  const link = document.createElement("a");
+                  link.href = source;
+                  link.download = viewingDoc.filename || "documento";
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  return;
+                }
+                window.open(source, "_blank", "noopener,noreferrer");
               }}
             >
               {t("actions.open")}
-            </a>
-            <a
-              href={getDocumentSource(viewingDoc) || "#"}
-              download={viewingDoc.filename || "documento"}
+            </button>
+            <button
               style={{ padding:"12px 18px", borderRadius:12, border:"2px solid #fff", background:"transparent", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
               onClick={e => {
                 e.stopPropagation();
-                if (!getDocumentSource(viewingDoc)) {
-                  e.preventDefault();
+                const source = getDocumentSource(viewingDoc);
+                if (!source) {
                   showToast(t("docs.previewUnavailable"));
+                  return;
                 }
+                const link = document.createElement("a");
+                link.href = source;
+                link.download = viewingDoc.filename || "documento";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
               }}
             >
               {t("actions.download")}
-            </a>
+            </button>
             <button
               onClick={(e) => { e.stopPropagation(); shareDocument(viewingDoc); }}
               style={{ padding:"12px 18px", borderRadius:12, border:"none", background:"#5B8DD9", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", opacity:getDocumentSource(viewingDoc) ? 1 : 0.55 }}
