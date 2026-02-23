@@ -932,29 +932,6 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
               ? <span style={{ fontSize:13, fontWeight:700, color:"#6b6961", textDecoration:"line-through" }}>€0</span>
               : item.budget > 0 && <span style={{ fontSize:15, fontWeight:500, color:cat.color, fontFamily:"'Playfair Display','Cormorant Garamond',serif" }}>{formatCurrency(item.budget)}</span>
           )}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onToggle(item.id); }}
-            style={{
-              marginTop:2,
-              border:`1px solid ${HOME_THEME.borderLight}`,
-              background:"#FFFDFB",
-              color:HOME_THEME.textSecondary,
-              borderRadius:8,
-              width:24,
-              height:22,
-              padding:0,
-              fontSize:12,
-              fontWeight:700,
-              lineHeight:1,
-              cursor:"pointer",
-              transform: expanded ? "rotate(180deg)" : "rotate(0)",
-              transition:"transform .25s"
-            }}
-            aria-label={expanded ? t("actions.close", { defaultValue:"Chiudi" }) : t("actions.expand", { defaultValue:"Espandi" })}
-          >
-            ▾
-          </button>
         </div>
       </div>
 
