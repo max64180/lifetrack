@@ -640,6 +640,42 @@ function normalizeAssetDocs(raw = {}) {
   return parsed;
 }
 
+function normalizeCategories(raw = []) {
+  if (!Array.isArray(raw)) return [];
+  const defaultsById = new Map((DEFAULT_CATS || []).map((cat) => [String(cat.id), cat]));
+  return raw
+    .map((cat, index) => {
+      if (!cat || typeof cat !== "object") return null;
+      const fallbackId = String(cat.label || `cat_${index}`).toLowerCase().replace(/\s+/g, "_");
+      const id = String(cat.id || fallbackId);
+      const base = defaultsById.get(id) || {};
+      const color = cat.color || base.color || "#8a877f";
+      return {
+        ...base,
+        ...cat,
+        id,
+        label: cat.label || base.label || id,
+        color,
+        light: cat.light || base.light || `${color}22`,
+        assets: Array.isArray(cat.assets) ? cat.assets.filter(Boolean) : [],
+        iconKey: typeof cat.iconKey === "string" ? cat.iconKey : (typeof base.iconKey === "string" ? base.iconKey : ""),
+      };
+    })
+    .filter(Boolean);
+}
+
+function mergeCategorySets(remoteRaw, localRaw) {
+  const remote = normalizeCategories(remoteRaw);
+  const local = normalizeCategories(localRaw);
+  if (!remote.length) return local.length ? local : normalizeCategories(DEFAULT_CATS);
+  const merged = new Map(remote.map((cat) => [String(cat.id), cat]));
+  local.forEach((cat) => {
+    const id = String(cat.id);
+    if (!merged.has(id)) merged.set(id, cat);
+  });
+  return Array.from(merged.values());
+}
+
 const sanitizeFilename = (name = "file") =>
   name.replace(/[^\w.\-]+/g, "_").slice(0, 80);
 
@@ -3575,7 +3611,21 @@ export default function App() {
   const [pullSyncing, setPullSyncing] = useState(false);
 
   // App state (must be declared before any hooks that reference them)
-  const [cats, setCats] = useState(DEFAULT_CATS);
+  const [cats, setCats] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lifetrack_categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const normalized = normalizeCategories(parsed);
+          if (normalized.length) return normalized;
+        }
+      }
+    } catch (err) {
+      console.warn("Local categories parse error:", err);
+    }
+    return normalizeCategories(DEFAULT_CATS);
+  });
   const [deadlines, setDeadlines] = useState(() => {
     try {
       const saved = localStorage.getItem('lifetrack_deadlines');
@@ -3862,7 +3912,7 @@ export default function App() {
           lastFocusCheckRef.current = Date.now();
           if (!cancelled && !pendingSaveRef.current) {
             suppressMetaRef.current = true;
-            setCats(userData.categories || DEFAULT_CATS);
+            setCats((prev) => mergeCategorySets(userData.categories || DEFAULT_CATS, prev));
             setWorkLogs(parsedWorkLogs);
             setAssetDocs(parsedAssetDocs);
             setPets(parsedPets);
@@ -3961,7 +4011,7 @@ export default function App() {
             ? mergeDeadlines(remoteDeadlines, localCurrent)
             : applyDelta(remoteDeadlines, localCurrent);
           setDeadlines(nextDeadlines);
-          setCats(userData.categories || DEFAULT_CATS);
+          setCats((prev) => mergeCategorySets(userData.categories || DEFAULT_CATS, prev));
           setWorkLogs(parsedWorkLogs);
           setAssetDocs(parsedAssetDocs);
           setPets(parsedPets);
