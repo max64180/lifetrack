@@ -332,9 +332,90 @@ function PetCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
   );
 }
 
+function CloudCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <path d="M7.2 19h9.4a3.8 3.8 0 0 0 .5-7.6A5.5 5.5 0 0 0 6.4 12a3.2 3.2 0 0 0 .8 7z" />
+        </>
+      }
+    />
+  );
+}
+
+function BriefcaseCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <rect x="3.5" y="7.5" width="17" height="12" rx="2.5" />
+          <path d="M9 7.5v-1.8a1.7 1.7 0 0 1 1.7-1.7h2.6A1.7 1.7 0 0 1 15 5.7v1.8" />
+          <path d="M3.5 12h17" />
+        </>
+      }
+    />
+  );
+}
+
+function CartCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <circle cx="10" cy="18.2" r="1.1" />
+          <circle cx="16.5" cy="18.2" r="1.1" />
+          <path d="M3.5 4.5h2l1.8 9h9.2l1.5-6.5H7.6" />
+        </>
+      }
+    />
+  );
+}
+
+function WrenchCategoryIcon({ size = 18, color = "#3F342C", strokeWidth = 1.8 }) {
+  return (
+    <OutlineIcon
+      size={size}
+      color={color}
+      strokeWidth={strokeWidth}
+      path={
+        <>
+          <path d="M14.5 4.5a3.5 3.5 0 0 0-3.2 4.8L5 15.6a1.8 1.8 0 1 0 2.5 2.5l6.3-6.3a3.5 3.5 0 0 0 4.8-3.2l-2.3 1-2.2-2.2z" />
+        </>
+      }
+    />
+  );
+}
+
 function CategoryIcon({ cat, size = 18, color, fallback = "📌" }) {
   if (!cat) return fallback;
   const stroke = color || HOME_THEME.textPrimary;
+  const iconKey = (cat.iconKey || "").toLowerCase();
+  const iconToken = String(cat.icon || "");
+  const idOrLabel = `${cat.id || ""} ${cat.label || ""}`.toLowerCase();
+  const cloudLegacy = iconToken === "🎵" || iconToken === "🎶" || iconToken === "☁️" || iconToken === "💻" || iconToken === "📱";
+
+  if (iconKey === "cloud" || iconKey === "streaming" || iconKey === "media" || cloudLegacy || idOrLabel.includes("stream") || idOrLabel.includes("cloud")) {
+    return <CloudCategoryIcon size={size} color={stroke} />;
+  }
+  if (iconKey === "work" || iconKey === "briefcase" || iconToken === "💼") {
+    return <BriefcaseCategoryIcon size={size} color={stroke} />;
+  }
+  if (iconKey === "shopping" || iconKey === "cart" || iconToken === "🛒") {
+    return <CartCategoryIcon size={size} color={stroke} />;
+  }
+  if (iconKey === "tools" || iconKey === "maintenance" || iconToken === "🔧") {
+    return <WrenchCategoryIcon size={size} color={stroke} />;
+  }
   if (cat.id === "casa") {
     return <HomeCategoryIcon size={size} color={stroke} />;
   }
@@ -882,12 +963,12 @@ function DeadlineCard({ item, expanded, onToggle, onComplete, onDelete, onPostpo
       >
         <div style={{
           width:30, height:30, borderRadius:10, flexShrink:0,
-          background: item.done ? "#f0efe8" : cat.light,
+          background: cat.light,
           display:"flex", alignItems:"center", justifyContent:"center",
           fontSize:15,
-          border: `1px solid ${item.done ? "#e0ddd6" : cat.color + "33"}`,
+          border: `1px solid ${cat.color}33`,
         }}>
-          {item.done ? "✓" : <CategoryIcon cat={cat} size={15} color={HOME_THEME.textPrimary} />}
+          <CategoryIcon cat={cat} size={15} color={HOME_THEME.textPrimary} />
         </div>
 
         <div style={{ flex:1, minWidth:0 }}>
@@ -3212,7 +3293,19 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
   const [newAsset, setNewAsset] = useState("");
   const [assetFiles, setAssetFiles] = useState([]);
   const [showAddCat, setShowAddCat] = useState(false);
-  const [newCat, setNewCat] = useState({ label:"", icon:"", color:"#E8855D" });
+  const [newCat, setNewCat] = useState({ label:"", icon:"", iconKey:"", color:"#E8855D" });
+  const iconOptions = [
+    { key:"home", icon:"🏠", cat:{ id:"casa" } },
+    { key:"auto", icon:"🚗", cat:{ id:"auto" } },
+    { key:"family", icon:"👨‍👩‍👧", cat:{ id:"famiglia" } },
+    { key:"finance", icon:"💰", cat:{ id:"finanze" } },
+    { key:"health", icon:"🏥", cat:{ id:"salute" } },
+    { key:"school", icon:"📚", cat:{ id:"scuola" } },
+    { key:"cloud", icon:"☁️", cat:{ id:"custom_cloud", iconKey:"cloud", label:"Cloud" } },
+    { key:"work", icon:"💼", cat:{ id:"custom_work", iconKey:"work", label:"Work" } },
+    { key:"shopping", icon:"🛒", cat:{ id:"custom_shopping", iconKey:"shopping", label:"Shopping" } },
+    { key:"tools", icon:"🔧", cat:{ id:"custom_tools", iconKey:"tools", label:"Tools" } },
+  ];
 
   useEffect(() => {
     setNewAsset("");
@@ -3250,17 +3343,18 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
   };
 
   const addCategory = () => {
-    if (!newCat.label.trim() || !newCat.icon.trim()) return;
+    if (!newCat.label.trim() || (!newCat.iconKey.trim() && !newCat.icon.trim())) return;
     const id = newCat.label.toLowerCase().replace(/\s+/g, '_');
     onUpdateCats([...cats, { 
       id, 
       label: newCat.label.trim(), 
-      icon: newCat.icon.trim(), 
+      icon: newCat.icon.trim(),
+      iconKey: newCat.iconKey.trim(),
       color: newCat.color,
       light: newCat.color + "22",
       assets: [] 
     }]);
-    setNewCat({ label:"", icon:"", color:"#E8855D" });
+    setNewCat({ label:"", icon:"", iconKey:"", color:"#E8855D" });
     setShowAddCat(false);
   };
 
@@ -3286,7 +3380,7 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
           <div key={cat.id} style={{ marginBottom:20, background:"#faf9f7", borderRadius:14, padding:"14px 16px", border:"1px solid #edecea" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
               <div style={{ width:40, height:40, borderRadius:10, background:cat.light, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, border:`2px solid ${cat.color}44` }}>
-                {cat.icon}
+                <CategoryIcon cat={cat} size={20} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
               </div>
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:15, fontWeight:700, color:"#2d2b26", fontFamily:"'Sora',sans-serif" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</div>
@@ -3384,19 +3478,21 @@ function CategorySheet({ open, onClose, cats, onUpdateCats, deadlines, workLogs,
               style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:"1px solid #e8e6e0", fontSize:14, outline:"none", marginBottom:10 }}
             />
 
-            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>{t("category.emoji")}</label>
+            <label style={{ display:"block", fontSize:10, fontWeight:700, color:"#8a877f", marginBottom:5, textTransform:"uppercase" }}>{t("category.emoji", { defaultValue:"Icona" })}</label>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(44px, 1fr))", gap:8, marginBottom:12, maxHeight:200, overflowY:"auto" }}>
-              {["🏠","🚗","👨‍👩‍👧","💰","🏥","📚","✈️","🍽️","🛒","💼","🎯","🎓","🏋️","🎨","🎵","🐕","🌱","🔧","📱","💻","⚡","🔑","📦","🎁"].map(emoji => (
+              {iconOptions.map((option) => (
                 <button
-                  key={emoji}
+                  key={option.key}
                   type="button"
-                  onClick={() => setNewCat({...newCat, icon: emoji})}
+                  onClick={() => setNewCat({ ...newCat, iconKey: option.key, icon: option.icon })}
                   style={{
-                    padding:"10px", fontSize:22, background: newCat.icon === emoji ? "#EBF2FC" : "#f5f4f0",
-                    border: newCat.icon === emoji ? "2px solid #5B8DD9" : "1px solid #e8e6e0",
+                    padding:"10px", fontSize:22, background: newCat.iconKey === option.key ? "#EBF2FC" : "#f5f4f0",
+                    border: newCat.iconKey === option.key ? "2px solid #5B8DD9" : "1px solid #e8e6e0",
                     borderRadius:8, cursor:"pointer", transition:"all .2s", aspectRatio:"1"
                   }}
-                >{emoji}</button>
+                >
+                  <CategoryIcon cat={option.cat} size={20} color={HOME_THEME.textPrimary} fallback={option.icon} />
+                </button>
               ))}
             </div>
 
