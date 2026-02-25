@@ -41,7 +41,8 @@ module.exports = async (req, res) => {
       return;
     }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const tokensCol = getDb().collection("users").doc(uid).collection("pushTokens");
+    const db = getDb();
+    const tokensCol = db.collection("users").doc(uid).collection("pushTokens");
     const tokenRef = tokensCol.doc(tokenHash);
     const snap = await tokenRef.get();
     const now = new Date().toISOString();
@@ -71,6 +72,21 @@ module.exports = async (req, res) => {
         })
         .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
       if (updates.length) await Promise.all(updates);
+    }
+    // Global cleanup: keep this token bound only to current user.
+    const sameTokenGlobal = await db.collectionGroup("pushTokens").where("token", "==", token).where("enabled", "==", true).get();
+    const disableSameTokenElsewhere = sameTokenGlobal.docs
+      .filter((docSnap) => docSnap.ref.parent.parent?.id && docSnap.ref.parent.parent.id !== uid)
+      .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
+    if (disableSameTokenElsewhere.length) await Promise.all(disableSameTokenElsewhere);
+
+    // Global cleanup by deviceId: disable other user bindings for same device.
+    if (deviceId) {
+      const sameDeviceGlobal = await db.collectionGroup("pushTokens").where("deviceId", "==", deviceId).where("enabled", "==", true).get();
+      const disableSameDeviceElsewhere = sameDeviceGlobal.docs
+        .filter((docSnap) => docSnap.ref.parent.parent?.id && docSnap.ref.parent.parent.id !== uid)
+        .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
+      if (disableSameDeviceElsewhere.length) await Promise.all(disableSameDeviceElsewhere);
     }
     res.status(200).json({ ok: true });
   } catch (error) {

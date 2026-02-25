@@ -5797,6 +5797,13 @@ export default function App() {
 
   const handleSignOut = async () => {
     try {
+      if (pushToken) {
+        try {
+          await unregisterPushTokenRemote(pushToken);
+        } catch (err) {
+          console.warn("Push unregister on logout failed:", err);
+        }
+      }
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);

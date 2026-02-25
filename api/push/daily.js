@@ -107,7 +107,10 @@ module.exports = async (req, res) => {
   try {
     const db = getDb();
     const messaging = getMessaging();
-    const usersSnap = await db.collection("users").get();
+    const singleUid = typeof req.query?.uid === "string" ? req.query.uid.trim() : "";
+    const usersSnap = singleUid
+      ? { docs: [await db.collection("users").doc(singleUid).get()].filter((d) => d.exists) }
+      : await db.collection("users").get();
     let usersProcessed = 0;
     let sent = 0;
     let disabledTokens = 0;
@@ -182,6 +185,8 @@ module.exports = async (req, res) => {
 
     res.status(200).json({
       ok: true,
+      mode: singleUid ? "single_user" : "all_users",
+      uid: singleUid || null,
       usersProcessed,
       sent,
       disabledTokens,
