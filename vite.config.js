@@ -27,7 +27,7 @@ export default defineConfig({
   },
   plugins: [react()],
   optimizeDeps: {
-    include: ['firebase/app', 'firebase/auth', 'firebase/firestore']
+    include: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/messaging']
   },
   build: {
     sourcemap: true,

@@ -244,6 +244,10 @@
     "settings": "Impostazioni",
     "logout": "Logout",
     "sync": "Sync cloud",
+    "push": "Notifiche push",
+    "pushBlocked": "Permessi bloccati nel browser",
+    "pushOn": "ON",
+    "pushOff": "OFF",
     "syncOn": "ON",
     "syncOff": "OFF"
   },
@@ -536,7 +540,14 @@
     "syncDisabled": "Sync disattivato",
     "syncBusy": "Sync in corso…",
     "resetDone": "✓ Dati cloud eliminati",
-    "resetError": "✗ Errore reset dati"
+    "resetError": "✗ Errore reset dati",
+    "pushEnabled": "✓ Notifiche attivate",
+    "pushDisabled": "✓ Notifiche disattivate",
+    "pushUnsupported": "Notifiche push non supportate su questo dispositivo",
+    "pushPermissionDenied": "Permesso notifiche non concesso",
+    "pushConfigMissing": "Configurazione push mancante",
+    "pushLoginRequired": "Accedi per attivare le notifiche",
+    "pushError": "✗ Errore attivazione notifiche"
   },
   "budgetBar": {
     "title": "Budget nel periodo",

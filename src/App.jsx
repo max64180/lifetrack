@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, query, where, orderBy } from 'firebase/firestore/lite';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getMessaging, getToken, onMessage, isSupported as messagingIsSupported } from "firebase/messaging";
 import { DEFAULT_CATS, RANGES } from "./data/constants";
 import { getCat, normalizeCategories, mergeCategorySets } from "./utils/cats";
 import { compressImage, compressImageToBlob, fileToBase64 } from "./utils/files";
@@ -60,6 +61,7 @@ const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 20000;
 const USE_STORAGE = false;
+const FCM_VAPID_PUBLIC_KEY = import.meta.env.VITE_FCM_VAPID_PUBLIC_KEY || "";
 
 const dateInpModal = {
   width: "100%",
@@ -3561,6 +3563,25 @@ export default function App() {
       return true;
     }
   });
+  const [pushEnabled, setPushEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("lifetrack_push_enabled") === "true";
+    } catch (err) {
+      return false;
+    }
+  });
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushToken, setPushToken] = useState(() => {
+    try {
+      return localStorage.getItem("lifetrack_push_token") || "";
+    } catch (err) {
+      return "";
+    }
+  });
+  const [pushPermission, setPushPermission] = useState(() => {
+    if (typeof Notification === "undefined") return "unsupported";
+    return Notification.permission || "default";
+  });
   const DEV_EMAIL = "mstanglino@gmail.com";
   const isDevUser = (user?.email || "").toLowerCase() === DEV_EMAIL;
   const [showDev, setShowDev] = useState(false);
@@ -4343,6 +4364,171 @@ export default function App() {
     setToast(message);
     setTimeout(() => setToast(null), 4000);
   };
+
+  const getAuthHeader = async () => {
+    const current = auth.currentUser;
+    if (!current) return "";
+    const idToken = await current.getIdToken();
+    return `Bearer ${idToken}`;
+  };
+
+  const registerPushTokenRemote = async (token) => {
+    if (!token) return false;
+    const authHeader = await getAuthHeader();
+    if (!authHeader) return false;
+    const response = await fetch("/api/push/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        token,
+        platform: navigator?.userAgent || "",
+        language: navigator?.language || "it",
+      }),
+    });
+    return response.ok;
+  };
+
+  const unregisterPushTokenRemote = async (token) => {
+    if (!token) return false;
+    const authHeader = await getAuthHeader();
+    if (!authHeader) return false;
+    const response = await fetch("/api/push/unregister", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ token }),
+    });
+    return response.ok;
+  };
+
+  const ensurePushToken = async ({ askPermission = false } = {}) => {
+    if (!user) {
+      showToast(t("toast.pushLoginRequired"));
+      return false;
+    }
+    if (!FCM_VAPID_PUBLIC_KEY) {
+      showToast(t("toast.pushConfigMissing"));
+      return false;
+    }
+    if (typeof window === "undefined" || typeof Notification === "undefined") {
+      showToast(t("toast.pushUnsupported"));
+      return false;
+    }
+    if (!("serviceWorker" in navigator)) {
+      showToast(t("toast.pushUnsupported"));
+      return false;
+    }
+    const supported = await messagingIsSupported().catch(() => false);
+    if (!supported) {
+      showToast(t("toast.pushUnsupported"));
+      return false;
+    }
+    if (askPermission) {
+      const permission = await Notification.requestPermission();
+      setPushPermission(permission);
+      if (permission !== "granted") {
+        showToast(t("toast.pushPermissionDenied"));
+        return false;
+      }
+    } else if (Notification.permission !== "granted") {
+      setPushPermission(Notification.permission || "default");
+      return false;
+    }
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, {
+      vapidKey: FCM_VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return false;
+    const registered = await registerPushTokenRemote(token);
+    if (!registered) return false;
+    setPushToken(token);
+    try { localStorage.setItem("lifetrack_push_token", token); } catch (err) {}
+    return true;
+  };
+
+  const handlePushToggle = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      if (!pushEnabled) {
+        const enabled = await ensurePushToken({ askPermission: true });
+        if (!enabled) {
+          setPushEnabled(false);
+          return;
+        }
+        setPushEnabled(true);
+        showToast(t("toast.pushEnabled"));
+        return;
+      }
+      if (pushToken) {
+        await unregisterPushTokenRemote(pushToken);
+      }
+      setPushEnabled(false);
+      setPushToken("");
+      try { localStorage.removeItem("lifetrack_push_token"); } catch (err) {}
+      showToast(t("toast.pushDisabled"));
+    } catch (error) {
+      console.error("Push toggle error:", error);
+      showToast(t("toast.pushError"));
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("lifetrack_push_enabled", String(pushEnabled));
+    } catch (err) {}
+  }, [pushEnabled]);
+
+  useEffect(() => {
+    if (!user || !pushEnabled) return;
+    let mounted = true;
+    const syncPush = async () => {
+      try {
+        const ok = await ensurePushToken({ askPermission: false });
+        if (!mounted) return;
+        if (!ok && Notification.permission !== "granted") {
+          setPushEnabled(false);
+        }
+      } catch (error) {
+        console.error("Push auto registration error:", error);
+      }
+    };
+    syncPush();
+    return () => { mounted = false; };
+  }, [user, pushEnabled]);
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") return;
+    const permission = Notification.permission || "default";
+    setPushPermission(permission);
+  }, [showMenu]);
+
+  useEffect(() => {
+    let unsubscribe = null;
+    const setupForeground = async () => {
+      if (!user || !pushEnabled) return;
+      const supported = await messagingIsSupported().catch(() => false);
+      if (!supported) return;
+      const messaging = getMessaging(app);
+      unsubscribe = onMessage(messaging, (payload) => {
+        const title = payload?.notification?.title;
+        if (title) showToast(`🔔 ${title}`);
+      });
+    };
+    setupForeground();
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, [user, pushEnabled]);
 
   const triggerManualSync = async () => {
     if (!syncEnabled) {
@@ -6681,6 +6867,34 @@ export default function App() {
                 }}
               >
                 {syncEnabled ? t("menu.syncOn") : t("menu.syncOff")}
+              </button>
+            </div>
+            <div style={{ marginBottom:10, padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#2d2b26" }}>
+                {t("menu.push")}
+                {pushPermission === "denied" && (
+                  <div style={{ fontSize:10, fontWeight:600, color:"#9a8f86", marginTop:2 }}>
+                    {t("menu.pushBlocked")}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handlePushToggle}
+                disabled={pushBusy}
+                style={{
+                  padding:"6px 10px",
+                  borderRadius:999,
+                  border:"none",
+                  background: pushEnabled ? "#4CAF6E" : "#E53935",
+                  color:"#fff",
+                  fontSize:11,
+                  fontWeight:700,
+                  cursor: pushBusy ? "not-allowed" : "pointer",
+                  minWidth:64,
+                  opacity: pushBusy ? 0.6 : 1,
+                }}
+              >
+                {pushEnabled ? t("menu.pushOn") : t("menu.pushOff")}
               </button>
             </div>
             <button onClick={() => { setShowStats(true); setShowMenu(false); }} style={{ width:"100%", padding:"10px", borderRadius:10, border:"1px solid #e8e6e0", background:"#faf9f7", textAlign:"left", marginBottom:8 }}>📈 {t("menu.stats")}</button>

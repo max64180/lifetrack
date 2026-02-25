@@ -244,6 +244,10 @@
     "settings": "Settings",
     "logout": "Logout",
     "sync": "Cloud sync",
+    "push": "Push notifications",
+    "pushBlocked": "Browser permissions are blocked",
+    "pushOn": "ON",
+    "pushOff": "OFF",
     "syncOn": "ON",
     "syncOff": "OFF"
   },
@@ -536,7 +540,14 @@
     "syncDisabled": "Sync disabled",
     "syncBusy": "Sync in progress…",
     "resetDone": "✓ Cloud data deleted",
-    "resetError": "✗ Data reset error"
+    "resetError": "✗ Data reset error",
+    "pushEnabled": "✓ Notifications enabled",
+    "pushDisabled": "✓ Notifications disabled",
+    "pushUnsupported": "Push notifications are not supported on this device",
+    "pushPermissionDenied": "Notification permission denied",
+    "pushConfigMissing": "Missing push configuration",
+    "pushLoginRequired": "Sign in to enable notifications",
+    "pushError": "✗ Notification setup error"
   },
   "budgetBar": {
     "title": "Budget in range",
