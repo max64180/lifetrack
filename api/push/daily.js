@@ -84,6 +84,17 @@ function pickTokenDocs(docs) {
   });
 }
 
+function pickMostRecentTokenDoc(entries) {
+  if (!entries.length) return null;
+  return entries
+    .slice()
+    .sort((a, b) => {
+      const ta = Date.parse(a?.data?.updatedAt || a?.data?.lastSeenAt || a?.data?.createdAt || "") || 0;
+      const tb = Date.parse(b?.data?.updatedAt || b?.data?.lastSeenAt || b?.data?.createdAt || "") || 0;
+      return tb - ta;
+    })[0];
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     res.status(405).json({ error: "method_not_allowed" });
@@ -119,7 +130,9 @@ module.exports = async (req, res) => {
         if (deviceId && sentDeviceSet.has(deviceId)) return false;
         return true;
       });
-      const tokens = filteredDocs.map((entry) => String(entry.data?.token || "")).filter(Boolean);
+      const onePerUser = pickMostRecentTokenDoc(filteredDocs);
+      if (!onePerUser) continue;
+      const tokens = [String(onePerUser.data?.token || "")].filter(Boolean);
       if (!tokens.length) continue;
 
       const response = await messaging.sendEachForMulticast({
@@ -143,7 +156,7 @@ module.exports = async (req, res) => {
         if (!r.success) return;
         const token = tokens[index];
         if (token) sentTokenSet.add(token);
-        const deviceId = String(filteredDocs[index]?.data?.deviceId || "").trim();
+        const deviceId = String((index === 0 ? onePerUser : null)?.data?.deviceId || "").trim();
         if (deviceId) sentDeviceSet.add(deviceId);
       });
       const invalidHashes = [];
@@ -151,7 +164,7 @@ module.exports = async (req, res) => {
         if (r.success) return;
         const code = r.error?.code || "";
         if (code.includes("registration-token-not-registered") || code.includes("invalid-registration-token")) {
-          invalidHashes.push(filteredDocs[index]?.id);
+          invalidHashes.push(index === 0 ? onePerUser?.id : undefined);
         }
       });
       if (invalidHashes.length) {
