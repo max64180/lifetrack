@@ -1,5 +1,5 @@
 const crypto = require("node:crypto");
-const { getDb, admin } = require("../_lib/firebaseAdmin");
+const { getDb, getApp, admin } = require("../_lib/firebaseAdmin");
 
 function parseBody(req) {
   if (!req.body) return {};
@@ -25,6 +25,7 @@ module.exports = async (req, res) => {
     return;
   }
   try {
+    getApp();
     const bearer = getBearer(req);
     if (!bearer) {
       res.status(401).json({ error: "missing_auth" });
