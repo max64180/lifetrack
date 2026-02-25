@@ -47,6 +47,15 @@ module.exports = async (req, res) => {
     res.status(200).json({ ok: true });
   } catch (error) {
     console.error("push/unregister error:", error);
+    const message = String(error?.message || "");
+    if (message.includes("firebase_admin_env_missing") || message.includes("DECODER routines") || message.includes("private key")) {
+      res.status(500).json({ error: "config_error" });
+      return;
+    }
+    if (String(error?.code || "").includes("auth/")) {
+      res.status(401).json({ error: "invalid_auth" });
+      return;
+    }
     res.status(500).json({ error: "internal_error" });
   }
 };
