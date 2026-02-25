@@ -56,6 +56,7 @@ module.exports = async (req, res) => {
     console.error("push/register error:", error);
     const message = String(error?.message || "");
     const stack = String(error?.stack || "");
+    const code = String(error?.code || "");
     const configFailure =
       message.includes("firebase_admin_env_missing") ||
       message.toLowerCase().includes("private key") ||
@@ -64,13 +65,22 @@ module.exports = async (req, res) => {
       message.includes("credential implementation provided to initializeApp") ||
       stack.includes("firebaseAdmin");
     if (configFailure) {
-      res.status(500).json({ error: "config_error" });
+      res.status(500).json({ error: "config_error", reason: "admin_init" });
       return;
     }
-    if (String(error?.code || "").includes("auth/")) {
-      res.status(401).json({ error: "invalid_auth" });
+    if (
+      code.includes("auth/") ||
+      message.includes("ID token") ||
+      message.includes("incorrect \"aud\"") ||
+      message.includes("incorrect \"iss\"")
+    ) {
+      res.status(401).json({ error: "invalid_auth", reason: "verify_id_token" });
       return;
     }
-    res.status(500).json({ error: "internal_error" });
+    if (message.includes("Value for argument \"documentPath\"") || message.includes("token")) {
+      res.status(400).json({ error: "bad_payload", reason: "token_payload" });
+      return;
+    }
+    res.status(500).json({ error: "internal_error", reason: code || message.slice(0, 80) || "unknown" });
   }
 };
