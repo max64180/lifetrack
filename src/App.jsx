@@ -4372,6 +4372,20 @@ export default function App() {
     return `Bearer ${idToken}`;
   };
 
+  const getPushDeviceId = () => {
+    try {
+      const existing = localStorage.getItem("lifetrack_push_device_id");
+      if (existing) return existing;
+      const created = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `push_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem("lifetrack_push_device_id", created);
+      return created;
+    } catch (err) {
+      return `push_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+  };
+
   const registerPushTokenRemote = async (token) => {
     if (!token) return false;
     const authHeader = await getAuthHeader();
@@ -4384,6 +4398,7 @@ export default function App() {
       },
       body: JSON.stringify({
         token,
+        deviceId: getPushDeviceId(),
         platform: navigator?.userAgent || "",
         language: navigator?.language || "it",
       }),

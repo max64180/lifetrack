@@ -35,23 +35,33 @@ module.exports = async (req, res) => {
     const uid = decoded.uid;
     const payload = parseBody(req);
     const token = typeof payload.token === "string" ? payload.token.trim() : "";
+    const deviceId = typeof payload.deviceId === "string" ? payload.deviceId.trim() : "";
     if (!token) {
       res.status(400).json({ error: "missing_token" });
       return;
     }
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    const tokenRef = getDb().collection("users").doc(uid).collection("pushTokens").doc(tokenHash);
+    const tokensCol = getDb().collection("users").doc(uid).collection("pushTokens");
+    const tokenRef = tokensCol.doc(tokenHash);
     const snap = await tokenRef.get();
     const now = new Date().toISOString();
     await tokenRef.set({
       token,
       enabled: true,
+      deviceId: deviceId || "",
       platform: payload.platform || "",
       language: payload.language || "it",
       createdAt: snap.exists ? (snap.data().createdAt || now) : now,
       updatedAt: now,
       lastSeenAt: now,
     }, { merge: true });
+    if (deviceId) {
+      const sameDeviceSnap = await tokensCol.where("deviceId", "==", deviceId).where("enabled", "==", true).get();
+      const updates = sameDeviceSnap.docs
+        .filter((docSnap) => docSnap.id !== tokenHash)
+        .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
+      if (updates.length) await Promise.all(updates);
+    }
     res.status(200).json({ ok: true });
   } catch (error) {
     console.error("push/register error:", error);

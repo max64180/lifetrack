@@ -36,6 +36,34 @@ function buildMessage(overdue, dueSoon) {
   return `Hai ${dueSoon} scadenze in arrivo nei prossimi giorni.`;
 }
 
+function pickTokenDocs(docs) {
+  const byDevice = new Map();
+  const withoutDevice = [];
+  docs.forEach((docSnap) => {
+    const data = docSnap.data() || {};
+    const entry = { id: docSnap.id, data };
+    const deviceId = (data.deviceId || "").trim();
+    if (!deviceId) {
+      withoutDevice.push(entry);
+      return;
+    }
+    const prev = byDevice.get(deviceId);
+    const prevTs = prev ? Date.parse(prev.data.updatedAt || prev.data.lastSeenAt || "") || 0 : -1;
+    const currTs = Date.parse(data.updatedAt || data.lastSeenAt || "") || 0;
+    if (!prev || currTs >= prevTs) {
+      byDevice.set(deviceId, entry);
+    }
+  });
+  const selected = [...byDevice.values(), ...withoutDevice];
+  const seenTokens = new Set();
+  return selected.filter((entry) => {
+    const token = entry?.data?.token;
+    if (!token || seenTokens.has(token)) return false;
+    seenTokens.add(token);
+    return true;
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     res.status(405).json({ error: "method_not_allowed" });
@@ -61,7 +89,8 @@ module.exports = async (req, res) => {
       const deadlinesSnap = await userDoc.ref.collection("deadlines").get();
       const { overdue, dueSoon } = computeSummary(deadlinesSnap.docs.map((d) => d.data()));
       if (overdue === 0 && dueSoon === 0) continue;
-      const tokens = tokensSnap.docs.map((d) => d.data()?.token).filter(Boolean);
+      const selectedDocs = pickTokenDocs(tokensSnap.docs);
+      const tokens = selectedDocs.map((entry) => entry.data?.token).filter(Boolean);
       if (!tokens.length) continue;
 
       const response = await messaging.sendEachForMulticast({
@@ -86,7 +115,7 @@ module.exports = async (req, res) => {
         if (r.success) return;
         const code = r.error?.code || "";
         if (code.includes("registration-token-not-registered") || code.includes("invalid-registration-token")) {
-          invalidHashes.push(tokensSnap.docs[index]?.id);
+          invalidHashes.push(selectedDocs[index]?.id);
         }
       });
       if (invalidHashes.length) {
