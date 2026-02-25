@@ -45,7 +45,7 @@ function pickTokenDocs(docs) {
     const entry = { id: docSnap.id, data };
     const deviceId = (data.deviceId || "").trim();
     if (!deviceId) {
-      const platform = String(data.platformKind || data.platform || "").trim();
+      const platform = String(data.platform || "").trim();
       if (!platform) {
         withoutDeviceGeneric.push(entry);
       } else {
@@ -84,43 +84,15 @@ function pickTokenDocs(docs) {
   });
 }
 
-function inferPlatformKind(entry) {
-  const kind = String(entry?.data?.platformKind || "").trim().toLowerCase();
-  if (kind) return kind;
-  const ua = String(entry?.data?.platform || "").toLowerCase();
-  if (ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod")) return "ios";
-  if (ua.includes("android")) return "android";
-  if (ua.includes("windows") || ua.includes("macintosh") || ua.includes("linux") || ua.includes("cros")) return "desktop";
-  return "unknown";
-}
-
-function isMobileKind(kind) {
-  return kind === "ios" || kind === "android";
-}
-
-function sortByRecency(entries) {
+function pickMostRecentTokenDoc(entries) {
+  if (!entries.length) return null;
   return entries
     .slice()
     .sort((a, b) => {
       const ta = Date.parse(a?.data?.updatedAt || a?.data?.lastSeenAt || a?.data?.createdAt || "") || 0;
       const tb = Date.parse(b?.data?.updatedAt || b?.data?.lastSeenAt || b?.data?.createdAt || "") || 0;
       return tb - ta;
-    });
-}
-
-function chooseTargetEntries(entries, { sendAll = false } = {}) {
-  const sorted = sortByRecency(entries);
-  if (!sorted.length) return [];
-  if (sendAll) return sorted;
-  const mobile = sorted.find((entry) => isMobileKind(inferPlatformKind(entry)));
-  const desktop = sorted.find((entry) => inferPlatformKind(entry) === "desktop");
-  const unknown = sorted.find((entry) => inferPlatformKind(entry) === "unknown");
-  const selected = [];
-  if (mobile) selected.push(mobile);
-  if (desktop && desktop.id !== mobile?.id) selected.push(desktop);
-  if (!selected.length && unknown) selected.push(unknown);
-  if (!selected.length) selected.push(sorted[0]);
-  return selected;
+    })[0];
 }
 
 module.exports = async (req, res) => {
@@ -142,12 +114,9 @@ module.exports = async (req, res) => {
     let usersProcessed = 0;
     let sent = 0;
     let disabledTokens = 0;
-    let selectedTokens = 0;
     const sentTokenSet = new Set();
     const sentDeviceSet = new Set();
     const appUrl = process.env.APP_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-    const forceAllTargets = String(req.query?.all || "") === "1";
-    const selectedPlatforms = [];
 
     for (const userDoc of usersSnap.docs) {
       usersProcessed += 1;
@@ -164,11 +133,10 @@ module.exports = async (req, res) => {
         if (deviceId && sentDeviceSet.has(deviceId)) return false;
         return true;
       });
-      const targets = chooseTargetEntries(filteredDocs, { sendAll: forceAllTargets });
-      const tokens = targets.map((entry) => String(entry?.data?.token || "")).filter(Boolean);
+      const onePerUser = pickMostRecentTokenDoc(filteredDocs);
+      if (!onePerUser) continue;
+      const tokens = [String(onePerUser.data?.token || "")].filter(Boolean);
       if (!tokens.length) continue;
-      selectedTokens += tokens.length;
-      targets.forEach((entry) => selectedPlatforms.push(inferPlatformKind(entry)));
 
       const response = await messaging.sendEachForMulticast({
         tokens,
@@ -191,7 +159,7 @@ module.exports = async (req, res) => {
         if (!r.success) return;
         const token = tokens[index];
         if (token) sentTokenSet.add(token);
-        const deviceId = String(targets[index]?.data?.deviceId || "").trim();
+        const deviceId = String((index === 0 ? onePerUser : null)?.data?.deviceId || "").trim();
         if (deviceId) sentDeviceSet.add(deviceId);
       });
       const invalidHashes = [];
@@ -199,7 +167,7 @@ module.exports = async (req, res) => {
         if (r.success) return;
         const code = r.error?.code || "";
         if (code.includes("registration-token-not-registered") || code.includes("invalid-registration-token")) {
-          invalidHashes.push(targets[index]?.id);
+          invalidHashes.push(index === 0 ? onePerUser?.id : undefined);
         }
       });
       if (invalidHashes.length) {
@@ -221,8 +189,6 @@ module.exports = async (req, res) => {
       uid: singleUid || null,
       usersProcessed,
       sent,
-      selectedTokens,
-      selectedPlatforms: [...new Set(selectedPlatforms)],
       disabledTokens,
     });
   } catch (error) {

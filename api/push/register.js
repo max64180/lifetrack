@@ -19,15 +19,6 @@ function getBearer(req) {
   return auth.slice(7);
 }
 
-function inferPlatformKind(rawPlatform) {
-  const ua = String(rawPlatform || "").toLowerCase();
-  if (!ua) return "unknown";
-  if (ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod")) return "ios";
-  if (ua.includes("android")) return "android";
-  if (ua.includes("windows") || ua.includes("macintosh") || ua.includes("linux") || ua.includes("cros")) return "desktop";
-  return "unknown";
-}
-
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "method_not_allowed" });
@@ -60,7 +51,6 @@ module.exports = async (req, res) => {
       enabled: true,
       deviceId: deviceId || "",
       platform: payload.platform || "",
-      platformKind: inferPlatformKind(payload.platform),
       language: payload.language || "it",
       createdAt: snap.exists ? (snap.data().createdAt || now) : now,
       updatedAt: now,
