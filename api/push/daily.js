@@ -100,6 +100,8 @@ module.exports = async (req, res) => {
     let usersProcessed = 0;
     let sent = 0;
     let disabledTokens = 0;
+    const sentTokenSet = new Set();
+    const sentDeviceSet = new Set();
     const appUrl = process.env.APP_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
     for (const userDoc of usersSnap.docs) {
@@ -110,7 +112,14 @@ module.exports = async (req, res) => {
       const { overdue, dueSoon } = computeSummary(deadlinesSnap.docs.map((d) => d.data()));
       if (overdue === 0 && dueSoon === 0) continue;
       const selectedDocs = pickTokenDocs(tokensSnap.docs);
-      const tokens = selectedDocs.map((entry) => entry.data?.token).filter(Boolean);
+      const filteredDocs = selectedDocs.filter((entry) => {
+        const token = String(entry?.data?.token || "");
+        if (!token || sentTokenSet.has(token)) return false;
+        const deviceId = String(entry?.data?.deviceId || "").trim();
+        if (deviceId && sentDeviceSet.has(deviceId)) return false;
+        return true;
+      });
+      const tokens = filteredDocs.map((entry) => String(entry.data?.token || "")).filter(Boolean);
       if (!tokens.length) continue;
 
       const response = await messaging.sendEachForMulticast({
@@ -130,12 +139,19 @@ module.exports = async (req, res) => {
       });
 
       sent += response.successCount;
+      response.responses.forEach((r, index) => {
+        if (!r.success) return;
+        const token = tokens[index];
+        if (token) sentTokenSet.add(token);
+        const deviceId = String(filteredDocs[index]?.data?.deviceId || "").trim();
+        if (deviceId) sentDeviceSet.add(deviceId);
+      });
       const invalidHashes = [];
       response.responses.forEach((r, index) => {
         if (r.success) return;
         const code = r.error?.code || "";
         if (code.includes("registration-token-not-registered") || code.includes("invalid-registration-token")) {
-          invalidHashes.push(selectedDocs[index]?.id);
+          invalidHashes.push(filteredDocs[index]?.id);
         }
       });
       if (invalidHashes.length) {
