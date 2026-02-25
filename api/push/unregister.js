@@ -48,7 +48,15 @@ module.exports = async (req, res) => {
   } catch (error) {
     console.error("push/unregister error:", error);
     const message = String(error?.message || "");
-    if (message.includes("firebase_admin_env_missing") || message.includes("DECODER routines") || message.includes("private key")) {
+    const stack = String(error?.stack || "");
+    const configFailure =
+      message.includes("firebase_admin_env_missing") ||
+      message.toLowerCase().includes("private key") ||
+      message.includes("DECODER routines") ||
+      message.includes("Failed to parse private key") ||
+      message.includes("credential implementation provided to initializeApp") ||
+      stack.includes("firebaseAdmin");
+    if (configFailure) {
       res.status(500).json({ error: "config_error" });
       return;
     }
