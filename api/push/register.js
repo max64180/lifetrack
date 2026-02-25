@@ -73,20 +73,23 @@ module.exports = async (req, res) => {
         .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
       if (updates.length) await Promise.all(updates);
     }
-    // Global cleanup: keep this token bound only to current user.
-    const sameTokenGlobal = await db.collectionGroup("pushTokens").where("token", "==", token).where("enabled", "==", true).get();
-    const disableSameTokenElsewhere = sameTokenGlobal.docs
-      .filter((docSnap) => docSnap.ref.parent.parent?.id && docSnap.ref.parent.parent.id !== uid)
-      .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
-    if (disableSameTokenElsewhere.length) await Promise.all(disableSameTokenElsewhere);
-
-    // Global cleanup by deviceId: disable other user bindings for same device.
-    if (deviceId) {
-      const sameDeviceGlobal = await db.collectionGroup("pushTokens").where("deviceId", "==", deviceId).where("enabled", "==", true).get();
-      const disableSameDeviceElsewhere = sameDeviceGlobal.docs
+    // Global cleanup is best-effort: registration must not fail if cross-user queries need indexes.
+    try {
+      const sameTokenGlobal = await db.collectionGroup("pushTokens").where("token", "==", token).where("enabled", "==", true).get();
+      const disableSameTokenElsewhere = sameTokenGlobal.docs
         .filter((docSnap) => docSnap.ref.parent.parent?.id && docSnap.ref.parent.parent.id !== uid)
         .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
-      if (disableSameDeviceElsewhere.length) await Promise.all(disableSameDeviceElsewhere);
+      if (disableSameTokenElsewhere.length) await Promise.all(disableSameTokenElsewhere);
+
+      if (deviceId) {
+        const sameDeviceGlobal = await db.collectionGroup("pushTokens").where("deviceId", "==", deviceId).where("enabled", "==", true).get();
+        const disableSameDeviceElsewhere = sameDeviceGlobal.docs
+          .filter((docSnap) => docSnap.ref.parent.parent?.id && docSnap.ref.parent.parent.id !== uid)
+          .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
+        if (disableSameDeviceElsewhere.length) await Promise.all(disableSameDeviceElsewhere);
+      }
+    } catch (cleanupError) {
+      console.warn("push/register global cleanup skipped:", cleanupError?.message || cleanupError);
     }
     res.status(200).json({ ok: true });
   } catch (error) {
