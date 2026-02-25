@@ -107,15 +107,22 @@ async function loginIfNeeded(page) {
   await page.goto("/");
   await expect(page.getByText("LifeTrack")).toBeVisible();
 
-  const timelineTab = page.getByRole("button", { name: /timeline/i });
+  const appReadyNav = page.getByRole("button", { name: /home|scadenze|deadlines/i }).first();
   const emailInput = page.getByPlaceholder(/email\.com/i);
-  await expect(timelineTab.or(emailInput)).toBeVisible({ timeout: 20000 });
-  if (await timelineTab.isVisible().catch(() => false)) return;
+  await expect(appReadyNav.or(emailInput)).toBeVisible({ timeout: 20000 });
+  if (await appReadyNav.isVisible().catch(() => false)) return;
 
   await emailInput.fill(E2E_EMAIL);
   await page.locator('input[type="password"]').fill(E2E_PASSWORD);
   await page.getByRole("button", { name: /accedi|sign in|login/i }).click();
-  await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("button", { name: /home|scadenze|deadlines/i }).first()).toBeVisible({ timeout: 20000 });
+}
+
+async function goToDeadlinesSection(page) {
+  const deadlinesNav = page.getByRole("button", { name: /scadenze|deadlines/i }).first();
+  await expect(deadlinesNav).toBeVisible({ timeout: 15000 });
+  await deadlinesNav.click();
+  await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 15000 });
 }
 
 test("new deadline wizard opens from + without white screen", async ({ page }) => {
@@ -132,6 +139,7 @@ test("overdue tab can navigate to previous month with data", async ({ page }) =>
   skipIfNoCredsInLocal();
   await bootstrapDeterministicData(page);
   await loginIfNeeded(page);
+  await goToDeadlinesSection(page);
 
   await page.getByRole("button", { name: /scadute|overdue/i }).click();
   await page.getByRole("button", { name: "‹" }).click();
@@ -143,7 +151,7 @@ test("asset add-work modal opens without runtime crash @nonblocking", async ({ p
   await bootstrapDeterministicData(page);
   await loginIfNeeded(page);
   await enforceAssetFixture(page);
-  await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 20000 });
+  await goToDeadlinesSection(page);
 
   await page.getByRole("button", { name: /^asset(s)?$/i }).click();
   await ensureAssetExistsViaUi(page, "E2E_ASSET");
