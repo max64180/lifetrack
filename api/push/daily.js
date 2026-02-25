@@ -38,13 +38,24 @@ function buildMessage(overdue, dueSoon) {
 
 function pickTokenDocs(docs) {
   const byDevice = new Map();
-  const withoutDevice = [];
+  const withoutDeviceByPlatform = new Map();
+  const withoutDeviceGeneric = [];
   docs.forEach((docSnap) => {
     const data = docSnap.data() || {};
     const entry = { id: docSnap.id, data };
     const deviceId = (data.deviceId || "").trim();
     if (!deviceId) {
-      withoutDevice.push(entry);
+      const platform = String(data.platform || "").trim();
+      if (!platform) {
+        withoutDeviceGeneric.push(entry);
+      } else {
+        const prev = withoutDeviceByPlatform.get(platform);
+        const prevTs = prev ? Date.parse(prev.data.updatedAt || prev.data.lastSeenAt || "") || 0 : -1;
+        const currTs = Date.parse(data.updatedAt || data.lastSeenAt || "") || 0;
+        if (!prev || currTs >= prevTs) {
+          withoutDeviceByPlatform.set(platform, entry);
+        }
+      }
       return;
     }
     const prev = byDevice.get(deviceId);
@@ -54,7 +65,16 @@ function pickTokenDocs(docs) {
       byDevice.set(deviceId, entry);
     }
   });
-  const selected = [...byDevice.values(), ...withoutDevice];
+  const selected = [...byDevice.values(), ...withoutDeviceByPlatform.values()];
+  // Keep only the most recent legacy token with unknown platform.
+  if (withoutDeviceGeneric.length) {
+    const latest = withoutDeviceGeneric.sort((a, b) => {
+      const ta = Date.parse(a.data.updatedAt || a.data.lastSeenAt || "") || 0;
+      const tb = Date.parse(b.data.updatedAt || b.data.lastSeenAt || "") || 0;
+      return tb - ta;
+    })[0];
+    if (latest) selected.push(latest);
+  }
   const seenTokens = new Set();
   return selected.filter((entry) => {
     const token = entry?.data?.token;

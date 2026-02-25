@@ -56,9 +56,19 @@ module.exports = async (req, res) => {
       lastSeenAt: now,
     }, { merge: true });
     if (deviceId) {
-      const sameDeviceSnap = await tokensCol.where("deviceId", "==", deviceId).where("enabled", "==", true).get();
-      const updates = sameDeviceSnap.docs
+      const enabledSnap = await tokensCol.where("enabled", "==", true).get();
+      const currentPlatform = String(payload.platform || "");
+      const updates = enabledSnap.docs
         .filter((docSnap) => docSnap.id !== tokenHash)
+        .filter((docSnap) => {
+          const data = docSnap.data() || {};
+          const otherDeviceId = String(data.deviceId || "").trim();
+          if (otherDeviceId && otherDeviceId === deviceId) return true;
+          // Disable legacy tokens (missing deviceId) for same platform to prevent duplicates.
+          const otherPlatform = String(data.platform || "");
+          if (!otherDeviceId && currentPlatform && otherPlatform === currentPlatform) return true;
+          return false;
+        })
         .map((docSnap) => docSnap.ref.set({ enabled: false, updatedAt: now }, { merge: true }));
       if (updates.length) await Promise.all(updates);
     }
