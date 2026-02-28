@@ -2098,7 +2098,9 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
                 <div key={cat.id} style={{ marginBottom:10 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:18 }}>{cat.icon}</span>
+                      <span style={{ display:"flex", alignItems:"center", justifyContent:"center", width:18, height:18 }}>
+                        <CategoryIcon cat={cat} size={18} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
+                      </span>
                       <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</span>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -2170,7 +2172,9 @@ function StatsSheet({ open, onClose, deadlines, cats }) {
                 <div key={cat.id} style={{ marginBottom:10 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <span style={{ fontSize:18 }}>{cat.icon}</span>
+                      <span style={{ display:"flex", alignItems:"center", justifyContent:"center", width:18, height:18 }}>
+                        <CategoryIcon cat={cat} size={18} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
+                      </span>
                       <span style={{ fontSize:13, fontWeight:600, color:"#2d2b26" }}>{t(cat.labelKey || "", { defaultValue: cat.label })}</span>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -2272,7 +2276,9 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
           assetsByCategory.map(({ cat, assets }) => (
             <div key={cat.id} style={{ marginBottom:24 }}>
               <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
-                <span style={{ fontSize:16 }}>{cat.icon}</span>
+                <span style={{ display:"flex", alignItems:"center", justifyContent:"center", width:16, height:16 }}>
+                    <CategoryIcon cat={cat} size={16} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
+                  </span>
                 {t(cat.labelKey || "", { defaultValue: cat.label })}
               </div>
               
@@ -2294,7 +2300,7 @@ function AssetListSheet({ open, onClose, deadlines, cats, onSelectAsset }) {
                       background:cat.light, border:`2px solid ${cat.color}33`,
                       display:"flex", alignItems:"center", justifyContent:"center", fontSize:20
                     }}>
-                      {cat.icon}
+                      <CategoryIcon cat={cat} size={20} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
                     </div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:2 }}>{asset.name}</div>
@@ -2382,7 +2388,9 @@ function AssetSheet({ open, onClose, deadlines, cats, catId, assetName, workLogs
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:28, marginBottom:4 }}>{cat.icon}</div>
+            <div style={{ width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:4 }}>
+              <CategoryIcon cat={cat} size={28} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
+            </div>
             <h2 style={{ margin:0, fontSize:20, fontWeight:800, fontFamily:"'Sora',sans-serif" }}>{assetName}</h2>
             <div style={{ fontSize:12, color:"#8a877f", marginTop:2 }}>{catLabel}</div>
           </div>
@@ -6462,7 +6470,9 @@ export default function App() {
             return assetsByCategory.map(({ cat, assets }) => (
               <div key={cat.id} style={{ marginBottom:24 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"#8a877f", textTransform:"uppercase", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ fontSize:16 }}>{cat.icon}</span>
+                  <span style={{ display:"flex", alignItems:"center", justifyContent:"center", width:16, height:16 }}>
+                    <CategoryIcon cat={cat} size={16} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
+                  </span>
                   {t(cat.labelKey || "", { defaultValue: cat.label })}
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -6481,7 +6491,7 @@ export default function App() {
                         background:cat.light, border:`2px solid ${cat.color}33`,
                         display:"flex", alignItems:"center", justifyContent:"center", fontSize:20
                       }}>
-                        {cat.icon}
+                        <CategoryIcon cat={cat} size={20} color={HOME_THEME.textPrimary} fallback={cat.icon || "📌"} />
                       </div>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:14, fontWeight:700, color:"#2d2b26", marginBottom:2 }}>{asset.name}</div>
