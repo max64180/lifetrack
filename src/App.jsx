@@ -4148,7 +4148,7 @@ export default function App() {
 
   // 🔥 Firebase Auto-Save (categories + worklogs)
   useEffect(() => {
-    if (!user || loading) return;
+    if (!user || loading || !syncEnabled) return;
     if (suppressMetaRef.current) {
       suppressMetaRef.current = false;
       return;
@@ -4174,7 +4174,7 @@ export default function App() {
       }
     }, 1000);
     return () => clearTimeout(saveTimer);
-  }, [cats, workLogs, assetDocs, pets, petEvents, petDeadlines, petDocs, user, loading]);
+  }, [cats, workLogs, assetDocs, pets, petEvents, petDeadlines, petDocs, user, loading, syncEnabled]);
 
   // Save to localStorage whenever cats or deadlines change
   useEffect(() => {
