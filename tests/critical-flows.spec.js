@@ -85,21 +85,6 @@ async function enforceAssetFixture(page) {
   await page.reload();
 }
 
-async function ensureAssetExistsViaUi(page, assetName = "E2E_ASSET") {
-  const assetButton = page.getByRole("button", { name: new RegExp(assetName, "i") }).first();
-  if (await assetButton.isVisible().catch(() => false)) return;
-
-  await page.locator('button:has-text("☰")').first().click();
-  await page.getByRole("button", { name: /impostazioni|settings/i }).click();
-  await page.getByRole("button", { name: /modifica|edit/i }).first().click();
-  const assetInput = page.getByPlaceholder(/nuovo asset|new asset/i);
-  await assetInput.fill(assetName);
-  await page.getByRole("button", { name: /\+\s*(aggiungi|add)/i }).first().click();
-  await page.getByRole("button", { name: /chiudi|close/i }).last().click();
-  await page.getByRole("button", { name: /^asset(s)?$/i }).click();
-  await expect(assetButton).toBeVisible({ timeout: 15000 });
-}
-
 async function loginIfNeeded(page) {
   if (!HAS_CREDS && E2E_STRICT) {
     throw new Error("Missing E2E_EMAIL/E2E_PASSWORD for strict E2E run");
@@ -154,7 +139,7 @@ test("asset add-work modal opens without runtime crash @nonblocking", async ({ p
   await goToDeadlinesSection(page);
 
   await page.getByRole("button", { name: /^asset(s)?$/i }).click();
-  await ensureAssetExistsViaUi(page, "E2E_ASSET");
+  await expect(page.getByRole("button", { name: /e2e_asset/i }).first()).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: /e2e_asset/i }).first().click();
   await page.getByRole("button", { name: /aggiungi|add/i }).first().click();
   await expect(page.getByText(/titolo|title/i)).toBeVisible();
