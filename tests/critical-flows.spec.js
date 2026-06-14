@@ -107,7 +107,7 @@ async function goToDeadlinesSection(page) {
   const deadlinesNav = page.getByRole("button", { name: /scadenze|deadlines/i }).first();
   await expect(deadlinesNav).toBeVisible({ timeout: 15000 });
   await deadlinesNav.click();
-  await expect(page.getByRole("button", { name: /timeline/i })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: /scadute|overdue/i })).toBeVisible({ timeout: 15000 });
 }
 
 test("new deadline wizard opens from + without white screen", async ({ page }) => {
@@ -138,7 +138,7 @@ test("asset add-work modal opens without runtime crash @nonblocking", async ({ p
   await enforceAssetFixture(page);
   await goToDeadlinesSection(page);
 
-  await page.getByRole("button", { name: /^asset(s)?$/i }).click();
+  await page.getByRole("button", { name: /organizza|organize|asset(s)?/i }).click();
   await expect(page.getByRole("button", { name: /e2e_asset/i }).first()).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: /e2e_asset/i }).first().click();
   await page.getByRole("button", { name: /aggiungi|add/i }).first().click();
