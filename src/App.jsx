@@ -62,6 +62,39 @@ const FILE_MAX_BYTES = 10 * 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 20000;
 const USE_STORAGE = false;
 const FCM_VAPID_PUBLIC_KEY = import.meta.env.VITE_FCM_VAPID_PUBLIC_KEY || "";
+const LOCAL_DATA_KEYS = [
+  "lifetrack_categories",
+  "lifetrack_deadlines",
+  "lifetrack_worklogs",
+  "lifetrack_asset_docs",
+  "lifetrack_pets",
+  "lifetrack_pet_events",
+  "lifetrack_pet_deadlines",
+  "lifetrack_pet_docs",
+];
+const LOCAL_SYNC_KEYS = [
+  "lifetrack_last_sync",
+  "lifetrack_last_full_sync",
+  "lifetrack_deadlines_version",
+];
+const LOCAL_USER_KEY = "lifetrack_local_user_uid";
+
+function removeLocalStorageKeys(keys) {
+  try {
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch (err) {
+    console.warn("LocalStorage cleanup error:", err);
+  }
+}
+
+function resetLocalSyncStorage() {
+  removeLocalStorageKeys(LOCAL_SYNC_KEYS);
+}
+
+function resetLocalAppStorage({ keepUser = false } = {}) {
+  removeLocalStorageKeys([...LOCAL_DATA_KEYS, ...LOCAL_SYNC_KEYS]);
+  if (!keepUser) removeLocalStorageKeys([LOCAL_USER_KEY]);
+}
 
 const dateInpModal = {
   width: "100%",
@@ -3776,6 +3809,36 @@ export default function App() {
   // 🔥 Firebase Authentication
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser?.uid) {
+        try {
+          const localUserId = localStorage.getItem(LOCAL_USER_KEY);
+          if (localUserId && localUserId !== currentUser.uid) {
+            resetLocalAppStorage({ keepUser: true });
+            suppressDeadlinesRef.current = true;
+            suppressMetaRef.current = true;
+            pendingSaveRef.current = false;
+            needsSaveRef.current = false;
+            pendingDeleteRef.current.clear();
+            lastSyncRef.current = 0;
+            lastFullSyncRef.current = 0;
+            deadlinesVersionRef.current = 0;
+            prevDeadlinesRef.current = [];
+            deadlinesRef.current = [];
+            setDeadlines([]);
+            setCats(normalizeCategories(DEFAULT_CATS));
+            setWorkLogs({});
+            setAssetDocs({});
+            setPets([]);
+            setPetEvents([]);
+            setPetDeadlines([]);
+            setPetDocs([]);
+            setRemoteInfo({ count: null, lastSync: null, error: null });
+          }
+          localStorage.setItem(LOCAL_USER_KEY, currentUser.uid);
+        } catch (err) {
+          console.warn("Local user context error:", err);
+        }
+      }
       setUser(currentUser || null);
       setLoading(false);
     });
@@ -4915,20 +4978,12 @@ export default function App() {
     if (!window.confirm(t("backup.resetCloudConfirm"))) return;
     try {
       startSync();
-      localStorage.removeItem('lifetrack_categories');
-      localStorage.removeItem('lifetrack_deadlines');
-      localStorage.removeItem('lifetrack_deadlines_version');
-      localStorage.removeItem('lifetrack_worklogs');
-      localStorage.removeItem('lifetrack_asset_docs');
-      localStorage.removeItem('lifetrack_pets');
-      localStorage.removeItem('lifetrack_pet_events');
-      localStorage.removeItem('lifetrack_pet_deadlines');
-      localStorage.removeItem('lifetrack_pet_docs');
+      resetLocalAppStorage({ keepUser: true });
       suppressDeadlinesRef.current = true;
       suppressMetaRef.current = true;
       deadlinesVersionRef.current = 0;
       setDeadlines([]);
-      setCats(DEFAULT_CATS);
+      setCats(normalizeCategories(DEFAULT_CATS));
       setWorkLogs({});
       setAssetDocs({});
       setPets([]);
@@ -4983,7 +5038,11 @@ export default function App() {
   };
 
   const deleteDeadlinesRemote = async (ids, stamp) => {
-    if (!user || ids.length === 0) return;
+    if (!ids.length) return;
+    if (!user || !syncEnabled) {
+      clearPendingDelete(ids);
+      return;
+    }
     const now = stamp || Date.now();
     startSync();
     try {
@@ -7052,6 +7111,8 @@ export default function App() {
                         return;
                       }
 
+                      resetLocalSyncStorage();
+                      if (user?.uid) localStorage.setItem(LOCAL_USER_KEY, user.uid);
                       localStorage.setItem('lifetrack_categories', JSON.stringify(data.categories));
                       localStorage.setItem('lifetrack_deadlines', JSON.stringify(data.deadlines));
                       localStorage.setItem('lifetrack_worklogs', JSON.stringify(data.workLogs || {}));
@@ -7079,11 +7140,7 @@ export default function App() {
 
               <button onClick={() => {
                 if (window.confirm(t("backup.resetConfirm"))) {
-                  localStorage.removeItem('lifetrack_categories');
-                  localStorage.removeItem('lifetrack_deadlines');
-                  localStorage.removeItem('lifetrack_deadlines_version');
-                  localStorage.removeItem('lifetrack_worklogs');
-                  localStorage.removeItem('lifetrack_asset_docs');
+                  resetLocalAppStorage({ keepUser: true });
                   window.location.reload();
                 }
               }} style={{ 
